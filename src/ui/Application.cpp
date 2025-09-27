@@ -263,7 +263,7 @@ void Application::draw() {
                         auto clip = std::make_shared<VideoClip>(clipMeta.filePath);
                         clip->startFrame = frame;
                         clip->duration = clipMeta.frameCount;
-                        lastRenderedFrame = -1;
+                        state.lastRenderedFrame = -1;
                         state.video->addClip(trackIdx, clip);
                     };
                 }
@@ -281,7 +281,7 @@ void Application::draw() {
                         clip->startFrame = frame;
                         clip->duration = soundFile.frameCount;
                         clip->m_properties.getProperties()["volume"]->data = Vector1D{ .number = 100 }.toString();
-                        lastRenderedFrame = -1;
+                        state.lastRenderedFrame = -1;
                         state.video->audioTracks[trackIdx]->addClip(clip);
                     };
                 }
@@ -298,7 +298,7 @@ void Application::draw() {
                         auto clip = std::make_shared<ImageClip>(imageFile.filePath);
                         clip->startFrame = frame;
                         clip->duration = imageFile.frameCount;
-                        lastRenderedFrame = -1;
+                        state.lastRenderedFrame = -1;
                         state.video->getTracks()[trackIdx]->addClip(clip);
                     };
                 }
@@ -325,7 +325,7 @@ void Application::draw() {
         auto setData = [&](std::shared_ptr<ClipProperty> property, std::string data) {
             if (property->keyframes.size() == 1) {
                 property->keyframes[0] = data;
-                lastRenderedFrame = -1;
+                state.lastRenderedFrame = -1;
                 for (auto audTrack : state.video->audioTracks) {
                     audTrack->processTime();
                 }
@@ -334,7 +334,7 @@ void Application::draw() {
 
             int keyframe = state.currentFrame - state.draggingClip->startFrame;
             state.draggingClip->m_properties.setKeyframe(property->id, keyframe, data);
-            lastRenderedFrame = -1;
+            state.lastRenderedFrame = -1;
             for (auto audTrack : state.video->audioTracks) {
                 audTrack->processTime();
             }
@@ -417,103 +417,7 @@ void Application::draw() {
 
         for (auto prop : state.draggingClip->m_properties.getProperties()) {
             ImGui::SeparatorText(prop.second->name.c_str());
-            switch (prop.second->type) {
-                case PropertyType::Text:
-                    drawText(prop.second);
-                    break;
-                case PropertyType::Percent: [[fallthrough]];
-                case PropertyType::Number:
-                    drawInt(prop.second);
-                    break;
-                case PropertyType::Dimensions:
-                    drawDimensions(prop.second);
-                    break; 
-                case PropertyType::Color:
-                    drawColorPicker(prop.second);
-                    break;
-                case PropertyType::Position:
-                    drawPosition(prop.second);
-                    break;
-            }
-
-            int keyframe = state.currentFrame - state.draggingClip->startFrame;
-            bool isKeyframed = prop.second->keyframes.contains(keyframe);
-
-            if (ImGui::Button(std::format("{}Keyframe {}", isKeyframed ? "Remove " : "", prop.second->name).c_str())) {
-                if (isKeyframed) {
-                    prop.second->keyframes.erase(keyframe);
-
-                    if (prop.second->keyframeInfo.contains(keyframe)) {
-                        prop.second->keyframeInfo.erase(keyframe);
-                    }
-                } else if (!isKeyframed && keyframe >= 0) {
-                    state.draggingClip->m_properties.setKeyframe(prop.second->id, keyframe, prop.second->data);
-                }
-            }
-
-            if (prop.second->keyframes.size() > 1) {
-                int previousKeyframe = 0;
-                int nextKeyframe = 0;
-
-                for (auto keyframeObj : prop.second->keyframes) {
-                    if (keyframeObj.first > keyframe) {
-                        nextKeyframe = keyframeObj.first;
-                        break;
-                    }
-
-                    if (keyframeObj.first > previousKeyframe) {
-                        previousKeyframe = keyframeObj.first;
-                    }
-                }
-
-                if (ImGui::Button(std::format("Go to next##{}", prop.second->id).c_str())) {
-                    state.currentFrame = state.draggingClip->startFrame + nextKeyframe;
-                    timeline.setPlayheadTime(state.video->timeForFrame(state.currentFrame));
-                }
-
-                ImGui::SameLine();
-
-                if (ImGui::Button(std::format("Go to previous##{}", prop.second->id).c_str())) {
-                    state.currentFrame = state.draggingClip->startFrame + previousKeyframe;
-                    timeline.setPlayheadTime(state.video->timeForFrame(state.currentFrame));
-                }
-
-                auto currentEasing = animation::EASING_NAMES[(int)prop.second->keyframeInfo[nextKeyframe].easing];
-                if (ImGui::BeginCombo(std::format("Easing##{}", prop.second->id).c_str(), currentEasing)) {
-                    for (int i = 0; i < animation::EASING_NAMES.size(); i++) {
-                        auto easingName = animation::EASING_NAMES[i];
-                        bool selected = easingName == currentEasing;
-                        if (ImGui::Selectable(easingName, selected)) {
-                            // this is so stupid i love it
-                            prop.second->keyframeInfo[nextKeyframe].easing = (animation::Easing)i;
-                        }
-
-                        if (selected) {
-                            ImGui::SetItemDefaultFocus();
-                        }
-                    }
-
-                    ImGui::EndCombo();
-                }
-
-                auto currentMode = animation::EASING_MODE_NAMES[(int)prop.second->keyframeInfo[nextKeyframe].mode];
-                if (ImGui::BeginCombo(std::format("Mode##{}", prop.second->id).c_str(), currentMode)) {
-                    for (int i = 0; i < animation::EASING_MODE_NAMES.size(); i++) {
-                        auto modeName = animation::EASING_MODE_NAMES[i];
-                        bool selected = modeName == currentMode;
-                        if (ImGui::Selectable(modeName, selected)) {
-                            // this is so stupid i love it x2
-                            prop.second->keyframeInfo[nextKeyframe].mode = (animation::EasingMode)i;
-                        }
-
-                        if (selected) {
-                            ImGui::SetItemDefaultFocus();
-                        }
-                    }
-
-                    ImGui::EndCombo();
-                }
-            }
+            prop.second->drawProperty();
         }
 
         if (ImGui::Button("Delete")) {
@@ -585,12 +489,12 @@ void Application::draw() {
     }
     
     auto resolution = state.video->getResolution();
-    if (lastRenderedFrame != state.currentFrame) {
+    if (state.lastRenderedFrame != state.currentFrame) {
         frame->clearFrame();
         state.video->renderIntoFrame(state.currentFrame, frame);
         lastRenderedFrameData.resize(frame->width * frame->height * 4);
         lastRenderedFrameData = frame->getFrameData();
-        lastRenderedFrame = state.currentFrame;
+        state.lastRenderedFrame = state.currentFrame;
 
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -628,7 +532,7 @@ void Application::drawClipButton(std::string name, int defaultDuration) {
             clip->duration = defaultDuration;
             state.video->addClip(trackIdx, clip);
 
-            lastRenderedFrame = -1;
+            state.lastRenderedFrame = -1;
         };
     }
 }

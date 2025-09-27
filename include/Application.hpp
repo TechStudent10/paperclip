@@ -56,5 +56,4 @@ protected:
     std::thread convertThread;
 
     std::vector<unsigned char> lastRenderedFrameData;
-    int lastRenderedFrame = -1;
 };

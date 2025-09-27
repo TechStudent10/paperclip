@@ -2,6 +2,7 @@
 #include <memory>
 #include <unordered_map>
 #include <vector>
+#include <array>
 #include <string>
 
 extern "C" {
@@ -62,6 +63,13 @@ struct RGBAColor {
     JSON_METHODS(RGBAColor)
 };
 
+struct DropdownOptions {
+    std::span<const char* const> options;
+    std::string data = "";
+
+    JSON_METHODS(DropdownOptions)
+};
+
 class Frame {
 protected:
 public:
@@ -94,7 +102,8 @@ enum class PropertyType {
     Percent,
     Dimensions,
     Color,
-    Position
+    Position,
+    Dropdown
 };
 
 struct PropertyKeyframeMeta {
@@ -111,6 +120,7 @@ public:
     std::string name;
     PropertyType type;
     std::string data; // can be interpreted by each individual clip
+    std::string options; // can be interpreted by each individual property
     std::map<int, std::string> keyframes;
     std::map<int, PropertyKeyframeMeta> keyframeInfo;
 
@@ -130,8 +140,12 @@ public:
         this->keyframes[0] = data;
         return this;
     }
+    ClipProperty* setOptions(std::string_view options) {
+        this->options = options;
+        return this;
+    }
 
-    void draw();
+    void drawProperty();
 
     static ClipProperty* create() {
         return new ClipProperty();
@@ -150,6 +164,11 @@ public:
     static ClipProperty* number() {
         return ClipProperty::create()
             ->setType(PropertyType::Number);
+    }
+
+    static ClipProperty* dropdown() {
+        return ClipProperty::create()
+            ->setType(PropertyType::Dropdown);
     }
 
     static ClipProperty* dimensions() {
@@ -218,6 +237,20 @@ public:
 };
 
 class Text : public Clip {
+protected:
+    constexpr static std::array<const char*, 11> FONT_NAMES = {
+        "Inter",
+        "JetBrains Mono",
+        "Noto Sans",
+        "Noto Serif",
+        "Open Sans",
+        "Oswald",
+        "Raleway",
+        "Raleway Dots",
+        "Roboto",
+        "Source Code Pro",
+        "Source Serif 4"
+    };
 public:
     Text();
     void render(Frame* frame) override;

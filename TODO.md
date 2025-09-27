@@ -4,7 +4,11 @@
     - progress bar
     - multithreading
 - [ ] notifications
-- [ ] optimize image viewing
+- [x] optimize image viewing
 - [ ] rotations
 - [ ] font selector in text
 - [x] fix MLT building
+
+once all of these are done
+
+- [ ] IMPROVE ALL THE CODE!!!!!!!!!!!!!!!!!!!!!

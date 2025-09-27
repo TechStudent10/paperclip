@@ -16,6 +16,7 @@ public:
 
     std::shared_ptr<Clip> draggingClip = nullptr;
     int currentFrame = 0;
+    int lastRenderedFrame = -1;
     bool isPlaying = false;
 
     std::string exportPath;
