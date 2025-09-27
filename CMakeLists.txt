@@ -15,7 +15,7 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     # endif()
 endif()
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx")
+# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx")
 
 project(video-thing VERSION 1.0.0)
 
