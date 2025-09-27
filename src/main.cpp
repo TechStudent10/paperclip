@@ -17,8 +17,8 @@
 #include <libyuv/convert.h>
 #include <libyuv/convert_argb.h>
 
-void ClipProperties::addProperty(std::shared_ptr<ClipProperty> property) {
-    properties[property->id] = property;
+void ClipProperties::addProperty(ClipProperty* property) {
+    properties[property->id] = std::make_shared<ClipProperty>(*property);
 }
 
 std::shared_ptr<ClipProperty> ClipProperties::getProperty(std::string id) {
@@ -34,137 +34,98 @@ void ClipProperties::setKeyframeMeta(std::string id, int frame, PropertyKeyframe
 }
 
 Rectangle::Rectangle(): Clip(60, 120) {
-    ClipProperty dimensionsProp = {
-        .id = "dimensions",
-        .name = "Dimensions",
-        .type = PropertyType::Dimensions,
-        .keyframes = {
-            { 0, Dimensions{ .pos = { .x = 10, .y = 10 }, .size = { .x = 500, .y = 500 } }.toString() }
-        }
-    };
-    properties.addProperty(std::make_shared<ClipProperty>(dimensionsProp));
+    m_properties.addProperty(
+        ClipProperty::dimensions()
+    );
 
-    ClipProperty colorProp = {
-        .id = "color",
-        .name = "Color",
-        .type = PropertyType::Color,
-        .keyframes = {
-            { 0,  RGBAColor{ .r = 0, .g = 0, .b = 0, .a = 255 }.toString() }
-        }
-    };
-    properties.addProperty(std::make_shared<ClipProperty>(colorProp));
+    m_properties.addProperty(
+        ClipProperty::color()
+    );
 
-    metadata.name = "Rectangle";
+    m_metadata.name = "Rectangle";
 }
 
 void Rectangle::render(Frame* frame) {
-    Dimensions dimensions = Dimensions::fromString(properties.getProperty("dimensions")->data);
-    RGBAColor color = RGBAColor::fromString(properties.getProperty("color")->data);
+    Dimensions dimensions = Dimensions::fromString(m_properties.getProperty("dimensions")->data);
+    RGBAColor color = RGBAColor::fromString(m_properties.getProperty("color")->data);
     frame->drawRect(dimensions, color);
 }
 
 
 Circle::Circle(): Clip(60, 120) {
-    ClipProperty posProp = {
-        .id = "position",
-        .name = "Position",
-        .type = PropertyType::Position,
-        .keyframes = {
-            { 0, Vector2D{ .x = 100, .y = 100 }.toString() }
-        }
-    };
-    properties.addProperty(std::make_shared<ClipProperty>(posProp));
+    m_properties.addProperty(
+        ClipProperty::position()
+    );
 
-    ClipProperty radiusProp = {
-        .id = "radius",
-        .name = "Radius",
-        .type = PropertyType::Number,
-        .keyframes = {
-            { 0, Vector1D{ .number = 500 }.toString() }
-        }
-    };
-    properties.addProperty(std::make_shared<ClipProperty>(radiusProp));
+    m_properties.addProperty(
+        ClipProperty::number()
+            ->setName("Radius")
+            ->setId("radius")
+            ->setDefaultKeyframe(Vector1D{ .number = 500 }.toString())
+    );
 
-    ClipProperty colorProp = {
-        .id = "color",
-        .name = "Color",
-        .type = PropertyType::Color,
-        .keyframes = {
-            { 0, RGBAColor{ .r = 0, .g = 0, .b = 0, .a = 255 }.toString() }
-        }
-    };
-    properties.addProperty(std::make_shared<ClipProperty>(colorProp));
+    m_properties.addProperty(
+        ClipProperty::color()
+    );
 
-    metadata.name = "Circle";
+    m_metadata.name = "Circle";
 }
 
 void Circle::render(Frame* frame) {
-    Vector2D position = Vector2D::fromString(properties.getProperty("position")->data);
-    Vector1D radius = Vector1D::fromString(properties.getProperty("radius")->data);
-    RGBAColor color = RGBAColor::fromString(properties.getProperty("color")->data);
+    Vector2D position = Vector2D::fromString(m_properties.getProperty("position")->data);
+    Vector1D radius = Vector1D::fromString(m_properties.getProperty("radius")->data);
+    RGBAColor color = RGBAColor::fromString(m_properties.getProperty("color")->data);
     frame->drawCircle(position, radius.number, color);
 }
 
 Text::Text(): Clip(60, 120) {
-    ClipProperty posProp = {
-        .id = "position",
-        .name = "Position",
-        .type = PropertyType::Position,
-        .keyframes = {
-            { 0, Vector2D{ .x = 960, .y = 540 }.toString() }
-        }
-    };
-    properties.addProperty(std::make_shared<ClipProperty>(posProp));
+    m_properties.addProperty(
+        ClipProperty::position()
+    );
 
-    ClipProperty colorProp = {
-        .id = "color",
-        .name = "Color",
-        .type = PropertyType::Color,
-        .keyframes = {
-            { 0, RGBAColor{ .r = 0, .g = 0, .b = 0, .a = 255 }.toString() }
-        }
-    };
-    properties.addProperty(std::make_shared<ClipProperty>(colorProp));
+    m_properties.addProperty(
+        ClipProperty::color()
+    );
 
-    ClipProperty textProp = {
-        .id = "text",
-        .name = "Text",
-        .type = PropertyType::Text,
-        .keyframes = {
-            { 0, "Hello, world!" }
-        }
-    };
-    properties.addProperty(std::make_shared<ClipProperty>(textProp));
+    // default text property is fine here
+    m_properties.addProperty(
+        ClipProperty::text()
+    );
 
-    ClipProperty fontProp = {
-        .id = "font",
-        .name = "Font",
-        .type = PropertyType::Text,
-        .keyframes = {
-            { 0, "inter.ttf" }
-        }
-    };
-    properties.addProperty(std::make_shared<ClipProperty>(fontProp));
+    // TODO: change this to dropdown
+    m_properties.addProperty(
+        ClipProperty::text()
+            ->setId("font")
+            ->setName("Font")
+            ->setDefaultKeyframe("inter.ttf")
+    );
 
-    properties.addProperty(std::make_shared<ClipProperty>(ClipProperty({
-        .id = "size",
-        .name = "Font size",
-        .type = PropertyType::Number,
-        .keyframes = {
-            { 0, Vector1D{ .number = 90 }.toString() }
-        }
-    })));
+    // m_properties.addProperty(std::make_shared<ClipProperty>(ClipProperty({
+    //     .id = "size",
+    //     .name = "Font size",
+    //     .type = PropertyType::Number,
+    //     .keyframes = {
+    //         { 0, Vector1D{ .number = 90 }.toString() }
+    //     }
+    // })));
 
-    metadata.name = "Text";
+    m_properties.addProperty(
+        ClipProperty::number()
+            ->setId("size")
+            ->setName("Font Size")
+            ->setDefaultKeyframe(Vector1D{ .number = 90 }.toString())
+    );
+
+    m_metadata.name = "Text";
 }
 
 void Text::render(Frame* frame) {
     auto& state = State::get();
-    auto text = properties.getProperty("text")->data;
-    auto font = properties.getProperty("font")->data;
-    auto fontSize = Vector1D::fromString(properties.getProperty("size")->data).number;
-    auto pos = Vector2D::fromString(properties.getProperty("position")->data);
-    auto color = RGBAColor::fromString(properties.getProperty("color")->data);
+    auto text = m_properties.getProperty("text")->data;
+    auto font = m_properties.getProperty("font")->data;
+    auto fontSize = Vector1D::fromString(m_properties.getProperty("size")->data).number;
+    auto pos = Vector2D::fromString(m_properties.getProperty("position")->data);
+    auto color = RGBAColor::fromString(m_properties.getProperty("color")->data);
 
     state.textRenderer->drawText(frame, text, font, pos, color, fontSize);
 }
@@ -203,25 +164,27 @@ VideoClip::VideoClip(const std::string& path): Clip(10, 60) {
     fps = mlt_producer_get_fps(producer);
     mlt_producer_get_out(producer);
 
-    metadata.name = path;
+    m_metadata.name = path;
 
-    properties.addProperty(std::make_shared<ClipProperty>(ClipProperty{
-        .id = "position",
-        .name = "Position",
-        .type = PropertyType::Position,
-        .keyframes = {
-            { 0, Vector2D{ .x = 0, .y = 0 }.toString() }
-        }
-    }));
+    m_properties.addProperty(
+        ClipProperty::position()
+    );
 
-    properties.addProperty(std::make_shared<ClipProperty>(ClipProperty{
-        .id = "scale",
-        .name = "Scale",
-        .type = PropertyType::Number,
-        .keyframes = {
-            { 0, Vector1D{ .number = 1 }.toString() }
-        }
-    }));    
+    // m_properties.addProperty(std::make_shared<ClipProperty>(ClipProperty{
+    //     .id = "scale",
+    //     .name = "Scale",
+    //     .type = PropertyType::Number,
+    //     .keyframes = {
+    //         { 0, Vector1D{ .number = 1 }.toString() }
+    //     }
+    // }));
+
+    m_properties.addProperty(
+        ClipProperty::number()
+            ->setId("scale")
+            ->setName("Scale")
+            ->setDefaultKeyframe(Vector1D{ .number = 1 }.toString())
+    );
 }
 
 VideoClip::~VideoClip() {
@@ -283,12 +246,12 @@ void VideoClip::render(Frame* frame) {
     // int clipW  = width;
     // int clipH  = height;
 
-    float scale = Vector1D::fromString(properties.getProperty("scale")->data).number;
+    float scale = Vector1D::fromString(m_properties.getProperty("scale")->data).number;
     if (scale <= 0) {
         return;
     }
 
-    auto position = Vector2D::fromString(properties.getProperty("position")->data);
+    auto position = Vector2D::fromString(m_properties.getProperty("position")->data);
     drawImage(frame, vidFrame.data(), { width, height }, position);
 
     // int scaledW = static_cast<int>(clipW * scale);
@@ -346,34 +309,25 @@ ImageClip::ImageClip(const std::string& path): Clip(0, 120) {
         std::println("could not load image {}", path);
     }
 
-    properties.addProperty(std::make_shared<ClipProperty>(ClipProperty{
-        .id = "position",
-        .name = "Position",
-        .type = PropertyType::Position,
-        .keyframes = {
-            { 0, Vector2D{ .x = 0, .y = 0 }.toString() }
-        }
-    }));
+    m_properties.addProperty(
+        ClipProperty::position()
+    );
 
-    properties.addProperty(std::make_shared<ClipProperty>(ClipProperty{
-        .id = "scale-x",
-        .name = "Scale X",
-        .type = PropertyType::Number,
-        .keyframes = {
-            { 0, Vector1D{ .number = 100 }.toString() }
-        }
-    }));
+    m_properties.addProperty(
+        ClipProperty::number()
+            ->setId("scale-x")
+            ->setName("Scale X")
+            ->setDefaultKeyframe(Vector1D{ .number = 100 }.toString())   
+    );
 
-    properties.addProperty(std::make_shared<ClipProperty>(ClipProperty{
-        .id = "scale-y",
-        .name = "Scale Y",
-        .type = PropertyType::Number,
-        .keyframes = {
-            { 0, Vector1D{ .number = 100 }.toString() }
-        }
-    }));
+    m_properties.addProperty(
+        ClipProperty::number()
+            ->setId("scale-y")
+            ->setName("Scale Y")
+            ->setDefaultKeyframe(Vector1D{ .number = 100 }.toString())   
+    );
 
-    metadata.name = path;
+    m_metadata.name = path;
 }
 
 void ImageClip::render(Frame* frame) {
@@ -382,12 +336,12 @@ void ImageClip::render(Frame* frame) {
     int clipW  = width;
     int clipH  = height;
 
-    float scaleX = (float)Vector1D::fromString(properties.getProperty("scale-x")->data).number / 100.f;
-    float scaleY = (float)Vector1D::fromString(properties.getProperty("scale-y")->data).number / 100.f;
+    float scaleX = (float)Vector1D::fromString(m_properties.getProperty("scale-x")->data).number / 100.f;
+    float scaleY = (float)Vector1D::fromString(m_properties.getProperty("scale-y")->data).number / 100.f;
     if (scaleX <= 0 || scaleY <= 0) {
         return;
     }
-    auto position = Vector2D::fromString(properties.getProperty("position")->data);
+    auto position = Vector2D::fromString(m_properties.getProperty("position")->data);
 
     drawImage(frame, imageData, { width, height }, position);
 
@@ -459,7 +413,7 @@ void VideoTrack::render(Frame* frame, int currentFrame) {
         if (currentFrame >= clip->startFrame && currentFrame <= clip->startFrame + clip->duration) {
             currentFrame = currentFrame - clip->startFrame;
             // process keyframes
-            for (auto property : clip->properties.getProperties()) {
+            for (auto property : clip->m_properties.getProperties()) {
                 // only one keyframe? use that
                 if (property.second->keyframes.size() == 1) {
                     // std::println("one keyframe {}", clip->metadata.name);
@@ -627,15 +581,13 @@ AudioClip::AudioClip(const std::string& path): Clip(0, 7680) {
     if (ma_sound_init_from_file(&state.soundEngine, path.c_str(), 0, NULL, NULL, &sound) != MA_SUCCESS) {
         std::println("could not init file");
     }
-    metadata.name = path;
-    properties.addProperty(std::make_shared<ClipProperty>(ClipProperty({
-        .id = "volume",
-        .name = "Volume",
-        .type = PropertyType::Percent,
-        .keyframes = {
-            { 0, Vector1D{ .number = 100 }.toString() }
-        },
-    })));
+    m_metadata.name = path;
+    m_properties.addProperty(
+        ClipProperty::number()
+            ->setId("volume")
+            ->setName("Volume")
+            ->setDefaultKeyframe(Vector1D{ .number = 100 }.toString())
+    );
 }
 
 AudioClip::~AudioClip() {
@@ -644,7 +596,7 @@ AudioClip::~AudioClip() {
 
 void AudioClip::play() {
     if (this->playing) return;
-    auto volume = Vector1D::fromString(properties.getProperty("volume")->data).number;
+    auto volume = Vector1D::fromString(m_properties.getProperty("volume")->data).number;
     ma_sound_set_volume(&sound, (float)volume / 255);
     if (ma_sound_start(&sound) != MA_SUCCESS) {
         std::println("no success :(");
@@ -689,7 +641,7 @@ void AudioTrack::processTime() {
         if (clip->startFrame + clip->duration < currentFrame && state.isPlaying) {
             clip->stop();
         }
-        for (auto property : clip->properties.getProperties()) {
+        for (auto property : clip->m_properties.getProperties()) {
             // only one keyframe? use that
             if (property.second->keyframes.size() == 1) {
                 property.second->data = property.second->keyframes[0];
@@ -739,7 +691,7 @@ void AudioTrack::processTime() {
 #undef ANIMATE_NUM
         }
 
-        clip->setVolume(Vector1D::fromString(clip->properties.getProperty("volume")->data).number / 100.f);
+        clip->setVolume(Vector1D::fromString(clip->m_properties.getProperty("volume")->data).number / 100.f);
     }
 }
 
@@ -820,60 +772,60 @@ int main() {
     // video->addClip(0, imgClip);
 
     auto rectClip = std::make_shared<Circle>();
-    rectClip->properties.setKeyframe("position", 120, Vector2D{ .x = 500, .y = 1000}.toString());
-    rectClip->properties.setKeyframe("position", 180, Vector2D{ .x = 200, .y = 800}.toString());
-    rectClip->properties.setKeyframe("position", 240, Vector2D{ .x = 0, .y = 500}.toString());
+    rectClip->m_properties.setKeyframe("position", 120, Vector2D{ .x = 500, .y = 1000}.toString());
+    rectClip->m_properties.setKeyframe("position", 180, Vector2D{ .x = 200, .y = 800}.toString());
+    rectClip->m_properties.setKeyframe("position", 240, Vector2D{ .x = 0, .y = 500}.toString());
 
-    rectClip->properties.setKeyframeMeta("position", 120, {
+    rectClip->m_properties.setKeyframeMeta("position", 120, {
         .easing = animation::Easing::Exponential,
         .mode = animation::EasingMode::EaseOut
     });
 
-    rectClip->properties.setKeyframeMeta("position", 180, {
+    rectClip->m_properties.setKeyframeMeta("position", 180, {
         .easing = animation::Easing::Exponential,
         .mode = animation::EasingMode::EaseIn
     });
 
-    rectClip->properties.setKeyframeMeta("position", 240, {
+    rectClip->m_properties.setKeyframeMeta("position", 240, {
         .easing = animation::Easing::Cubic,
         .mode = animation::EasingMode::EaseInOut
     });
 
 
-    rectClip->properties.setKeyframe("color", 90, RGBAColor{ .r = 255, .g = 0, .b = 0 }.toString());
-    rectClip->properties.setKeyframe("color", 150, RGBAColor{ .r = 0, .g = 255, .b = 0 }.toString());
-    rectClip->properties.setKeyframe("color", 210, RGBAColor{ .r = 0, .g = 0, .b = 255 }.toString());
+    rectClip->m_properties.setKeyframe("color", 90, RGBAColor{ .r = 255, .g = 0, .b = 0 }.toString());
+    rectClip->m_properties.setKeyframe("color", 150, RGBAColor{ .r = 0, .g = 255, .b = 0 }.toString());
+    rectClip->m_properties.setKeyframe("color", 210, RGBAColor{ .r = 0, .g = 0, .b = 255 }.toString());
 
-    rectClip->properties.setKeyframeMeta("color", 90, {
+    rectClip->m_properties.setKeyframeMeta("color", 90, {
         .easing = animation::Easing::Backwards,
         .mode = animation::EasingMode::EaseInOut
     });
 
-    rectClip->properties.setKeyframeMeta("color", 150, {
+    rectClip->m_properties.setKeyframeMeta("color", 150, {
         .easing = animation::Easing::Circular,
         .mode = animation::EasingMode::EaseOut
     });
 
-    rectClip->properties.setKeyframeMeta("color", 210, {
+    rectClip->m_properties.setKeyframeMeta("color", 210, {
         .easing = animation::Easing::Exponential,
         .mode = animation::EasingMode::EaseOut
     });
 
-    rectClip->properties.setKeyframe("radius", 60, Vector1D{ .number = 250 }.toString());
-    rectClip->properties.setKeyframe("radius", 120, Vector1D{ .number = 600 }.toString());
-    rectClip->properties.setKeyframe("radius", 180, Vector1D{ .number = 150 }.toString());
+    rectClip->m_properties.setKeyframe("radius", 60, Vector1D{ .number = 250 }.toString());
+    rectClip->m_properties.setKeyframe("radius", 120, Vector1D{ .number = 600 }.toString());
+    rectClip->m_properties.setKeyframe("radius", 180, Vector1D{ .number = 150 }.toString());
 
-    rectClip->properties.setKeyframeMeta("radius", 60, {
+    rectClip->m_properties.setKeyframeMeta("radius", 60, {
         .easing = animation::Easing::Quadratic,
         .mode = animation::EasingMode::EaseInOut
     });
 
-    rectClip->properties.setKeyframeMeta("radius", 120, {
+    rectClip->m_properties.setKeyframeMeta("radius", 120, {
         .easing = animation::Easing::Elastic,
         .mode = animation::EasingMode::EaseInOut
     });
 
-    rectClip->properties.setKeyframeMeta("radius", 180, {
+    rectClip->m_properties.setKeyframeMeta("radius", 180, {
         .easing = animation::Easing::Sine,
         .mode = animation::EasingMode::EaseInOut
     });

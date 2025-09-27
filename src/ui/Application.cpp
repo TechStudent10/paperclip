@@ -99,10 +99,10 @@ void Application::draw() {
             for (auto track : state.video->audioTracks) {
                 for (auto clip : track->getClips()) {
                     audio.addClip(
-                        clip->metadata.name,
+                        clip->m_metadata.name,
                         state.video->timeForFrame(clip->startFrame),
                         state.video->timeForFrame(clip->startFrame + clip->duration),
-                        clip->properties.getProperty("volume")
+                        clip->m_properties.getProperty("volume")
                     );
                 }
             }
@@ -280,7 +280,7 @@ void Application::draw() {
                         auto clip = std::make_shared<AudioClip>(soundFile.filePath);
                         clip->startFrame = frame;
                         clip->duration = soundFile.frameCount;
-                        clip->properties.getProperties()["volume"]->data = Vector1D{ .number = 100 }.toString();
+                        clip->m_properties.getProperties()["volume"]->data = Vector1D{ .number = 100 }.toString();
                         lastRenderedFrame = -1;
                         state.video->audioTracks[trackIdx]->addClip(clip);
                     };
@@ -333,7 +333,7 @@ void Application::draw() {
             }
 
             int keyframe = state.currentFrame - state.draggingClip->startFrame;
-            state.draggingClip->properties.setKeyframe(property->id, keyframe, data);
+            state.draggingClip->m_properties.setKeyframe(property->id, keyframe, data);
             lastRenderedFrame = -1;
             for (auto audTrack : state.video->audioTracks) {
                 audTrack->processTime();
@@ -398,7 +398,7 @@ void Application::draw() {
             }
         };
 
-        TextCentered(state.draggingClip->metadata.name);
+        TextCentered(state.draggingClip->m_metadata.name);
 
         ImGui::Separator();
 
@@ -407,7 +407,7 @@ void Application::draw() {
 
         }
         if (ImGui::BeginPopup("Keyframe Editor")) {
-            for (auto prop : state.draggingClip->properties.getProperties()) {
+            for (auto prop : state.draggingClip->m_properties.getProperties()) {
                 ImGui::Text("%s", prop.second->name.c_str());
             }
             ImGui::EndPopup();
@@ -415,7 +415,7 @@ void Application::draw() {
 
         ImGui::SeparatorText("Properties");
 
-        for (auto prop : state.draggingClip->properties.getProperties()) {
+        for (auto prop : state.draggingClip->m_properties.getProperties()) {
             ImGui::SeparatorText(prop.second->name.c_str());
             switch (prop.second->type) {
                 case PropertyType::Text:
@@ -447,7 +447,7 @@ void Application::draw() {
                         prop.second->keyframeInfo.erase(keyframe);
                     }
                 } else if (!isKeyframed && keyframe >= 0) {
-                    state.draggingClip->properties.setKeyframe(prop.second->id, keyframe, prop.second->data);
+                    state.draggingClip->m_properties.setKeyframe(prop.second->id, keyframe, prop.second->data);
                 }
             }
 

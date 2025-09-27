@@ -102,13 +102,79 @@ struct PropertyKeyframeMeta {
     animation::EasingMode mode;
 };
 
-struct ClipProperty {
+
+class ClipProperty {
+private:
+    ClipProperty() {}
+public:
     std::string id;
     std::string name;
     PropertyType type;
     std::string data; // can be interpreted by each individual clip
     std::map<int, std::string> keyframes;
     std::map<int, PropertyKeyframeMeta> keyframeInfo;
+
+    ClipProperty* setId(std::string_view id) {
+        this->id = id;
+        return this;
+    }
+    ClipProperty* setName(std::string_view name) {
+        this->name = name;
+        return this;
+    }
+    ClipProperty* setType(PropertyType type) {
+        this->type = type;
+        return this;
+    }
+    ClipProperty* setDefaultKeyframe(std::string_view data) {
+        this->keyframes[0] = data;
+        return this;
+    }
+
+    void draw();
+
+    static ClipProperty* create() {
+        return new ClipProperty();
+    }
+
+    // defaults that most clips are gonna use (but can override)
+
+    static ClipProperty* text() {
+        return ClipProperty::create()
+            ->setType(PropertyType::Text)
+            ->setId("text")
+            ->setName("Text")
+            ->setDefaultKeyframe("Hello World!");
+    }
+
+    static ClipProperty* number() {
+        return ClipProperty::create()
+            ->setType(PropertyType::Number);
+    }
+
+    static ClipProperty* dimensions() {
+        return ClipProperty::create()
+            ->setType(PropertyType::Dimensions)
+            ->setId("dimensions")
+            ->setName("Dimensions")
+            ->setDefaultKeyframe(Dimensions{ .pos = { .x = 10, .y = 10 }, .size = { .x = 500, .y = 500 } }.toString());
+    }
+
+    static ClipProperty* color() {
+        return ClipProperty::create()
+            ->setType(PropertyType::Color)
+            ->setId("color")
+            ->setName("Color")
+            ->setDefaultKeyframe(RGBAColor{ .r = 0, .g = 0, .b = 0, .a = 255 }.toString());
+    }
+    
+    static ClipProperty* position() {
+        return ClipProperty::create()
+            ->setType(PropertyType::Position)
+            ->setId("position")
+            ->setName("Position")
+            ->setDefaultKeyframe(Vector2D{ .x = 0, .y = 0 }.toString());
+    }
 };
 
 struct ClipProperties {
@@ -116,7 +182,7 @@ private:
     std::map<std::string, std::shared_ptr<ClipProperty>> properties;
 
 public:
-    void addProperty(std::shared_ptr<ClipProperty> property);
+    void addProperty(ClipProperty* property);
     std::map<std::string, std::shared_ptr<ClipProperty>> getProperties() { return properties; }
     std::shared_ptr<ClipProperty> getProperty(std::string id);
     void setKeyframe(std::string id, int frame, std::string data);
@@ -131,8 +197,8 @@ class Clip {
 protected:
     Clip(int startFrame, int duration): startFrame(startFrame), duration(duration) {};
 public:
-    ClipProperties properties;
-    ClipMetadata metadata;
+    ClipProperties m_properties;
+    ClipMetadata m_metadata;
     int startFrame;
     int duration;
     virtual void render(Frame* frame) {}
