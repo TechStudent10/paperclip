@@ -1,0 +1,1 @@
+All fonts in this directory are licensed under the Open Font License. The details of the Open Font License can be found in the OFL.txt file in this directory.

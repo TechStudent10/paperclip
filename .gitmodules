@@ -1,0 +1,9 @@
+[submodule "libs/imgui"]
+	path = libs/imgui
+	url = https://github.com/ocornut/imgui
+[submodule "libs/libyuv"]
+	path = libs/libyuv
+	url = https://github.com/lemenkov/libyuv
+[submodule "libs/nativefiledialog"]
+	path = libs/nativefiledialog
+	url = https://github.com/mlabbe/nativefiledialog
