@@ -13,10 +13,10 @@ jobs:
             os: windows-latest
           
           - name: macOS
-            on: macos-latest
+            os: macos-latest
 
           - name: Linux
-            on: ubuntu-latest
+            os: ubuntu-latest
     
     name: ${{ matrix.config.name }}
     runs-on: ${{ matrix.config.os }}
