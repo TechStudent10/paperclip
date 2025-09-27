@@ -1,4 +1,3 @@
-#include "libyuv/convert_from_argb.h"
 #include <iostream>
 #include <video.hpp>
 
@@ -100,15 +99,6 @@ Text::Text(): Clip(60, 120) {
             ->setDefaultKeyframe("inter.ttf")
     );
 
-    // m_properties.addProperty(std::make_shared<ClipProperty>(ClipProperty({
-    //     .id = "size",
-    //     .name = "Font size",
-    //     .type = PropertyType::Number,
-    //     .keyframes = {
-    //         { 0, Vector1D{ .number = 90 }.toString() }
-    //     }
-    // })));
-
     m_properties.addProperty(
         ClipProperty::number()
             ->setId("size")
@@ -169,15 +159,6 @@ VideoClip::VideoClip(const std::string& path): Clip(10, 60) {
     m_properties.addProperty(
         ClipProperty::position()
     );
-
-    // m_properties.addProperty(std::make_shared<ClipProperty>(ClipProperty{
-    //     .id = "scale",
-    //     .name = "Scale",
-    //     .type = PropertyType::Number,
-    //     .keyframes = {
-    //         { 0, Vector1D{ .number = 1 }.toString() }
-    //     }
-    // }));
 
     m_properties.addProperty(
         ClipProperty::number()
@@ -241,11 +222,6 @@ void VideoClip::render(Frame* frame) {
 
     if (!decodeFrame(targetFrame) || vidFrame.empty()) return;
 
-    // int frameW = frame->width;
-    // int frameH = frame->height;
-    // int clipW  = width;
-    // int clipH  = height;
-
     float scale = Vector1D::fromString(m_properties.getProperty("scale")->data).number;
     if (scale <= 0) {
         return;
@@ -253,54 +229,6 @@ void VideoClip::render(Frame* frame) {
 
     auto position = Vector2D::fromString(m_properties.getProperty("position")->data);
     drawImage(frame, vidFrame.data(), { width, height }, position);
-
-    // int scaledW = static_cast<int>(clipW * scale);
-    // int scaledH = static_cast<int>(clipH * scale);
-
-    // std::vector<unsigned char> scaledRow(scaledW * 4); // temp row buffer
-
-
-    // for (int y = 0; y < scaledH; ++y) {
-    //     int destY = position.y + y;
-    //     if (destY < 0 || destY >= frameH) continue;
-
-    //     float srcYf = y / scale;
-    //     int srcY = static_cast<int>(srcYf);
-    //     float yWeight = srcYf - srcY;
-    //     int srcY1 = std::min(srcY + 1, clipH - 1);
-
-    //     for (int x = 0; x < scaledW; ++x) {
-    //         float srcXf = x / scale;
-    //         int srcX = static_cast<int>(srcXf);
-    //         float xWeight = srcXf - srcX;
-    //         int srcX1 = std::min(srcX + 1, clipW - 1);
-
-    //         int idx00 = (srcY  * clipW + srcX ) * 3;
-    //         int idx01 = (srcY  * clipW + srcX1) * 3;
-    //         int idx10 = (srcY1 * clipW + srcX ) * 3;
-    //         int idx11 = (srcY1 * clipW + srcX1) * 3;
-
-    //         for (int c = 0; c < 3; ++c) {
-    //             float top    = vidFrame[idx00 + c] * (1 - xWeight) + vidFrame[idx01 + c] * xWeight;
-    //             float bottom = vidFrame[idx10 + c] * (1 - xWeight) + vidFrame[idx11 + c] * xWeight;
-    //             scaledRow[x * 4 + c] = static_cast<unsigned char>(top * (1 - yWeight) + bottom * yWeight);
-    //         }
-
-    //         scaledRow[x * 4] = scaledRow[x * 4 + 1] = scaledRow[x * 4 + 2] = (float)(
-    //             scaledRow[x * 4] + scaledRow[x * 4 + 1] + scaledRow[x * 4 + 2]
-    //         ) / 3.f;
-
-    //         scaledRow[x * 4 + 3] = 255;
-    //     }
-
-    //     // copy into imageData directly
-    //     // speed go brrrrrr
-    //     unsigned char* dstRow = &frame->imageData[destY * frameW * 4];
-    //     int copyWidth = std::min(scaledW, frameW - position.x);
-    //     if (copyWidth > 0 && position.x < frameW) {
-    //         std::memcpy(dstRow + position.x * 4, scaledRow.data(), copyWidth * 4);
-    //     }
-    // }
 }
 
 ImageClip::ImageClip(const std::string& path): Clip(0, 120) {
@@ -344,62 +272,9 @@ void ImageClip::render(Frame* frame) {
     auto position = Vector2D::fromString(m_properties.getProperty("position")->data);
 
     drawImage(frame, imageData, { width, height }, position);
-
-    // int scaledW = static_cast<int>(clipW * scaleX);
-    // int scaledH = static_cast<int>(clipH * scaleY);
-
-
-    // std::vector<int> srcX(scaledW), srcX1(scaledW);
-    // std::vector<float> xWeight(scaledW), invX(scaledW);
-    // for (int x = 0; x < scaledW; ++x) {
-    //     float srcXf = x / scaleX;
-    //     srcX[x] = static_cast<int>(srcXf);
-    //     xWeight[x] = srcXf - srcX[x];
-    //     invX[x] = 1.0f - xWeight[x];
-    //     srcX1[x] = std::min(srcX[x] + 1, clipW - 1);
-    // }
-
-    // for (int y = 0; y < scaledH; ++y) {
-    //     int destY = position.y + y;
-    //     if (destY < 0 || destY >= frameH) continue;
-
-    //     float srcYf = y / scaleY;
-    //     int srcY = static_cast<int>(srcYf);
-    //     float yWeight = srcYf - srcY;
-    //     float invY = 1.0f - yWeight;
-    //     int srcY1 = std::min(srcY + 1, clipH - 1);
-
-    //     // copy directly into frameData
-    //     // speed go brrrrrr
-    //     unsigned char* dstRow = &frame->imageData[destY * frameW * 4];
-    //     int copyWidth = std::min(scaledW, frameW - position.x);
-    //     if (copyWidth <= 0 || position.x >= frameW) continue;
-
-    //     for (int x = 0; x < copyWidth; ++x) {
-    //         int dstIdx = (position.x + x) * 4;
-
-    //         int idx00 = (srcY  * clipW + srcX[x] ) * 3;
-    //         int idx01 = (srcY  * clipW + srcX1[x]) * 3;
-    //         int idx10 = (srcY1 * clipW + srcX[x] ) * 3;
-    //         int idx11 = (srcY1 * clipW + srcX1[x]) * 3;
-
-    //         for (int c = 0; c < 3; ++c) {
-    //             float top    = imageData[idx00 + c] * invX[x] + imageData[idx01 + c] * xWeight[x];
-    //             float bottom = imageData[idx10 + c] * invX[x] + imageData[idx11 + c] * xWeight[x];
-    //             dstRow[dstIdx + c] = static_cast<unsigned char>(top * invY + bottom * yWeight);
-    //         }
-    //         dstRow[dstIdx + 3] = 255; // alpha
-    //     }
-    // }
 }
 
-
-ImageClip::~ImageClip() {
-    if (imageData) {
-        // stbi_image_free(&imageData);
-        std::println("destructor sucess!");
-    }
-}
+ImageClip::~ImageClip() {}
 
 void ImageClip::onDelete() {
     if (imageData) {
@@ -416,14 +291,12 @@ void VideoTrack::render(Frame* frame, int currentFrame) {
             for (auto property : clip->m_properties.getProperties()) {
                 // only one keyframe? use that
                 if (property.second->keyframes.size() == 1) {
-                    // std::println("one keyframe {}", clip->metadata.name);
                     property.second->data = property.second->keyframes[0];
                     continue;
                 }
 
                 // beyond the last keyframe? use that
                 if (std::prev(property.second->keyframes.end())->first <= currentFrame - clip->startFrame) {
-                    // std::println("one lasta keyframe {}", clip->metadata.name);
                     property.second->data = property.second->keyframes.rbegin()->second;
                     continue;
                 }
@@ -447,8 +320,6 @@ void VideoTrack::render(Frame* frame, int currentFrame) {
                     property.second->data = property.second->keyframes[previousKeyframe];
                     continue;
                 }
-
-                // std::println("prev: {}, next: {}", previousKeyframe, nextKeyframe);
 
                 float progress = (float)(currentFrame - previousKeyframe) / (float)(nextKeyframe - previousKeyframe);
                 if (property.second->keyframeInfo.contains(nextKeyframe)) {
@@ -477,7 +348,6 @@ void VideoTrack::render(Frame* frame, int currentFrame) {
                             ANIMATE_NUM(oldColor, nextColor, b),
                             ANIMATE_NUM(oldColor, nextColor, a),
                         }.toString();
-                        std::println("color: {}", property.second->data);
                     } },
                     { PropertyType::Number, [&]() {
                         auto oldNumber = Vector1D::fromString(property.second->keyframes[previousKeyframe]);
@@ -505,7 +375,7 @@ void VideoTrack::render(Frame* frame, int currentFrame) {
                     { PropertyType::Text, [&]() {
                         // i do not want to bother animating text
                         // so this is the best we get
-                        auto nextText = property.second->keyframes[nextKeyframe];
+                        auto nextText = property.second->keyframes[previousKeyframe];
                         property.second->data = nextText;
                     } },
                     { PropertyType::Percent, [&]() {
@@ -607,12 +477,10 @@ void AudioClip::play() {
 void AudioClip::stop() {
     if (!this->playing) return;
     ma_sound_stop(&sound);
-    // std::println("stop by justice");
     this->playing = false;
 }
 
 void AudioClip::seekToSec(float seconds) {
-    // std::println("seekin to {}s", seconds);
     ma_sound_seek_to_second(&sound, seconds);
 }
 
@@ -631,7 +499,6 @@ void AudioTrack::processTime() {
     auto currentFrame = state.currentFrame;
     for (auto clip : clips) {
         if (currentFrame >= clip->startFrame && currentFrame < clip->startFrame + clip->duration && state.isPlaying) {
-            // std::println("start");
             float seconds = state.video->timeForFrame(currentFrame - clip->startFrame);
             if (std::abs(clip->getCursor() - seconds) >= 0.5f) {
                 clip->seekToSec(seconds);
@@ -698,12 +565,8 @@ void AudioTrack::processTime() {
 void AudioTrack::onPlay() {
     auto& state = State::get();
     // filters clips that should be playing now
-    // auto clips_view = clips | std::views::filter([state](std::shared_ptr<AudioClip> clip) {
-    //     return clip->startFrame >= state.currentFrame && state.currentFrame <= clip->startFrame + clip->duration;
-    // });
     for (auto clip : clips) {
         if (state.currentFrame >= clip->startFrame && state.currentFrame <= clip->startFrame + clip->duration) {
-            std::println("hjjge");
             clip->seekToSec(state.video->timeForFrame(state.currentFrame - clip->startFrame));
         }
     }
@@ -716,39 +579,9 @@ void AudioTrack::onStop() {
 }
 
 int main() {
-    // Mlt::Factory::init();
     if (mlt_factory_init("resources/mlt") == 0) {
         std::println("unable to init mlt factory");
     }
-
-    // AudioRenderer renderer("test.mp3", 60.f);
-    // renderer.addClip("/home/dee/Music/1191779_-PARTY-SIRENS-.mp3", 0.f, 40.f, std::make_shared<ClipProperty>(ClipProperty{
-    //     .keyframes = {
-    //         { 0, Vector1D{ .number = 0 }.toString() },
-    //         { 360, Vector1D{ .number = 100 }.toString() }
-    //     },
-    //     .keyframeInfo = {
-    //         { 0, {} }
-    //     }
-    // }));
-    // renderer.addClip("/home/dee/Music/1191781_The-91s-Conundrum.mp3", 20.f, 55.f, std::make_shared<ClipProperty>(ClipProperty{
-    //     .keyframes = {
-    //         { 0, Vector1D{ .number = 35 }.toString() }
-    //     },
-    //     .keyframeInfo = {
-    //         { 0, {} }
-    //     }
-    // }));
-    // renderer.addClip("/home/dee/Music/Justice - Phantom Pt II (Official Audio) [5QCBkwmsOk0].mp3", 15.f, 55.f, std::make_shared<ClipProperty>(ClipProperty{
-    //     .keyframes = {
-    //         { 0, Vector1D{ .number = 35 }.toString() }
-    //     },
-    //     .keyframeInfo = {
-    //         { 0, {} }
-    //     }
-    // }));
-    // renderer.render(30);
-
     std::cout << "hello!" << std::endl;
 
 
@@ -756,20 +589,12 @@ int main() {
     int height = 1080;
     int fps = 60;
 
-    // VPFFile::convertToVPF("/home/dee/Videos/Video_2025-09-06_10-36-39.mp4");
-
-    // auto textRenderer = std::make_unique<TextRenderer>("inter.ttf");
-    // auto videoRenderer = std::make_unique<VideoRenderer>("output.mp4", width, height, fps);
-
     auto video = new Video(fps, { width, height });
     auto vidTrack1 = new VideoTrack();
     video->addTrack(vidTrack1);
 
     auto vidTrack2 = new VideoTrack();
     video->addTrack(vidTrack2);
-
-    // auto imgClip = std::make_shared<ImageClip>("/home/dee/Pictures/underscored v2 bg darkened.png");
-    // video->addClip(0, imgClip);
 
     auto rectClip = std::make_shared<Circle>();
     rectClip->m_properties.setKeyframe("position", 120, Vector2D{ .x = 500, .y = 1000}.toString());
@@ -833,15 +658,6 @@ int main() {
 
     video->addClip(0, rectClip);
 
-    // auto vidTrack3 = new VideoTrack();
-    // video->addTrack(vidTrack3);
-
-    // auto vidTrack4 = new VideoTrack();
-    // video->addTrack(vidTrack4);
-
-    // auto vidTrack5 = new VideoTrack();
-    // video->addTrack(vidTrack5);
-
     auto audTrack1 = new AudioTrack();
     video->audioTracks.push_back(audTrack1);
 
@@ -852,20 +668,9 @@ int main() {
     if (ma_engine_init(NULL, &state.soundEngine) != MA_SUCCESS) {
         std::println("could not init engine");
     }
-
-    // auto clip = std::make_shared<AudioClip>("/home/dee/Music/1191781_The-91s-Conundrum.mp3");
-    // audTrack1->addClip(clip);
-
-    // video->addClip(1, std::make_shared<VideoClipV2>("/home/dee/Videos/Video_2025-08-26_22-14-33.mp4"));
-    // video->render(videoRenderer.get());
-
-    // videoRenderer->finish();
     
     state.video = video;
     state.textRenderer = std::make_shared<TextRenderer>();
-    
-    // ma_result result;
-    // ma_engine engine;
 
     Application app;
     app.setup();
