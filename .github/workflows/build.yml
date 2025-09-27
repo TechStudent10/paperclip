@@ -1,0 +1,27 @@
+name: Build Project
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: true
+      matrix:
+        config:
+          - name: Windows
+            os: windows-latest
+          
+          - name: macOS
+            on: macos-latest  
+    
+    name: ${{ matrix.config.name }}
+    runs-on: ${{ matrix.config.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: CMake Action
+        uses: threeal/cmake-action@v2.1.0
+        with:
+          generator: Ninja
