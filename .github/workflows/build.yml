@@ -30,13 +30,13 @@ jobs:
           choco install cmake ninja ffmpeg clang -y
       
       - name: Deps (mac)
-        if: matrix.config.os == "macOS"
+        if: matrix.config.os == 'macOS'
         run: |
           brew update
           brew install cmake ninja ffmpeg clang
 
       - name: Deps (lin)
-        if: matrix.config.os == "Linux"
+        if: matrix.config.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y cmake ninja-build ffmpeg clang
