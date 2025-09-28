@@ -17,7 +17,6 @@
 #include <libyuv/convert_argb.h>
 
 #include <imgui/misc/cpp/imgui_stdlib.h>
-#include <ranges>
 
 void ClipProperty::drawProperty() {
     auto& state = State::get();
@@ -100,15 +99,12 @@ void ClipProperty::drawProperty() {
     auto drawDropdown = [this, setData]() {
         DropdownOptions dropdownOptions = DropdownOptions::fromString(options);
 
-        auto& currentSelection = dropdownOptions.data;
-        if (ImGui::BeginCombo(name.c_str(), currentSelection.c_str())) {
+        if (ImGui::BeginCombo(name.c_str(), data.c_str())) {
             for (auto option : dropdownOptions.options) {
-                bool selected = option == currentSelection;
+                bool selected = option == data;
                 auto optionStr = std::string(option);
                 if (ImGui::Selectable(optionStr.c_str(), selected)) {
                     setData(optionStr);
-                    dropdownOptions.data = option;
-                    options = dropdownOptions.toString();
                 }
 
                 if (selected) {
@@ -301,8 +297,7 @@ Text::Text(): Clip(60, 120) {
                     "Roboto",
                     "Source Code Pro",
                     "Source Serif 4"
-                }),
-                .data = "Inter"
+                })
             }.toString())
             ->setDefaultKeyframe("Inter")
     );

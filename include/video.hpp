@@ -65,7 +65,6 @@ struct RGBAColor {
 
 struct DropdownOptions {
     std::vector<std::string> options;
-    std::string data = "";
 
     JSON_METHODS(DropdownOptions)
 };

@@ -6,8 +6,9 @@
 - [ ] notifications
 - [x] optimize image viewing
 - [ ] rotations
-- [ ] font selector in text
+- [x] font selector in text
 - [x] fix MLT building
+- [ ] project saving
 
 once all of these are done
 
