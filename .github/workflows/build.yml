@@ -51,7 +51,7 @@ jobs:
           libavcodec-dev libavformat-dev libswscale-dev libswresample-dev
 
       - name: Configure
-        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+        run: cmake -S . -B build -G Ninja -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release
 
       - name: Compile
         run: cmake --build build --config Release
