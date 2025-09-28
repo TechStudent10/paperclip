@@ -64,7 +64,7 @@ struct RGBAColor {
 };
 
 struct DropdownOptions {
-    std::span<const char* const> options;
+    std::vector<std::string> options;
     std::string data = "";
 
     JSON_METHODS(DropdownOptions)
@@ -237,20 +237,6 @@ public:
 };
 
 class Text : public Clip {
-protected:
-    constexpr static std::array<const char*, 11> FONT_NAMES = {
-        "Inter",
-        "JetBrains Mono",
-        "Noto Sans",
-        "Noto Serif",
-        "Open Sans",
-        "Oswald",
-        "Raleway",
-        "Raleway Dots",
-        "Roboto",
-        "Source Code Pro",
-        "Source Serif 4"
-    };
 public:
     Text();
     void render(Frame* frame) override;

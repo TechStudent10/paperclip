@@ -102,11 +102,11 @@ void ClipProperty::drawProperty() {
 
         auto& currentSelection = dropdownOptions.data;
         if (ImGui::BeginCombo(name.c_str(), currentSelection.c_str())) {
-            std::println("{}", dropdownOptions.options.size());
             for (auto option : dropdownOptions.options) {
                 bool selected = option == currentSelection;
-                if (ImGui::Selectable(option, selected)) {
-                    setData(std::string(option));
+                auto optionStr = std::string(option);
+                if (ImGui::Selectable(optionStr.c_str(), selected)) {
+                    setData(optionStr);
                     dropdownOptions.data = option;
                     options = dropdownOptions.toString();
                 }
@@ -289,7 +289,19 @@ Text::Text(): Clip(60, 120) {
             ->setId("font")
             ->setName("Font")
             ->setOptions(DropdownOptions{
-                .options = FONT_NAMES,
+                .options = std::vector<std::string>({
+                    "Inter",
+                    "JetBrains Mono",
+                    "Noto Sans",
+                    "Noto Serif",
+                    "Open Sans",
+                    "Oswald",
+                    "Raleway",
+                    "Raleway Dots",
+                    "Roboto",
+                    "Source Code Pro",
+                    "Source Serif 4"
+                }),
                 .data = "Inter"
             }.toString())
             ->setDefaultKeyframe("Inter")
