@@ -6,7 +6,7 @@ on:
 jobs:
   build:
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         config:
           - name: Windows
@@ -24,8 +24,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: CMake Action
-        uses: threeal/cmake-action@v2.1.0
-        with:
-          generator: Ninja
-          cxx-compiler: clang++
+      - name: Deps (win)
+        if: matrix.config.os == 'Windows'
+        run: |
+          choco install cmake ninja ffmpeg clang -y
+      
+      - name: Deps (mac)
+        if: matrix.config.os == "macOS"
+        run: |
+          brew update
+          brew install cmake ninja ffmpeg clang
+
+      - name: Deps (lin)
+        if: matrix.config.os == "Linux"
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build ffmpeg clang
+
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+      - name: Compile
+        run: cmake --build build --config Release
