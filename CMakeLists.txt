@@ -15,8 +15,6 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     # endif()
 endif()
 
-# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx")
-
 project(video-thing VERSION 1.0.0)
 
 set(IMGUI_DIR ${CMAKE_SOURCE_DIR}/libs/imgui)
@@ -49,14 +47,6 @@ add_executable(${PROJECT_NAME} ${SOURCES})
 
 include(cmake/CPM.cmake)
 
-CPMAddPackage("gh:stephenberry/glaze@5.6.1")
-CPMAddPackage("gh:libsdl-org/SDL#release-3.2.20")
-CPMAddPackage(
-  NAME glad
-  GITHUB_REPOSITORY Dav1dde/glad
-  GIT_TAG v0.1.36 # latest stable
-)
-CPMAddPackage("gh:mackron/miniaudio#0.11.23")
 CPMAddPackage(
     NAME mlt
     GITHUB_REPOSITORY mltframework/mlt
@@ -70,30 +60,16 @@ CPMAddPackage(
         "ENABLE_MLTPLUSPLUS ON"
         "RELOCATABLE OFF"
 )
-
-# CPMAddPackage("gh:webmproject/libwebm#main")
-# add_subdirectory(libs/libwebm)
-
-# # libvpx via system package
-# find_package(PkgConfig REQUIRED)
-# pkg_check_modules(LIBVPX REQUIRED vpx)
-
-# include(FetchContent)
-
-# set(ZSTD_BUILD_STATIC ON)
-# set(ZSTD_BUILD_SHARED OFF)
-
-# FetchContent_Declare(
-#     zstd
-#     URL "https://github.com/facebook/zstd/releases/download/v1.5.5/zstd-1.5.5.tar.gz"
-#     DOWNLOAD_EXTRACT_TIMESTAMP TRUE
-#     SOURCE_SUBDIR build/cmake
-# )
-
-# FetchContent_MakeAvailable(zstd)
+CPMAddPackage(
+    NAME glad
+    GITHUB_REPOSITORY Dav1dde/glad
+    GIT_TAG v0.1.36 # latest stable
+)
+CPMAddPackage("gh:stephenberry/glaze@5.6.1")
+CPMAddPackage("gh:libsdl-org/SDL#release-3.2.20")
+CPMAddPackage("gh:mackron/miniaudio#0.11.23")
 
 find_package(PkgConfig REQUIRED)
-# find_package(OpenCV 4.2 REQUIRED)
 pkg_check_modules(FFMPEG REQUIRED IMPORTED_TARGET
     libavutil libavcodec libavformat libswscale libswresample
 )
@@ -102,11 +78,9 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     include
     libs/
     libs/imgui
-    # libs/libwebm
     libs/libyuv/include
     libs/nativefiledialog/src/include
-    # ${zstd_SOURCE_DIR}/lib
-    # ${LIBVPX_INCLUDE_DIRS}
+    libs/cereal/include
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE

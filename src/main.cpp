@@ -18,6 +18,8 @@
 
 #include <imgui/misc/cpp/imgui_stdlib.h>
 
+#include <cereal/types/polymorphic.hpp>
+
 void ClipProperty::drawProperty() {
     auto& state = State::get();
     auto setData = [&](std::string data) {
@@ -344,19 +346,7 @@ void drawImage(Frame* frame, unsigned char* data, Vector2D size, Vector2D positi
     }
 }
 
-VideoClip::VideoClip(const std::string& path): Clip(10, 60) {
-    profile = mlt_profile_init("hdv_720_30p");
-    if (profile == NULL) {
-        std::println("no profile!");
-    }
-    producer = mlt_factory_producer(profile, "avformat", path.c_str());
-    if (producer == NULL) {
-        std::println("no video!");
-    }
-
-    fps = mlt_producer_get_fps(producer);
-    mlt_producer_get_out(producer);
-
+VideoClip::VideoClip(const std::string& path): Clip(10, 60), path(path) {
     m_metadata.name = path;
 
     m_properties.addProperty(
@@ -369,6 +359,36 @@ VideoClip::VideoClip(const std::string& path): Clip(10, 60) {
             ->setName("Scale")
             ->setDefaultKeyframe(Vector1D{ .number = 1 }.toString())
     );
+
+    if (!path.empty()) {
+        initialize();
+    }
+}
+
+VideoClip::VideoClip(): VideoClip("") {}
+
+bool VideoClip::initialize() {
+    if (initialized) {
+        return true;
+    }
+
+    profile = mlt_profile_init("hdv_720_30p");
+    if (profile == NULL) {
+        std::println("no profile!");
+        return false;
+    }
+    producer = mlt_factory_producer(profile, "avformat", path.c_str());
+    if (producer == NULL) {
+        std::println("no video!");
+        return false;
+    }
+
+    fps = mlt_producer_get_fps(producer);
+    mlt_producer_get_out(producer);
+
+    initialized = true;
+
+    return true;
 }
 
 VideoClip::~VideoClip() {
@@ -419,6 +439,8 @@ bool VideoClip::decodeFrame(int frameNumber) {
 }
 
 void VideoClip::render(Frame* frame) {
+    initialize();
+
     auto& state = State::get();
     int targetFrame = floor((float)(state.currentFrame - startFrame) / ((float)state.video->getFPS() / (float)fps));
     if (targetFrame < 0) return;
@@ -434,12 +456,7 @@ void VideoClip::render(Frame* frame) {
     drawImage(frame, vidFrame.data(), { width, height }, position);
 }
 
-ImageClip::ImageClip(const std::string& path): Clip(0, 120) {
-    imageData = stbi_load(path.c_str(), &width, &height, NULL, 3);
-    if (imageData == NULL) {
-        std::println("could not load image {}", path);
-    }
-
+ImageClip::ImageClip(const std::string& path): Clip(0, 120), path(path) {
     m_properties.addProperty(
         ClipProperty::position()
     );
@@ -459,9 +476,35 @@ ImageClip::ImageClip(const std::string& path): Clip(0, 120) {
     );
 
     m_metadata.name = path;
+
+    if (path.empty()) return;
+
+    initialize();
+}
+
+bool ImageClip::initialize() {
+    if (initialized) {
+        return true;
+    }
+
+    imageData = stbi_load(path.c_str(), &width, &height, NULL, 3);
+    if (imageData == NULL) {
+        std::println("could not load image {}", path);
+        return false;
+    }
+
+    initialized = true;
+
+    return true;
+}
+
+ImageClip::ImageClip(): ImageClip("") {
+    std::println("construct: {} ({})", path, sizeof(imageData));
 }
 
 void ImageClip::render(Frame* frame) {
+    initialize();
+
     int frameW = frame->width;
     int frameH = frame->height;
     int clipW  = width;
@@ -477,7 +520,9 @@ void ImageClip::render(Frame* frame) {
     drawImage(frame, imageData, { width, height }, position);
 }
 
-ImageClip::~ImageClip() {}
+ImageClip::~ImageClip() {
+    onDelete();
+}
 
 void ImageClip::onDelete() {
     if (imageData) {
@@ -653,12 +698,7 @@ float Video::timeForFrame(int frame) {
     return (float)frame / (float)getFPS();
 }
 
-AudioClip::AudioClip(const std::string& path): Clip(0, 7680) {
-    auto& state = State::get();
-    
-    if (ma_sound_init_from_file(&state.soundEngine, path.c_str(), 0, NULL, NULL, &sound) != MA_SUCCESS) {
-        std::println("could not init file");
-    }
+AudioClip::AudioClip(const std::string& path): Clip(0, 7680), path(path) {
     m_metadata.name = path;
     m_properties.addProperty(
         ClipProperty::number()
@@ -666,13 +706,37 @@ AudioClip::AudioClip(const std::string& path): Clip(0, 7680) {
             ->setName("Volume")
             ->setDefaultKeyframe(Vector1D{ .number = 100 }.toString())
     );
+
+    if (!path.empty()) {
+        initalize();
+    }
 }
+
+AudioClip::AudioClip(): AudioClip("") {}
 
 AudioClip::~AudioClip() {
     ma_sound_uninit(&sound);
 }
 
+bool AudioClip::initalize() {
+    if (initialized) {
+        return true;
+    }
+
+    auto& state = State::get();
+    
+    if (ma_sound_init_from_file(&state.soundEngine, path.c_str(), 0, NULL, NULL, &sound) != MA_SUCCESS) {
+        std::println("could not init file");
+        return false;
+    }
+
+    initialized = true;
+
+    return true;
+}
+
 void AudioClip::play() {
+    initalize();
     if (this->playing) return;
     auto volume = Vector1D::fromString(m_properties.getProperty("volume")->data).number;
     ma_sound_set_volume(&sound, (float)volume / 255);
@@ -683,22 +747,26 @@ void AudioClip::play() {
 }
 
 void AudioClip::stop() {
+    initalize();
     if (!this->playing) return;
     ma_sound_stop(&sound);
     this->playing = false;
 }
 
 void AudioClip::seekToSec(float seconds) {
+    initalize();
     ma_sound_seek_to_second(&sound, seconds);
 }
 
 float AudioClip::getCursor() {
+    initalize();
     float cursor = 0;
     ma_sound_get_cursor_in_seconds(&sound, &cursor);
     return cursor;
 }
 
 void AudioClip::setVolume(float volume) {
+    initalize();
     ma_sound_set_volume(&sound, volume);
 }
 
@@ -786,6 +854,10 @@ void AudioTrack::onStop() {
     }
 }
 
+CEREAL_REGISTER_DYNAMIC_INIT(AudioClip)
+CEREAL_REGISTER_DYNAMIC_INIT(ImageClip)
+CEREAL_REGISTER_DYNAMIC_INIT(VideoClip)
+
 int main() {
     if (mlt_factory_init("resources/mlt") == 0) {
         std::println("unable to init mlt factory");
@@ -797,12 +869,11 @@ int main() {
     int height = 1080;
     int fps = 60;
 
-    auto video = new Video(fps, { width, height });
-    auto vidTrack1 = new VideoTrack();
-    video->addTrack(vidTrack1);
-
-    auto vidTrack2 = new VideoTrack();
-    video->addTrack(vidTrack2);
+    auto video = std::make_shared<Video>();
+    video->framerate = 60;
+    video->resolution = {width, height};
+    video->addTrack(std::make_shared<VideoTrack>());
+    video->addTrack(std::make_shared<VideoTrack>());
 
     auto rectClip = std::make_shared<Circle>();
     rectClip->m_properties.setKeyframe("position", 120, Vector2D{ .x = 500, .y = 1000}.toString());
@@ -866,11 +937,8 @@ int main() {
 
     video->addClip(0, rectClip);
 
-    auto audTrack1 = new AudioTrack();
-    video->audioTracks.push_back(audTrack1);
-
-    auto audTrack2 = new AudioTrack();
-    video->audioTracks.push_back(audTrack2);
+    video->audioTracks.push_back(std::make_shared<AudioTrack>());
+    video->audioTracks.push_back(std::make_shared<AudioTrack>());
 
     auto& state = State::get();
     if (ma_engine_init(NULL, &state.soundEngine) != MA_SUCCESS) {

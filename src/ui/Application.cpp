@@ -1,6 +1,7 @@
 #include <Application.hpp>
 #include <print>
 
+#include <cereal/archives/portable_binary.hpp>
 #include <state.hpp>
 #include <widgets.hpp>
 
@@ -11,6 +12,8 @@
 #include <imguinotify/ImGuiNotify.hpp>
 
 #include <filesystem>
+
+#include <fstream>
 
 bool ButtonCenteredOnLine(const char* label, float alignment = 0.5f) {
     ImGuiStyle& style = ImGui::GetStyle();
@@ -39,15 +42,45 @@ void Application::draw() {
     ImGuiID exportId = ImGui::GetID("Export Menu");
 
     if (ImGui::BeginMainMenuBar()) {
+        if (ImGui::BeginMenu("File")) {
+            if (ImGui::MenuItem("Save As")) {
+                nfdchar_t *outPath = NULL;
+                nfdresult_t result = NFD_SaveDialog("pclp", NULL, &outPath);
+                    
+                if (result == NFD_OKAY) {
+                    std::ofstream file(outPath);
+                    cereal::PortableBinaryOutputArchive oarchive(file);
+                    oarchive(state.video);
+                }
+                else if (result == NFD_CANCEL) {}
+            }
+
+            if (ImGui::MenuItem("Open")) {
+                nfdchar_t *outPath = NULL;
+                nfdresult_t result = NFD_OpenDialog("pclp", NULL, &outPath);
+                    
+                if (result == NFD_OKAY) {
+                    std::ifstream file(outPath);
+                    std::shared_ptr<Video> video;
+                    cereal::PortableBinaryInputArchive iarchive(file);
+                    iarchive(video);
+                    std::println("{}", video->getTracks().size());
+
+                    state.video = video;
+                }
+                else if (result == NFD_CANCEL) {}
+            }
+
+            ImGui::EndMenu();
+        }
+
         if (ImGui::BeginMenu("Tracks")) {
             if (ImGui::MenuItem("New Video Track")) {
-                auto newTrack = new VideoTrack();
-                state.video->addTrack(newTrack);
+                state.video->addTrack(std::make_shared<VideoTrack>());
             }
 
             if (ImGui::MenuItem("New Audio Track")) {
-                auto newTrack = new AudioTrack();
-                state.video->audioTracks.push_back(newTrack);
+                state.video->audioTracks.push_back(std::make_shared<AudioTrack>());
             }
 
             ImGui::EndMenu();

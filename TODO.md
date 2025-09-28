@@ -8,7 +8,7 @@
 - [ ] rotations
 - [x] font selector in text
 - [x] fix MLT building
-- [ ] project saving
+- [X] project saving
 
 once all of these are done
 

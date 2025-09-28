@@ -7,3 +7,7 @@
 [submodule "libs/nativefiledialog"]
 	path = libs/nativefiledialog
 	url = https://github.com/mlabbe/nativefiledialog
+[submodule "libs/cereal"]
+	path = libs/cereal
+	url = https://github.com/USCiLab/cereal
+	branch = master

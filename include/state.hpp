@@ -11,7 +11,7 @@ public:
         return instance;
     }
 
-    Video* video;
+    std::shared_ptr<Video> video;
     std::shared_ptr<TextRenderer> textRenderer;
 
     std::shared_ptr<Clip> draggingClip = nullptr;
