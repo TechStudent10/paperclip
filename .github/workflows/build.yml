@@ -27,13 +27,13 @@ jobs:
       - name: Deps (win)
         if: runner.os == 'Windows'
         run: |
-          choco install cmake ninja ffmpeg clang -y
+          choco install cmake ninja ffmpeg -y
       
       - name: Deps (mac)
         if: runner.os == 'macOS'
         run: |
           brew update
-          brew install cmake ninja ffmpeg clang
+          brew install cmake ninja ffmpeg
 
       - name: Deps (lin)
         if: runner.os == 'Linux'
@@ -44,7 +44,8 @@ jobs:
           libaudio-dev libjack-dev libsndio-dev libx11-dev libxext-dev \
           libxrandr-dev libxcursor-dev libxfixes-dev libxi-dev libxss-dev libxtst-dev \
           libxkbcommon-dev libdrm-dev libgbm-dev libgl1-mesa-dev libgles2-mesa-dev \
-          libegl1-mesa-dev libdbus-1-dev libibus-1.0-dev libudev-dev clang
+          libegl1-mesa-dev libdbus-1-dev libibus-1.0-dev libudev-dev clang libavutil-dev \
+          libavcodec-dev libavformat-dev libswscale-dev libswresample-dev
 
       - name: Configure
         run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
