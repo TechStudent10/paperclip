@@ -20,7 +20,7 @@
 
 #include <cereal/types/polymorphic.hpp>
 
-static constexpr float PI_DIV_180 = std::numbers::pi / 180.f;
+static constexpr double PI_DIV_180 = std::numbers::pi / 180.f;
 
 void ClipProperty::drawProperty() {
     auto& state = State::get();
@@ -327,7 +327,7 @@ void Text::render(Frame* frame) {
     state.textRenderer->drawText(frame, text, font, pos, color, fontSize);
 }
 
-void drawImage(Frame* frame, unsigned char* data, Vector2D size, Vector2D position, float rotation = 0) {
+void drawImage(Frame* frame, unsigned char* data, Vector2D size, Vector2D position, double rotation = 0) {
     // TODO: account for scaling
 
     // x'' = (x' * cos(θ)) - (y' * sin(θ))
@@ -337,43 +337,68 @@ void drawImage(Frame* frame, unsigned char* data, Vector2D size, Vector2D positi
     // x' = x - center x
     // y' = y - center y
 
-    // rotation = rotation % 360.f;
-    float radians = rotation * PI_DIV_180;
-    // float radians = 1.5707961;
-    // float radians = 0;
-    float centerX = (float)position.x + (float)size.x / 2.f;
-    float centerY = (float)position.y + (float)size.y / 2.f;
+    double radians = rotation * PI_DIV_180;
 
-    float cosR = cos(radians);
-    float sinR = sin(radians);
+    double cosR = cosf(radians);
+    double sinR = sinf(radians);
+    double centerX = (double)size.x / 2.f;
+    double centerY = (double)size.y / 2.f;
 
-    for (int dstY = 0; dstY < size.y + 10; dstY++) {
-        for (int dstX = 0; dstX < size.x + 10; dstX++) {
+    auto forwardMappedPos = [cosR, sinR, centerX, centerY](int x, int y) {
+        Vector2D result;
+
+        double xPrime = x - centerX;
+        double yPrime = y - centerY;
+        result.x = static_cast<int>(std::round((xPrime * cosR) - (yPrime * sinR) + centerX));
+        result.y = static_cast<int>(std::round((xPrime * sinR) + (yPrime * cosR) + centerY));
+
+        return result;
+    };
+
+    auto inverseMappedPos = [cosR, sinR, centerX, centerY](int x, int y) {
+        Vector2D result;
+
+        double xPrime = x - centerX;
+        double yPrime = y - centerY;
+        result.x = static_cast<int>(std::round((xPrime * cosR) + (yPrime * sinR) + centerX));
+        result.y = static_cast<int>(std::round(-(xPrime * sinR) + (yPrime * cosR) + centerY));
+
+        return result;
+    };
+
+    // precompute rotated positions for the corners
+    // 0, 0
+    auto topLeft = forwardMappedPos(0, 0);
+
+    // width, 0
+    auto topRight = forwardMappedPos(size.x, 0);
+
+    // 0, height
+    auto bottomLeft = forwardMappedPos(0, size.y);
+
+    // width, height
+    auto bottomRight = forwardMappedPos(size.x, size.y);
+
+    int minX = std::min({ topLeft.x, topRight.x, bottomLeft.x, bottomRight.x });
+    int minY = std::min({ topLeft.y, topRight.y, bottomLeft.y, bottomRight.y });
+
+    int maxX = std::max({ topLeft.x, topRight.x, bottomLeft.x, bottomRight.x });
+    int maxY = std::max({ topLeft.y, topRight.y, bottomLeft.y, bottomRight.y });
+
+    for (int dstY = minY; dstY < maxY; dstY++) {
+        for (int dstX = minX; dstX < maxX; dstX++) {
             int frameX = dstX + position.x;
-            if (frameX >= frame->width || frameX < 0) continue;
-
             int frameY = dstY + position.y;
-            if (frameY >= frame->height || frameY < 0) continue;
 
-            int srcX = dstX;
-            int srcY = dstY;
-
-            if (rotation != 0) {
-                float xPrime = dstX - centerX;
-                float yPrime = dstY - centerY;
-                // std::println("b: {}, {}, {}", yPrime, _dstY, size.y);
-                // inverse rotation
-                float rotatedSrcX = (xPrime * cos(radians)) + (yPrime * sin(radians)) + centerX / 4.f;
-                float rotatedSrcY = -(xPrime * sin(radians)) + (yPrime * cos(radians)) + centerY / 4.f;
-
-                srcX = static_cast<int>(std::round(rotatedSrcX));
-                srcY = static_cast<int>(std::round(rotatedSrcY));
-
-                if (srcX >= size.x || srcX < 0) continue; 
-                if (srcY >= size.y || srcY < 0) continue;
-            }
-
-            int srcLoc = (srcY * size.x + srcX) * 3;
+            auto res = inverseMappedPos(dstX, dstY);
+            
+            if (res.x < 0 || res.x >= size.x) continue;
+            if (res.y < 0 || res.y >= size.y) continue;
+            
+            if (frameX < 0 || frameX >= frame->width) continue;
+            if (frameY < 0 || frameY >= frame->height) continue;
+            
+            int srcLoc = (res.y * size.x + res.x) * 3;
             int dstLoc = (frameY * frame->width + frameX) * 4;
             uint8_t* dst = &frame->imageData[dstLoc];
             dst[0] = data[srcLoc];

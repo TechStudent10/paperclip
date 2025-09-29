@@ -5,10 +5,11 @@
     - multithreading
 - [ ] notifications
 - [x] optimize image viewing
-- [ ] rotations
+- [x] rotations
 - [x] font selector in text
 - [x] fix MLT building
-- [X] project saving
+- [x] project saving
+- [ ] scaling
 
 once all of these are done
 
