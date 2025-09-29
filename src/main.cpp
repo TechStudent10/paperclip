@@ -20,6 +20,8 @@
 
 #include <cereal/types/polymorphic.hpp>
 
+static constexpr float PI_DIV_180 = std::numbers::pi / 180.f;
+
 void ClipProperty::drawProperty() {
     auto& state = State::get();
     auto setData = [&](std::string data) {
@@ -325,18 +327,54 @@ void Text::render(Frame* frame) {
     state.textRenderer->drawText(frame, text, font, pos, color, fontSize);
 }
 
-void drawImage(Frame* frame, unsigned char* data, Vector2D size, Vector2D position) {
-    // TODO: account for scaling and rotation
+void drawImage(Frame* frame, unsigned char* data, Vector2D size, Vector2D position, float rotation = 0) {
+    // TODO: account for scaling
 
-    for (int srcY = 0; srcY < size.y; srcY++) {
-        int dstY = srcY + position.y;
-        if (dstY >= frame->height || dstY < 0) continue;
-        for (int srcX = 0; srcX < size.x; srcX++) {
-            int dstX = srcX + position.x;
-            if (dstX >= frame->width || dstX < 0) continue;
+    // x'' = (x' * cos(θ)) - (y' * sin(θ))
+    // y'' = (x' * sin(θ)) + (y' * cos(θ))
+    // x'' = rotated x
+    // y'' = rotated y
+    // x' = x - center x
+    // y' = y - center y
+
+    // rotation = rotation % 360.f;
+    float radians = rotation * PI_DIV_180;
+    // float radians = 1.5707961;
+    // float radians = 0;
+    float centerX = (float)position.x + (float)size.x / 2.f;
+    float centerY = (float)position.y + (float)size.y / 2.f;
+
+    float cosR = cos(radians);
+    float sinR = sin(radians);
+
+    for (int dstY = 0; dstY < size.y + 10; dstY++) {
+        for (int dstX = 0; dstX < size.x + 10; dstX++) {
+            int frameX = dstX + position.x;
+            if (frameX >= frame->width || frameX < 0) continue;
+
+            int frameY = dstY + position.y;
+            if (frameY >= frame->height || frameY < 0) continue;
+
+            int srcX = dstX;
+            int srcY = dstY;
+
+            if (rotation != 0) {
+                float xPrime = dstX - centerX;
+                float yPrime = dstY - centerY;
+                // std::println("b: {}, {}, {}", yPrime, _dstY, size.y);
+                // inverse rotation
+                float rotatedSrcX = (xPrime * cos(radians)) + (yPrime * sin(radians)) + centerX / 4.f;
+                float rotatedSrcY = -(xPrime * sin(radians)) + (yPrime * cos(radians)) + centerY / 4.f;
+
+                srcX = static_cast<int>(std::round(rotatedSrcX));
+                srcY = static_cast<int>(std::round(rotatedSrcY));
+
+                if (srcX >= size.x || srcX < 0) continue; 
+                if (srcY >= size.y || srcY < 0) continue;
+            }
 
             int srcLoc = (srcY * size.x + srcX) * 3;
-            int dstLoc = (dstY * frame->width + dstX) * 4;
+            int dstLoc = (frameY * frame->width + frameX) * 4;
             uint8_t* dst = &frame->imageData[dstLoc];
             dst[0] = data[srcLoc];
             dst[1] = data[srcLoc + 1];
@@ -475,6 +513,13 @@ ImageClip::ImageClip(const std::string& path): Clip(0, 120), path(path) {
             ->setDefaultKeyframe(Vector1D{ .number = 100 }.toString())   
     );
 
+    m_properties.addProperty(
+        ClipProperty::number()
+            ->setId("rotation")
+            ->setName("Rotation (deg)")
+            ->setDefaultKeyframe(Vector1D{ .number = 0 }.toString())
+    );
+
     m_metadata.name = path;
 
     if (path.empty()) return;
@@ -512,12 +557,13 @@ void ImageClip::render(Frame* frame) {
 
     float scaleX = (float)Vector1D::fromString(m_properties.getProperty("scale-x")->data).number / 100.f;
     float scaleY = (float)Vector1D::fromString(m_properties.getProperty("scale-y")->data).number / 100.f;
+    int rotation = Vector1D::fromString(m_properties.getProperty("rotation")->data).number;
     if (scaleX <= 0 || scaleY <= 0) {
         return;
     }
     auto position = Vector2D::fromString(m_properties.getProperty("position")->data);
 
-    drawImage(frame, imageData, { width, height }, position);
+    drawImage(frame, imageData, { width, height }, position, rotation);
 }
 
 ImageClip::~ImageClip() {
