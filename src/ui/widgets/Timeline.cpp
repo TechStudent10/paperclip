@@ -30,8 +30,8 @@ TimelineTrack::TimelineTrack(int _id, const std::string& _name, float _height)
     : id(_id), name(_name), muted(false), locked(false), height(_height) {
 }
 
-VideoTimeline::VideoTimeline() 
-    : playheadTime(0.0f), zoomFactor(50.0f), scrollX(0.0f), 
+VideoTimeline::VideoTimeline()
+    : playheadTime(0.0f), zoomFactor(50.0f), scrollX(0.0f),
       timelineLength(300.0f), pixelsPerSecond(50.0f),
       isDragging(false), isScrubbing(false), resizeMode(RESIZE_NONE),
       isMovingBetweenTracks(false), originalTrackId(0) {
@@ -41,14 +41,14 @@ void VideoTimeline::setPlayheadTime(float time) {
     playheadTime = std::max(0.0f, std::min(timelineLength, time));
 
     float viewport_width = canvasSize.x - TRACK_HEADER_WIDTH;
-    
+
     if (viewport_width <= 0) {
         return; // don't auto-scroll if no space
     }
-    
+
     float playhead_pixel_pos = playheadTime * pixelsPerSecond;
     float target_scroll = playhead_pixel_pos - (viewport_width * 0.5f);
-    
+
     if (target_scroll < 0) {
         scrollX = 0;
     } else {
@@ -77,10 +77,10 @@ void VideoTimeline::setZoom(float zoom) {
 void VideoTimeline::render() {
     ImGuiWindow* window = ImGui::GetCurrentWindow();
     if (window->SkipItems) return;
-    
+
     ImGuiIO& io = ImGui::GetIO();
     ImDrawList* drawList = ImGui::GetWindowDrawList();
-    
+
     auto& state = State::get();
 
     canvasPos = ImVec2(ImGui::GetCursorScreenPos().x, std::max(ImGui::GetCursorScreenPos().y + RULER_HEIGHT + TRACK_HEADER_WIDTH + (60.f * std::min(trackScrollY, -2.2f)), 0.f));
@@ -90,13 +90,13 @@ void VideoTimeline::render() {
     ImGui::InvisibleButton("timeline", canvasSize);
     bool isHovered = ImGui::IsItemHovered();
     bool isActive = ImGui::IsItemActive();
-    
+
     if (isHovered) {
         if (io.MouseWheel != 0.0f && !io.KeyShift) {
             if (io.KeyCtrl) {
                 float old_zoom = zoomFactor;
                 setZoom(zoomFactor * (1.0f + io.MouseWheel * 0.1f));
-                
+
                 float mouse_time = (io.MousePos.x - canvasPos.x - TRACK_HEADER_WIDTH + scrollX) / old_zoom;
                 scrollX = mouse_time * zoomFactor - (io.MousePos.x - canvasPos.x - TRACK_HEADER_WIDTH);
             } else {
@@ -104,13 +104,13 @@ void VideoTimeline::render() {
             }
         }
     }
-    
+
     float max_scroll = std::max(0.0f, timelineLength * pixelsPerSecond - (canvasSize.x - TRACK_HEADER_WIDTH));
     scrollX = std::max(0.0f, std::min(scrollX, max_scroll));
-    
+
     drawList->AddRectFilled(canvasPos, ImVec2(canvasPos.x + canvasSize.x, canvasPos.y + canvasSize.y), IM_COL32(45, 45, 48, 255));
-    
-    
+
+
     // ImGui::BeginChild("tracks", ImVec2(0, 0), true, ImGuiWindowFlags_HorizontalScrollbar);
     for (size_t i = state.video->getTracks().size() - 1; i >= 0; i--) {
         if (i > state.video->getTracks().size() - 1) {
@@ -127,10 +127,10 @@ void VideoTimeline::render() {
         drawTrack(drawList, canvasPos, canvasSize, i, state.video->audioTracks.size(), TrackType::Audio);
     }
     // ImGui::EndChild();
-    
+
     drawRuler(drawList, canvasPos, canvasSize);
     drawPlayhead(drawList, canvasPos, canvasSize);
-    
+
     if (isPlacingClip) {
         drawList->AddLine({ hoverPos.x, 0 }, { hoverPos.x, 1000 },  IM_COL32(255, 255, 255, 255) );
     }
@@ -141,31 +141,31 @@ void VideoTimeline::render() {
 void VideoTimeline::drawRuler(ImDrawList* drawList, const ImVec2& canvasPos, const ImVec2& canvasSize) {
     ImVec2 ruler_pos = ImVec2(canvasPos.x + TRACK_HEADER_WIDTH, canvasPos.y - (RULER_HEIGHT + TRACK_HEADER_WIDTH + (60.f * std::min(trackScrollY, -2.2f))));
     ImVec2 ruler_size = ImVec2(canvasSize.x - TRACK_HEADER_WIDTH, RULER_HEIGHT);
-    
+
     drawList->AddRectFilled(ruler_pos, ImVec2(ruler_pos.x + ruler_size.x, ruler_pos.y + ruler_size.y), IM_COL32(60, 60, 63, 255));
-    
+
     float start_time = scrollX / pixelsPerSecond;
     float end_time = (scrollX + ruler_size.x) / pixelsPerSecond;
-    
+
     float step = 1.0f;
     if (pixelsPerSecond > 100) step = 0.1f;
     else if (pixelsPerSecond < 20) step = 5.0f;
-    
+
     for (float time = std::floor(start_time / step) * step; time <= end_time; time += step) {
         float x = ruler_pos.x + (time * pixelsPerSecond - scrollX);
         if (x >= ruler_pos.x && x <= ruler_pos.x + ruler_size.x) {
             bool major_tick = std::fmod(time, step * 5) < 0.001f;
             float tick_height = major_tick ? ruler_size.y * 0.8f : ruler_size.y * 0.4f;
-            
+
             drawList->AddLine(ImVec2(x, ruler_pos.y + ruler_size.y - tick_height), ImVec2(x, ruler_pos.y + ruler_size.y), IM_COL32(200, 200, 200, 255));
-            
+
             if (major_tick) {
                 char time_str[32];
                 int minutes = (int)time / 60;
                 int seconds = (int)time % 60;
                 int frames = (int)((time - (int)time) * State::get().video->getFPS());
                 snprintf(time_str, sizeof(time_str), "%02d:%02d:%02d", minutes, seconds, frames);
-                
+
                 drawList->AddText(ImVec2(x + 3, ruler_pos.y + 5), IM_COL32(200, 200, 200, 255), time_str);
             }
         }
@@ -178,13 +178,13 @@ void VideoTimeline::drawTrack(ImDrawList* drawList, const ImVec2& canvasPos, con
 
     ImVec2 header_pos = ImVec2(canvasPos.x, track_y);
     ImVec2 header_size = ImVec2(TRACK_HEADER_WIDTH, 60.0f);
-    
+
     ImVec2 content_pos = ImVec2(canvasPos.x + TRACK_HEADER_WIDTH, track_y);
     ImVec2 content_size = ImVec2(canvasSize.x - TRACK_HEADER_WIDTH, 60.0f);
 
     drawList->AddRectFilled(header_pos, ImVec2(header_pos.x + header_size.x, header_pos.y + header_size.y), IM_COL32(55, 55, 58, 255));
     drawList->AddRect(header_pos, ImVec2(header_pos.x + header_size.x, header_pos.y + header_size.y), IM_COL32(70, 70, 73, 255));
-    
+
     drawList->AddText(ImVec2(header_pos.x + 10, header_pos.y + 10), IM_COL32(200, 200, 200, 255), std::format("{} {}", type == TrackType::Audio ? "Audio" : "Video", trackIndex + 1).c_str());
 
     ImU32 track_bg_color = (trackIndex % 2 == 0) ? IM_COL32(50, 50, 53, 255) : IM_COL32(45, 45, 48, 255);
@@ -206,7 +206,7 @@ void VideoTimeline::drawTrack(ImDrawList* drawList, const ImVec2& canvasPos, con
             };
             break;
     }
-    
+
     drawList->AddLine(ImVec2(content_pos.x, content_pos.y + content_size.y), ImVec2(content_pos.x + content_size.x, content_pos.y + content_size.y), IM_COL32(70, 70, 73, 255));
 
     ImGuiIO& io = ImGui::GetIO();
@@ -228,26 +228,26 @@ void VideoTimeline::drawTrack(ImDrawList* drawList, const ImVec2& canvasPos, con
 void VideoTimeline::drawClip(ImDrawList* drawList, const TimelineClip& clip, const ImVec2& trackPos, const ImVec2& trackSize, TrackType type) {
     float clip_x = trackPos.x + (clip.startTime * pixelsPerSecond - scrollX);
     float clip_width = clip.duration * pixelsPerSecond;
-    
+
     float clip_end_x = clip_x + clip_width;
     float track_end_x = trackPos.x + trackSize.x;
-    
+
     if (clip_end_x < trackPos.x || clip_x > track_end_x) {
         return;
     }
-    
+
     float visible_start_x = std::max(clip_x, trackPos.x);
     float visible_end_x = std::min(clip_end_x, track_end_x);
     float visible_width = visible_end_x - visible_start_x;
-    
+
     ImVec2 clip_pos = ImVec2(visible_start_x, trackPos.y + 5);
     ImVec2 clip_size = ImVec2(visible_width, trackSize.y - 10);
-    
+
     ImU32 clip_color = type == TrackType::Video ? IM_COL32(150, 200, 255, 255) : IM_COL32(100, 150, 100, 255);
     drawList->AddRectFilled(clip_pos, ImVec2(clip_pos.x + clip_size.x, clip_pos.y + clip_size.y), clip_color);
-    
+
     drawList->AddRect(clip_pos, ImVec2(clip_pos.x + clip_size.x, clip_pos.y + clip_size.y), IM_COL32(255, 255, 255, 100), 0.0f, 0, 1.0f);
-    
+
     ImGuiIO& io = ImGui::GetIO();
     ImVec2 mousePos = io.MousePos;
 
@@ -269,7 +269,7 @@ void VideoTimeline::drawClip(ImDrawList* drawList, const TimelineClip& clip, con
             resizeOriginalDuration = clip.clip->duration;
         }
     }
-    
+
     if (clip_end_x <= track_end_x + 1) { // smol tolerance x2
         ImVec2 right_handle_pos = ImVec2(clip_pos.x + clip_size.x - RESIZE_HANDLE_WIDTH, clip_pos.y);
         drawList->AddRectFilled(
@@ -317,28 +317,28 @@ VideoTimeline::ResizeMode VideoTimeline::GetResizeMode(const ImVec2& mouse_pos, 
     auto state = State::get();
     float clip_x = track_pos.x + ((float)clip->startFrame / state.video->getFPS() * pixelsPerSecond - scrollX);
     float clip_width = (float)clip->duration / state.video->getFPS() * pixelsPerSecond;
-    
+
     ImVec2 clip_pos = ImVec2(std::max(clip_x, track_pos.x), track_pos.y + 5);
     ImVec2 clip_size = ImVec2(std::min(clip_width, track_pos.x + track_size.x - clip_pos.x), track_size.y - 10);
-    
+
     if (mouse_pos.x >= clip_pos.x && mouse_pos.x <= clip_pos.x + RESIZE_HANDLE_WIDTH) {
         return RESIZE_LEFT;
     }
-    
-    if (mouse_pos.x >= clip_pos.x + clip_size.x - RESIZE_HANDLE_WIDTH && 
+
+    if (mouse_pos.x >= clip_pos.x + clip_size.x - RESIZE_HANDLE_WIDTH &&
         mouse_pos.x <= clip_pos.x + clip_size.x) {
         return RESIZE_RIGHT;
     }
-    
+
     return RESIZE_NONE;
 }
 
 void VideoTimeline::drawPlayhead(ImDrawList* drawList, const ImVec2& canvasPos, const ImVec2& canvasSize) {
     float playhead_x = canvasPos.x + TRACK_HEADER_WIDTH + (playheadTime * pixelsPerSecond - scrollX);
-    
+
     if (playhead_x >= canvasPos.x + TRACK_HEADER_WIDTH && playhead_x <= canvasPos.x + canvasSize.x) {
         drawList->AddLine(ImVec2(playhead_x, canvasPos.y + RULER_HEIGHT - (RULER_HEIGHT + TRACK_HEADER_WIDTH + (60.f * std::min(trackScrollY, -2.2f)))), ImVec2(playhead_x, canvasPos.y + canvasSize.y - (RULER_HEIGHT + TRACK_HEADER_WIDTH + (60.f * std::min(trackScrollY, -2.2f)))), IM_COL32(255, 100, 100, 255), 2.0f);
-        
+
         ImVec2 handle_pos = ImVec2(playhead_x - 6, canvasPos.y + RULER_HEIGHT - 10);
         ImVec2 handle_size = ImVec2(12, 10);
         drawList->AddTriangleFilled(ImVec2(handle_pos.x, handle_pos.y - (RULER_HEIGHT + TRACK_HEADER_WIDTH + (60.f * std::min(trackScrollY, -2.2f)))), ImVec2(handle_pos.x + handle_size.x, handle_pos.y - (RULER_HEIGHT + TRACK_HEADER_WIDTH + (60.f * std::min(trackScrollY, -2.2f)))), ImVec2(handle_pos.x + handle_size.x * 0.5f, handle_pos.y + handle_size.y - (RULER_HEIGHT + TRACK_HEADER_WIDTH + (60.f * std::min(trackScrollY, -2.2f)))), IM_COL32(255, 100, 100, 255));
@@ -356,7 +356,7 @@ void VideoTimeline::handleInteractions(const ImVec2& canvasPos, const ImVec2& ca
             if (io.KeyCtrl) {
                 float old_zoom = zoomFactor;
                 setZoom(zoomFactor * (1.0f + io.MouseWheel * 0.1f));
-                
+
                 float mouse_time = (io.MousePos.x - canvasPos.x - TRACK_HEADER_WIDTH + scrollX) / old_zoom;
                 scrollX = mouse_time * zoomFactor - (io.MousePos.x - canvasPos.x - TRACK_HEADER_WIDTH);
                 io.MouseWheel = 0.f;
@@ -379,10 +379,10 @@ void VideoTimeline::handleInteractions(const ImVec2& canvasPos, const ImVec2& ca
     if (isHovered && ImGui::IsMouseClicked(0)) {
         ImVec2 mouse_pos = io.MousePos;
         dragStartPos = mouse_pos;
-        
+
         // playhead
         float playhead_x = canvasPos.x + TRACK_HEADER_WIDTH + (playheadTime * pixelsPerSecond - scrollX);
-        if (mouse_pos.y <= canvasPos.y - (TRACK_HEADER_WIDTH + (60.f * std::min(trackScrollY, -2.2f))) && 
+        if (mouse_pos.y <= canvasPos.y - (TRACK_HEADER_WIDTH + (60.f * std::min(trackScrollY, -2.2f))) &&
             std::abs(mouse_pos.x - playhead_x) < 10) {
             isScrubbing = true;
         }
@@ -429,7 +429,7 @@ void VideoTimeline::handleInteractions(const ImVec2& canvasPos, const ImVec2& ca
             float newStart = std::max(0.0f, mouse_time);
             float maxStart = (float)(resizeOriginalStart + resizeOriginalDuration) / state.video->getFPS() - 0.1f; // Min 0.1s duration
             newStart = std::min(newStart, maxStart);
-            
+
             int newStartFrame = state.video->frameForTime(newStart);
             if (selectedTrackType == TrackType::Video) {
                 for (auto clip : state.video->getTracks()[resizingTrackIdx]->getClips()) {
@@ -482,7 +482,7 @@ void VideoTimeline::handleInteractions(const ImVec2& canvasPos, const ImVec2& ca
             resizingClip->duration = newEndFrame - resizingClip->startFrame;
         }
     }
-    
+
     if (isDragging && ImGui::IsMouseDragging(0)) {
         if (state.draggingClip) {
             ImVec2 mouse_pos = io.MousePos;
@@ -582,7 +582,7 @@ void VideoTimeline::handleInteractions(const ImVec2& canvasPos, const ImVec2& ca
             }
         }
     }
-    
+
     if (isScrubbing && ImGui::IsMouseDragging(0)) {
         float new_time = (io.MousePos.x - canvasPos.x - TRACK_HEADER_WIDTH + scrollX) / pixelsPerSecond;
         setPlayheadTime(new_time);
@@ -608,13 +608,13 @@ void VideoTimeline::handleInteractions(const ImVec2& canvasPos, const ImVec2& ca
 void VideoTimeline::scrollToTime(float time, bool center) {
     float target_pixel_pos = time * pixelsPerSecond;
     float viewport_width = canvasSize.x - TRACK_HEADER_WIDTH;
-    
+
     if (center) {
         scrollX = target_pixel_pos - viewport_width * 0.5f;
     } else {
         scrollX = target_pixel_pos;
     }
-    
+
     // Clamp scroll
     float max_scroll = std::max(0.0f, timelineLength * pixelsPerSecond - viewport_width);
     scrollX = std::max(0.0f, std::min(scrollX, max_scroll));

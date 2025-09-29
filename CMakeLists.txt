@@ -17,41 +17,58 @@ endif()
 
 project(video-thing VERSION 1.0.0)
 
-set(IMGUI_DIR ${CMAKE_SOURCE_DIR}/libs/imgui)
-
-if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
-    set(NFD_FILE ${CMAKE_SOURCE_DIR}/libs/nativefiledialog/src/nfd_win.cpp)
-elseif (CMAKE_SYSTEM_NAME STREQUAL "Darwin")
-    set(NFD_FILE ${CMAKE_SOURCE_DIR}/libs/nativefiledialog/src/nfd_cocoa.m)
-else()
-    message(compiling nfd for linux)
-    set(NFD_FILE ${CMAKE_SOURCE_DIR}/libs/nativefiledialog/src/nfd_zenity.c)
-endif()
-
-file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS
-    src/*.cpp
-    ${NFD_FILE}
-    ${CMAKE_SOURCE_DIR}/libs/nativefiledialog/src/nfd_common.c
-    ${CMAKE_SOURCE_DIR}/libs/libyuv/source/*.cc
-    ${IMGUI_DIR}/imgui.cpp
-    ${IMGUI_DIR}/imgui_draw.cpp
-    ${IMGUI_DIR}/imgui_demo.cpp
-    ${IMGUI_DIR}/imgui_tables.cpp
-    ${IMGUI_DIR}/imgui_widgets.cpp
-    ${IMGUI_DIR}/backends/imgui_impl_sdl3.cpp
-    ${IMGUI_DIR}/backends/imgui_impl_opengl3.cpp
-    ${IMGUI_DIR}/misc/cpp/imgui_stdlib.cpp
-)
-# include_directories()
+file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.cpp)
 add_executable(${PROJECT_NAME} ${SOURCES})
+target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 include(cmake/CPM.cmake)
+
+CPMAddPackage(
+    NAME imgui
+    GITHUB_REPOSITORY ocornut/imgui
+    GIT_TAG 4d216d4
+    DOWNLOAD_ONLY ON
+)
+add_library(imgui STATIC
+    ${imgui_SOURCE_DIR}/imgui.cpp
+    ${imgui_SOURCE_DIR}/imgui_draw.cpp
+    ${imgui_SOURCE_DIR}/imgui_demo.cpp
+    ${imgui_SOURCE_DIR}/imgui_tables.cpp
+    ${imgui_SOURCE_DIR}/imgui_widgets.cpp
+    ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp
+    ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
+    ${imgui_SOURCE_DIR}/misc/cpp/imgui_stdlib.cpp
+)
+target_include_directories(imgui PUBLIC ${imgui_SOURCE_DIR} ${imgui_SOURCE_DIR}/backends ${imgui_SOURCE_DIR}/misc/cpp)
+
+CPMAddPackage("gh:stephenberry/glaze@5.6.1")
+CPMAddPackage("gh:libsdl-org/SDL#release-3.2.20")
+CPMAddPackage("gh:USCiLab/cereal#a56bad8")
+CPMAddPackage("gh:mackron/miniaudio#0.11.23")
+CPMAddPackage("gh:btzy/nativefiledialog-extended#6db343a")
+CPMAddPackage("gh:lemenkov/libyuv#5b22f31")
+CPMAddPackage("gh:nothings/stb#fede005")
+
+if (WIN32)
+    file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/out/lib/mlt)
+
+    CPMAddPackage("gh:win-iconv/win-iconv#82f00fb")
+    add_library(Iconv STATIC ${win-iconv_SOURCE_DIR}/win_iconv.c)
+    target_include_directories(Iconv PUBLIC ${win-iconv_SOURCE_DIR})
+    set(Iconv_LIBRARY Iconv)
+    set(Iconv_INCLUDE_DIR ${win-iconv_SOURCE_DIR})
+
+    CPMAddPackage("gh:dlfcn-win32/dlfcn-win32#8bfddb5")
+    # add alias
+    add_library(dlfcn-win32::dl ALIAS dlfcn)
+endif ()
 
 CPMAddPackage(
     NAME mlt
     GITHUB_REPOSITORY mltframework/mlt
     GIT_TAG v7.32.0
     OPTIONS
+        "MLT_DATA_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/out/lib/mlt"
         "ENABLE_QT OFF"
         "ENABLE_QT6 OFF"
         "ENABLE_QT5 OFF"
@@ -60,39 +77,32 @@ CPMAddPackage(
         "ENABLE_MLTPLUSPLUS ON"
         "RELOCATABLE OFF"
 )
-CPMAddPackage(
-    NAME glad
-    GITHUB_REPOSITORY Dav1dde/glad
-    GIT_TAG v0.1.36 # latest stable
-)
-CPMAddPackage("gh:stephenberry/glaze@5.6.1")
-CPMAddPackage("gh:libsdl-org/SDL#release-3.2.20")
-CPMAddPackage("gh:mackron/miniaudio#0.11.23")
 
+find_package(OpenGL REQUIRED)
+# find_package(OpenCV REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(FFMPEG REQUIRED IMPORTED_TARGET
     libavutil libavcodec libavformat libswscale libswresample
 )
 
-target_include_directories(${PROJECT_NAME} PRIVATE
-    include
-    libs/
-    libs/imgui
-    libs/libyuv/include
-    libs/nativefiledialog/src/include
-    libs/cereal/include
-)
-
 target_link_libraries(${PROJECT_NAME} PRIVATE
     PkgConfig::FFMPEG
+    OpenGL::GL
+    # ${OpenCV_LIBS}
+    yuv
+    cereal
+    imgui
+    nfd
     SDL3::SDL3
-    glad
     glaze::glaze
     miniaudio
-    ${OpenCV_LIBS}
     mlt
     mlt++
 )
+
+add_dependencies(${PROJECT_NAME} mltavformat)
+
+target_include_directories(${PROJECT_NAME} PRIVATE ${stb_SOURCE_DIR} ${libyuv_SOURCE_DIR}/include)
 
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory

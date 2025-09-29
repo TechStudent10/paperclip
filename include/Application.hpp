@@ -2,18 +2,16 @@
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
-#include <glad/glad.h>
+#include <SDL3/SDL_opengl.h>
 
 #include <imgui.h>
-#include <imgui_internal.h>
-#include <imgui/backends/imgui_impl_sdl3.h>
-#include <imgui/backends/imgui_impl_opengl3.h>
 
 #include <thread>
 #include <vector>
 
 #include <video.hpp>
 #include <widgets.hpp>
+
 
 class Application {
 public:

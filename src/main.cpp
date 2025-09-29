@@ -11,14 +11,16 @@
 #include <miniaudio.h>
 
 #define STB_IMAGE_IMPLEMENTATION
-#include <stb/stb_image.h>
+#include <stb_image.h>
 
 #include <libyuv/convert.h>
 #include <libyuv/convert_argb.h>
 
-#include <imgui/misc/cpp/imgui_stdlib.h>
+#include <misc/cpp/imgui_stdlib.h>
 
 #include <cereal/types/polymorphic.hpp>
+
+#include <nfd.h>
 
 static constexpr double PI_DIV_180 = std::numbers::pi / 180.f;
 
@@ -460,14 +462,18 @@ VideoClip::~VideoClip() {
 }
 
 bool VideoClip::decodeFrame(int frameNumber) {
+    if (!producer) {
+        return false;
+    }
+
     mlt_producer_seek(producer, frameNumber);
-    
+
     mlt_frame frame = nullptr;
     if (mlt_service_get_frame(MLT_PRODUCER_SERVICE(producer), &frame, 0) != 0) {
         std::println("Failed to get frame");
         return false;
     }
-    
+
     if (!frame) {
         std::println("Frame is null");
         return false;
@@ -934,7 +940,7 @@ int main() {
         std::println("unable to init mlt factory");
     }
     std::cout << "hello!" << std::endl;
-
+    NFD_Init();
 
     int width = 1920;
     int height = 1080;

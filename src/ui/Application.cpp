@@ -5,11 +5,11 @@
 #include <state.hpp>
 #include <widgets.hpp>
 
-#include <imgui/misc/cpp/imgui_stdlib.h>
+#include <imgui_impl_opengl3.h>
+#include <imgui_impl_sdl3.h>
+#include <misc/cpp/imgui_stdlib.h>
 #include <nfd.h>
 #include <miniaudio.h>
-
-#include <imguinotify/ImGuiNotify.hpp>
 
 #include <filesystem>
 
@@ -36,6 +36,12 @@ void TextCentered(std::string text) {
     ImGui::Text("%s", text.c_str());
 }
 
+constexpr nfdnfilteritem_t PROJECT_FILES_FILTER[] = { {"Project Files", "pclp"} };
+constexpr nfdnfilteritem_t MP4_FILES_FILTER[] = { {"MP4 Files", "mp4"} };
+constexpr nfdnfilteritem_t VIDEO_FILES_FILTER [] = { {"Video Files", "mp4,mov"} };
+constexpr nfdnfilteritem_t IMAGE_FILES_FILTER [] = { {"Image Files", "png,jpg,jpeg"} };
+constexpr nfdnfilteritem_t AUDIO_FILES_FILTER [] = { {"Audio Files", "mp3"} };
+
 void Application::draw() {
     auto& state = State::get();
 
@@ -45,8 +51,14 @@ void Application::draw() {
         if (ImGui::BeginMenu("File")) {
             if (ImGui::MenuItem("Save As")) {
                 nfdchar_t *outPath = NULL;
-                nfdresult_t result = NFD_SaveDialog("pclp", NULL, &outPath);
-                    
+                nfdresult_t result = NFD_SaveDialogN(
+                    &outPath,
+                    PROJECT_FILES_FILTER,
+                    std::size(PROJECT_FILES_FILTER),
+                    nullptr,
+                    nullptr
+                );
+
                 if (result == NFD_OKAY) {
                     std::ofstream file(outPath);
                     cereal::PortableBinaryOutputArchive oarchive(file);
@@ -57,8 +69,13 @@ void Application::draw() {
 
             if (ImGui::MenuItem("Open")) {
                 nfdchar_t *outPath = NULL;
-                nfdresult_t result = NFD_OpenDialog("pclp", NULL, &outPath);
-                    
+                nfdresult_t result = NFD_OpenDialogN(
+                    &outPath,
+                    PROJECT_FILES_FILTER,
+                    std::size(PROJECT_FILES_FILTER),
+                    nullptr
+                );
+
                 if (result == NFD_OKAY) {
                     std::ifstream file(outPath);
                     std::shared_ptr<Video> video;
@@ -69,6 +86,8 @@ void Application::draw() {
                     state.video = video;
                 }
                 else if (result == NFD_CANCEL) {}
+
+                if (outPath) { NFD_FreePathN(outPath); }
             }
 
             ImGui::EndMenu();
@@ -90,10 +109,10 @@ void Application::draw() {
             if (ImGui::MenuItem("Export")) {
                 ImGui::OpenPopup(exportId);
             }
-            
+
             ImGui::EndMenu();
         }
-        
+
         ImGui::EndMainMenuBar();
     }
     if (ImGui::BeginPopupModal("Export Menu")) {
@@ -105,11 +124,17 @@ void Application::draw() {
         ImGui::SameLine();
         if (ImGui::Button("File Picker")) {
             nfdchar_t *outPath = NULL;
-            nfdresult_t result = NFD_SaveDialog("mp4", NULL, &outPath);
-                
+            nfdresult_t result = NFD_SaveDialogN(
+                &outPath,
+                MP4_FILES_FILTER,
+                std::size(MP4_FILES_FILTER),
+                nullptr,
+                nullptr
+            );
+
             if (result == NFD_OKAY) {
                 state.exportPath = std::move(outPath);
-                free(outPath);
+                NFD_FreePathN(outPath);
             }
             else if (result == NFD_CANCEL) {}
         }
@@ -123,11 +148,11 @@ void Application::draw() {
                 .replace_extension(
                     std::format(".na.{}", exportPath.extension().string())
                 ).string();
-            
+
             auto audioFilename = std::format("{}.wav", state.exportPath);
             VideoRenderer renderer(videoFilename, state.video->getResolution().x, state.video->getResolution().y, state.video->getFPS());
             state.video->render(&renderer);
-            
+
             AudioRenderer audio(audioFilename, state.video->timeForFrame(state.video->frameCount));
             for (auto track : state.video->audioTracks) {
                 for (auto clip : track->getClips()) {
@@ -144,14 +169,14 @@ void Application::draw() {
             // renderer.addAudio(pcmData);
 
             renderer.finish();
-            
+
             VPFFile::combineAV(audioFilename, videoFilename, state.exportPath);
-            
-            ImGui::InsertNotification({
-                ImGuiToastType::Success,
-                6000,
-                "Render finish!"
-            });
+
+            // ImGui::InsertNotification({
+            //     ImGuiToastType::Success,
+            //     6000,
+            //     "Render finish!"
+            // });
             ImGui::CloseCurrentPopup();
         }
 
@@ -216,8 +241,13 @@ void Application::draw() {
         if (ImGui::BeginTabItem("Pool")) {
             if (ImGui::Button("Import Videos")) {
                 nfdchar_t *outPath = NULL;
-                nfdresult_t result = NFD_OpenDialog("mp4,mov", NULL, &outPath);
-                    
+                nfdresult_t result = NFD_OpenDialogN(
+                    &outPath,
+                    VIDEO_FILES_FILTER,
+                    std::size(VIDEO_FILES_FILTER),
+                    nullptr
+                );
+
                 if (result == NFD_OKAY) {
                     showUploadDialog = true;
                     std::string outFile = std::move(outPath);
@@ -248,8 +278,13 @@ void Application::draw() {
 
             if (ImGui::Button("Import Audio")) {
                 nfdchar_t *outPath = NULL;
-                nfdresult_t result = NFD_OpenDialog("mp3", NULL, &outPath);
-                    
+                nfdresult_t result = NFD_OpenDialogN(
+                    &outPath,
+                    AUDIO_FILES_FILTER,
+                    std::size(AUDIO_FILES_FILTER),
+                    nullptr
+                );
+
                 if (result == NFD_OKAY) {
                     std::string outFile = std::move(outPath);
                     free(outPath);
@@ -273,8 +308,13 @@ void Application::draw() {
 
             if (ImGui::Button("Import Image")) {
                 nfdchar_t *outPath = NULL;
-                nfdresult_t result = NFD_OpenDialog("png,jpg,jpeg", NULL, &outPath);
-                    
+                nfdresult_t result = NFD_OpenDialogN(
+                    &outPath,
+                    IMAGE_FILES_FILTER,
+                    std::size(IMAGE_FILES_FILTER),
+                    nullptr
+                );
+
                 if (result == NFD_OKAY) {
                     std::string outFile = std::move(outPath);
                     state.video->imagePool.push_back({
@@ -380,7 +420,7 @@ void Application::draw() {
             bool y = ImGui::DragInt("Y", &dimensions.pos.y);
             bool w = ImGui::DragInt("Width", &dimensions.size.x);
             bool h = ImGui::DragInt("Height", &dimensions.size.y);
-            
+
             if (x || y || w || h) {
                 setData(property, dimensions.toString());
             }
@@ -396,7 +436,7 @@ void Application::draw() {
                 setData(property, position.toString());
             }
         };
-        
+
         auto drawInt = [&](std::shared_ptr<ClipProperty> property) {
             Vector1D number = Vector1D::fromString(property->data);
             if (ImGui::DragInt(
@@ -477,7 +517,7 @@ void Application::draw() {
         }
     }
     ImGui::End();
-    
+
     ImGui::SetNextWindowClass(&bareWindowClass);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
     ImGui::Begin("Track", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
@@ -520,7 +560,7 @@ void Application::draw() {
             );
         }
     }
-    
+
     auto resolution = state.video->getResolution();
     if (state.lastRenderedFrame != state.currentFrame) {
         frame->clearFrame();
@@ -618,7 +658,8 @@ bool Application::initSDL() {
     SDL_GL_MakeCurrent(window, gl_context);
     SDL_GL_SetSwapInterval(1); // Enable vsync
 
-    gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress);
+    // gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress);
+    // SDL_GL_LoadLibrary(nullptr);
 
     return true;
 }
@@ -713,8 +754,8 @@ void Application::run() {
         glClear(GL_COLOR_BUFFER_BIT);
 
         /* clear the window to the draw color. */
-        
-        
+
+
         ImGui::Render();
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);

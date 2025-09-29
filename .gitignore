@@ -4,3 +4,4 @@
 build/
 .cache/
 imgui.ini
+.idea/
