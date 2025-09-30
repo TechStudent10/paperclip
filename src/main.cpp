@@ -13,6 +13,9 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
+#define STB_IMAGE_RESIZE_IMPLEMENTATION
+#include <stb_image_resize2.h>
+
 #include <libyuv/convert.h>
 #include <libyuv/convert_argb.h>
 
@@ -328,8 +331,6 @@ void Text::render(Frame* frame) {
 }
 
 void drawImage(Frame* frame, unsigned char* data, Vector2D size, Vector2D position, double rotation = 0) {
-    // TODO: account for scaling
-
     // x'' = (x' * cos(θ)) - (y' * sin(θ))
     // y'' = (x' * sin(θ)) + (y' * cos(θ))
     // x'' = rotated x
@@ -385,12 +386,15 @@ void drawImage(Frame* frame, unsigned char* data, Vector2D size, Vector2D positi
     int maxX = std::max({ topLeft.x, topRight.x, bottomLeft.x, bottomRight.x });
     int maxY = std::max({ topLeft.y, topRight.y, bottomLeft.y, bottomRight.y });
 
+    // std::println("drawImage: size=({}, {})", size.x, size.y);
     for (int dstY = minY; dstY < maxY; dstY++) {
         for (int dstX = minX; dstX < maxX; dstX++) {
             int frameX = dstX + position.x;
             int frameY = dstY + position.y;
 
             auto res = inverseMappedPos(dstX, dstY);
+            res.x = std::clamp(res.x, 0, size.x - 1);
+            res.y = std::clamp(res.y, 0, size.y - 1);
             
             if (res.x < 0 || res.x >= size.x) continue;
             if (res.y < 0 || res.y >= size.y) continue;
@@ -401,6 +405,13 @@ void drawImage(Frame* frame, unsigned char* data, Vector2D size, Vector2D positi
             int srcLoc = (res.y * size.x + res.x) * 3;
             int dstLoc = (frameY * frame->width + frameX) * 4;
             uint8_t* dst = &frame->imageData[dstLoc];
+            // if (!data[srcLoc] || !data[srcLoc + 1] || !data[srcLoc + 2]) continue;
+
+            // std::println("{}, {}, {}", data[srcLoc], data[srcLoc + 1], data[srcLoc + 2]);
+            // if (srcLoc + 2 >= size.x * size.y * 3) {
+                // std::println("OOB: res=({}, {}), srcLoc={}", res.x, res.y, srcLoc);
+                // continue;
+            // }
             dst[0] = data[srcLoc];
             dst[1] = data[srcLoc + 1];
             dst[2] = data[srcLoc + 2];
@@ -579,11 +590,6 @@ ImageClip::ImageClip(): ImageClip("") {
 void ImageClip::render(Frame* frame) {
     initialize();
 
-    int frameW = frame->width;
-    int frameH = frame->height;
-    int clipW  = width;
-    int clipH  = height;
-
     float scaleX = (float)Vector1D::fromString(m_properties.getProperty("scale-x")->data).number / 100.f;
     float scaleY = (float)Vector1D::fromString(m_properties.getProperty("scale-y")->data).number / 100.f;
     int rotation = Vector1D::fromString(m_properties.getProperty("rotation")->data).number;
@@ -592,7 +598,24 @@ void ImageClip::render(Frame* frame) {
     }
     auto position = Vector2D::fromString(m_properties.getProperty("position")->data);
 
-    drawImage(frame, imageData, { width, height }, position, rotation);
+    int currentScaledW = static_cast<int>(std::floor(width / scaleX));
+    int currentScaledH = static_cast<int>(std::floor(height / scaleY));
+    
+    if (currentScaledW != scaledW || currentScaledH != scaledH) {
+        // std::println("scale change!");
+        scaledW = currentScaledW;
+        scaledH = currentScaledH;
+        
+        resizedData.resize(scaledW * scaledH * 3);
+        auto res = stbir_resize_uint8_linear(
+            imageData, width, height, width * 3,
+            resizedData.data(), scaledW, scaledH, scaledW * 3,
+            stbir_pixel_layout::STBIR_RGB
+        );
+        // std::println("{}", res == 0);
+    }
+
+    drawImage(frame, resizedData.data(), { scaledW, scaledH }, position, rotation);
 }
 
 ImageClip::~ImageClip() {

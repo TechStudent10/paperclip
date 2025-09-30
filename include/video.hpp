@@ -368,7 +368,10 @@ public:
 class ImageClip : public Clip {
 private:
     unsigned char* imageData;
+    std::vector<unsigned char> resizedData;
+
     int width, height;
+    int scaledW = 0, scaledH = 0;
 
     bool initialize();
 public:

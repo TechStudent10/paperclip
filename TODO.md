@@ -9,7 +9,7 @@
 - [x] font selector in text
 - [x] fix MLT building
 - [x] project saving
-- [ ] scaling
+- [x] scaling
 
 once all of these are done
 

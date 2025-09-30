@@ -56,6 +56,23 @@ add_library(imgui STATIC
 target_include_directories(imgui PUBLIC ${imgui_SOURCE_DIR} ${imgui_SOURCE_DIR}/backends ${imgui_SOURCE_DIR}/misc/cpp)
 target_link_libraries(imgui PUBLIC SDL3::SDL3 OpenGL::GL)
 
+# CPMAddPackage(
+#     NAME libvips
+#     GITHUB_REPOSITORY libvips/libvips
+#     GIT_TAG v8.17.2
+#     DOWNLOAD_ONLY ON
+# )
+
+# file(GLOB_RECURSE libvipscpp_SOURCES CONFIGURE_DEPENDS ${libvips_SOURCE_DIR}/cplusplus/*.cpp)
+# file(GLOB_RECURSE libvips_SOURCES CONFIGURE_DEPENDS ${libvips_SOURCE_DIR}/libvips/*/*.c)
+
+# add_library(libvips STATIC
+#     ${libvips_SOURCES}
+#     ${libvipscpp_SOURCES}
+# )
+
+# target_include_directories(libvips PUBLIC ${libvips_SOURCE_DIR}/cplusplus/include ${libvips_SOURCE_DIR}/libvips/include)
+
 if (WIN32)
     file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/out/share/mlt)
 
