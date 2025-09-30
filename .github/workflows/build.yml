@@ -35,6 +35,8 @@ jobs:
           mkdir C:\ffmpeg
           powershell -Command "Expand-Archive ffmpeg-dev.zip C:\ffmpeg"
 
+          exit
+
           setx PKG_CONFIG_PATH C:\ffmpeg\lib\pkgconfig
           setx PATH C:\ffmpeg\bin;%PATH%
 
@@ -61,7 +63,7 @@ jobs:
           libegl1-mesa-dev libdbus-1-dev libibus-1.0-dev libudev-dev clang ffmpeg libavutil-dev \
           libavcodec-dev libavformat-dev libswscale-dev libswresample-dev
 
-          curl -L -o ffmpeg.tar.xz https://github.com/BtbN/FFmpeg-Builds/releases/download/2025-09-30/ffmpeg-master-latest-linux64-lgpl-shared.tar.xz
+          curl -L -o ffmpeg.tar.xz https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl-shared.tar.xz
           mkdir -p $HOME/ffmpeg
           tar -xvf ffmpeg.tar.xz -C $HOME/ffmpeg
           
