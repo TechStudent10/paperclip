@@ -56,25 +56,25 @@ add_library(imgui STATIC
 target_include_directories(imgui PUBLIC ${imgui_SOURCE_DIR} ${imgui_SOURCE_DIR}/backends ${imgui_SOURCE_DIR}/misc/cpp)
 target_link_libraries(imgui PUBLIC SDL3::SDL3 OpenGL::GL)
 
-# if (WIN32)
-#     file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/out/share/mlt)
+if (WIN32)
+    file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/out/share/mlt)
 
-#     set(WIN_ICONV_BUILD_EXECUTABLE OFF)
-#     set(WIN_ICONV_BUILD_SHARED OFF)
-#     CPMAddPackage("gh:win-iconv/win-iconv#82f00fb")
-#     set(Iconv_LIBRARY iconv_static)
-#     set(Iconv_INCLUDE_DIR ${win-iconv_SOURCE_DIR})
+    set(WIN_ICONV_BUILD_EXECUTABLE OFF)
+    set(WIN_ICONV_BUILD_SHARED OFF)
+    CPMAddPackage("gh:win-iconv/win-iconv#82f00fb")
+    set(Iconv_LIBRARY iconv_static)
+    set(Iconv_INCLUDE_DIR ${win-iconv_SOURCE_DIR})
 
-#     CPMAddPackage("gh:dlfcn-win32/dlfcn-win32#8bfddb5")
-#     set(CMAKE_DL_LIBS dl)
+    CPMAddPackage("gh:dlfcn-win32/dlfcn-win32#8bfddb5")
+    set(CMAKE_DL_LIBS dl)
 
-#     CPMAddPackage("gh:G-P-S/pthreads-win32-2-9-1#43d3a62")
-#     set(Threads_LIBRARY ${pthreads-win32-2-9-1_SOURCE_DIR}/x64/pthreadVC2.lib)
-#     set(Threads_INCLUDE_DIR ${pthreads-win32-2-9-1_SOURCE_DIR})
-#     include_directories(${pthreads-win32-2-9-1_SOURCE_DIR})
-#     add_definitions(-DHAVE_STRUCT_TIMESPEC)
-#     add_definitions(-D_USE_MATH_DEFINES)
-# endif ()
+    CPMAddPackage("gh:G-P-S/pthreads-win32-2-9-1#43d3a62")
+    set(Threads_LIBRARY ${pthreads-win32-2-9-1_SOURCE_DIR}/x64/pthreadVC2.lib)
+    set(Threads_INCLUDE_DIR ${pthreads-win32-2-9-1_SOURCE_DIR})
+    include_directories(${pthreads-win32-2-9-1_SOURCE_DIR})
+    add_definitions(-DHAVE_STRUCT_TIMESPEC)
+    add_definitions(-D_USE_MATH_DEFINES)
+endif ()
 
 CPMAddPackage(
     NAME mlt
