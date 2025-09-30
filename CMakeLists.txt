@@ -17,6 +17,10 @@ endif()
 
 project(video-thing VERSION 1.0.0)
 
+if(APPLE)
+    enable_language(OBJC)
+endif()
+
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.cpp)
 add_executable(${PROJECT_NAME} ${SOURCES})
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
