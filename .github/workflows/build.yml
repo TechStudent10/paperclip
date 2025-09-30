@@ -29,24 +29,26 @@ jobs:
       - name: Deps (win)
         if: runner.os == 'Windows'
         run: |
-          choco install cmake ffmpeg pkgconfiglite mingw -y
+          choco install cmake pkgconfiglite mingw -y
+          choco install ffmpeg --version=6.1.1
       
       - name: Deps (mac)
         if: runner.os == 'macOS'
         run: |
           brew update
-          brew install cmake ninja ffmpeg
+          brew install cmake ninja ffmpeg@6
 
       - name: Deps (lin)
         if: runner.os == 'Linux'
         run: |
+          sudo add-apt-repository ppa:ubuntuhandbook1/ffmpeg6 -y
           sudo apt-get update
           sudo apt-get install -y build-essential git make \
           pkg-config cmake ninja-build gnome-desktop-testing libasound2-dev libpulse-dev \
           libaudio-dev libjack-dev libsndio-dev libx11-dev libxext-dev \
           libxrandr-dev libxcursor-dev libxfixes-dev libxi-dev libxss-dev libxtst-dev \
           libxkbcommon-dev libdrm-dev libgbm-dev libgl1-mesa-dev libgles2-mesa-dev \
-          libegl1-mesa-dev libdbus-1-dev libibus-1.0-dev libudev-dev clang libavutil-dev \
+          libegl1-mesa-dev libdbus-1-dev libibus-1.0-dev libudev-dev clang ffmpeg libavutil-dev \
           libavcodec-dev libavformat-dev libswscale-dev libswresample-dev
 
       - name: Configure (win)
