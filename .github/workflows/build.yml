@@ -29,7 +29,7 @@ jobs:
       - name: Deps (win)
         if: runner.os == 'Windows'
         run: |
-          choco install cmake ninja ffmpeg pkgconfiglite -y
+          choco install cmake ffmpeg pkgconfiglite mingw -y
       
       - name: Deps (mac)
         if: runner.os == 'macOS'
@@ -49,7 +49,11 @@ jobs:
           libegl1-mesa-dev libdbus-1-dev libibus-1.0-dev libudev-dev clang libavutil-dev \
           libavcodec-dev libavformat-dev libswscale-dev libswresample-dev
 
-      - name: Configure
+      - name: Configure (win)
+        if: runner.os == 'Windows'
+        run: cmake -S . -B build -G "MinGW Makefiles" -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release
+
+      - name: Configure (everyone else)
         run: cmake -S . -B build -G Ninja -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release
 
       - name: Compile
