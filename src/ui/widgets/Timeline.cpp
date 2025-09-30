@@ -251,6 +251,8 @@ void VideoTimeline::drawClip(ImDrawList* drawList, const TimelineClip& clip, con
     ImGuiIO& io = ImGui::GetIO();
     ImVec2 mousePos = io.MousePos;
 
+    auto& state = State::get();
+
     if (clip_x >= trackPos.x - 1) { // smol tolerance
         drawList->AddRectFilled(
             clip_pos,
@@ -264,6 +266,7 @@ void VideoTimeline::drawClip(ImDrawList* drawList, const TimelineClip& clip, con
         if (ImGui::IsMouseClicked(0) && hovered) {
             resizeMode = RESIZE_LEFT;
             resizingClip = clip.clip;
+            state.draggingClip = clip.clip;
             resizingTrackIdx = selectedTrackIdx;
             resizeOriginalStart = clip.clip->startFrame;
             resizeOriginalDuration = clip.clip->duration;
@@ -283,6 +286,7 @@ void VideoTimeline::drawClip(ImDrawList* drawList, const TimelineClip& clip, con
 
         if (ImGui::IsMouseClicked(0) && hovered) {
             resizeMode = RESIZE_RIGHT;
+            state.draggingClip = clip.clip;
             resizingClip = clip.clip;
             resizingTrackIdx = selectedTrackIdx;
             resizeOriginalStart = clip.clip->startFrame;
@@ -483,7 +487,7 @@ void VideoTimeline::handleInteractions(const ImVec2& canvasPos, const ImVec2& ca
         }
     }
 
-    if (isDragging && ImGui::IsMouseDragging(0)) {
+    if (isDragging && resizeMode == RESIZE_NONE && ImGui::IsMouseDragging(0)) {
         if (state.draggingClip) {
             ImVec2 mouse_pos = io.MousePos;
 

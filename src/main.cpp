@@ -240,6 +240,16 @@ Rectangle::Rectangle(): Clip(60, 120) {
     m_metadata.name = "Rectangle";
 }
 
+Vector2D Rectangle::getPos() {
+    Dimensions dimensions = Dimensions::fromString(m_properties.getProperty("dimensions")->data);
+    return dimensions.pos;
+}
+
+Vector2D Rectangle::getSize() {
+    Dimensions dimensions = Dimensions::fromString(m_properties.getProperty("dimensions")->data);
+    return dimensions.size;
+}
+
 void Rectangle::render(Frame* frame) {
     Dimensions dimensions = Dimensions::fromString(m_properties.getProperty("dimensions")->data);
     RGBAColor color = RGBAColor::fromString(m_properties.getProperty("color")->data);
@@ -264,6 +274,18 @@ Circle::Circle(): Clip(60, 120) {
     );
 
     m_metadata.name = "Circle";
+}
+
+Vector2D Circle::getSize() {
+    int diameter = Vector1D::fromString(m_properties.getProperty("radius")->data).number * 2;
+    
+    return { diameter, diameter };
+}
+
+Vector2D Circle::getPos() {
+    Vector2D position = Vector2D::fromString(m_properties.getProperty("position")->data);
+    int radius = Vector1D::fromString(m_properties.getProperty("radius")->data).number;
+    return { position.x - radius, position.y - radius };
 }
 
 void Circle::render(Frame* frame) {
@@ -319,6 +341,17 @@ Text::Text(): Clip(60, 120) {
     m_metadata.name = "Text";
 }
 
+Vector2D Text::getSize() {
+    auto fontSize = Vector1D::fromString(m_properties.getProperty("size")->data).number;
+
+    return { static_cast<int>(width), fontSize };
+}
+
+Vector2D Text::getPos() {
+    Vector2D position = Vector2D::fromString(m_properties.getProperty("position")->data);
+    return position;
+}
+
 void Text::render(Frame* frame) {
     auto& state = State::get();
     auto text = m_properties.getProperty("text")->data;
@@ -327,7 +360,7 @@ void Text::render(Frame* frame) {
     auto pos = Vector2D::fromString(m_properties.getProperty("position")->data);
     auto color = RGBAColor::fromString(m_properties.getProperty("color")->data);
 
-    state.textRenderer->drawText(frame, text, font, pos, color, fontSize);
+    width = state.textRenderer->drawText(frame, text, font, pos, color, fontSize);
 }
 
 void drawImage(Frame* frame, unsigned char* data, Vector2D size, Vector2D position, double rotation = 0) {
@@ -465,6 +498,15 @@ bool VideoClip::initialize() {
     return true;
 }
 
+Vector2D VideoClip::getSize() {    
+    return { width, height };
+}
+
+Vector2D VideoClip::getPos() {
+    Vector2D position = Vector2D::fromString(m_properties.getProperty("position")->data);
+    return position;
+}
+
 VideoClip::~VideoClip() {
     mlt_producer_close(producer);
     mlt_profile_close(profile);
@@ -583,6 +625,15 @@ bool ImageClip::initialize() {
     return true;
 }
 
+Vector2D ImageClip::getSize() {    
+    return { scaledW, scaledH };
+}
+
+Vector2D ImageClip::getPos() {
+    Vector2D position = Vector2D::fromString(m_properties.getProperty("position")->data);
+    return position;
+}
+
 ImageClip::ImageClip(): ImageClip("") {
     std::println("construct: {} ({})", path, sizeof(imageData));
 }
@@ -598,8 +649,8 @@ void ImageClip::render(Frame* frame) {
     }
     auto position = Vector2D::fromString(m_properties.getProperty("position")->data);
 
-    int currentScaledW = static_cast<int>(std::floor(width / scaleX));
-    int currentScaledH = static_cast<int>(std::floor(height / scaleY));
+    int currentScaledW = static_cast<int>(std::floor(width * scaleX));
+    int currentScaledH = static_cast<int>(std::floor(height * scaleY));
     
     if (currentScaledW != scaledW || currentScaledH != scaledH) {
         // std::println("scale change!");

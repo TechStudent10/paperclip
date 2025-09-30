@@ -19,7 +19,7 @@ void TextRenderer::loadFont(std::string fontName) {
     fontBuffers[fontName] = std::vector<unsigned char>((std::istreambuf_iterator<char>(fontFile)), std::istreambuf_iterator<char>());
 }
 
-void TextRenderer::drawText(Frame* frame, std::string text, std::string fontName, Vector2D pos, RGBAColor color, float pixelHeight) {
+float TextRenderer::drawText(Frame* frame, std::string text, std::string fontName, Vector2D pos, RGBAColor color, float pixelHeight) {
     if (!fontBuffers.contains(fontName)) {
         loadFont(fontName);
     }
@@ -48,7 +48,7 @@ void TextRenderer::drawText(Frame* frame, std::string text, std::string fontName
         int dh = y1 - y0;
 
         // std::println("dw: {}, dh: {}", dw, dh);
-        if (dw * dh < 0) return;
+        if (dw * dh < 0) return cursor - pos.x;
 
         std::vector<unsigned char> bitmap(dw * dh);
         stbtt_MakeGlyphBitmap(&font, bitmap.data(), dw, dh, dw, scale, scale, glyph);
@@ -73,4 +73,6 @@ void TextRenderer::drawText(Frame* frame, std::string text, std::string fontName
             cursor += (int)(kerning * scale);
         }
     }
+
+    return cursor - pos.x;
 }

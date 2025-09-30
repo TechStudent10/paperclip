@@ -397,25 +397,24 @@ void Application::draw() {
 
     ImGui::SetNextWindowClass(&bareWindowClass);
     ImGui::Begin("Properties");
-    if (state.draggingClip) {
-        auto setData = [&](std::shared_ptr<ClipProperty> property, std::string data) {
-            if (property->keyframes.size() == 1) {
-                property->keyframes[0] = data;
-                state.lastRenderedFrame = -1;
-                for (auto audTrack : state.video->audioTracks) {
-                    audTrack->processTime();
-                }
-                return;
-            }
-
-            int keyframe = state.currentFrame - state.draggingClip->startFrame;
-            state.draggingClip->m_properties.setKeyframe(property->id, keyframe, data);
+    auto setData = [&](std::shared_ptr<ClipProperty> property, std::string data) {
+        if (property->keyframes.size() == 1) {
+            property->keyframes[0] = data;
             state.lastRenderedFrame = -1;
             for (auto audTrack : state.video->audioTracks) {
                 audTrack->processTime();
             }
-        };
+            return;
+        }
 
+        int keyframe = state.currentFrame - state.draggingClip->startFrame;
+        state.draggingClip->m_properties.setKeyframe(property->id, keyframe, data);
+        state.lastRenderedFrame = -1;
+        for (auto audTrack : state.video->audioTracks) {
+            audTrack->processTime();
+        }
+    };
+    if (state.draggingClip) {
         auto drawDimensions = [&](std::shared_ptr<ClipProperty> property) {
             Dimensions dimensions = Dimensions::fromString(property->data);
 
@@ -583,8 +582,118 @@ void Application::draw() {
     ImVec2 avail = ImGui::GetContentRegionAvail();
     auto scale = ImMin(avail.x / resolution.x, (avail.y - 150) / resolution.y);
     ImVec2 imageSize = ImVec2(resolution.x * scale, resolution.y * scale);
-    ImGui::SetCursorPos(ImVec2((ImGui::GetWindowSize().x - imageSize.x) * 0.5f , ImGui::GetCursorPosY()));
+    ImVec2 imagePos = ImVec2((ImGui::GetWindowSize().x - imageSize.x) * 0.5f , ImGui::GetCursorPosY());
+    ImGui::SetCursorPos(imagePos);
     ImGui::Image((ImTextureID)(uintptr_t)imageTexture, imageSize);
+
+    ImGuiIO& io = ImGui::GetIO();
+
+    ImGui::SetCursorPos(imagePos);
+
+    auto absMousePos = io.MousePos;
+    auto windowPos = ImGui::GetWindowPos();
+    auto mousePos = ImVec2(
+        absMousePos.x - imagePos.x - windowPos.x,
+        absMousePos.y - imagePos.y - windowPos.y
+    );
+
+    if (ImGui::InvisibleButton("btn", imageSize)) {
+        // std::println("btn");
+    }
+
+    if (ImGui::IsItemHovered() && ImGui::IsMouseDown(0)) {
+        // mouse position in the canvas
+        // in terms of the video resolution
+        auto canvasX = static_cast<int>(std::round(mousePos.x / scale));
+        auto canvasY = static_cast<int>(std::round(mousePos.y / scale));
+        
+        bool deselected = false;
+
+        if (isDraggingClip && io.MouseDownDuration[0] == 0) {
+            // check if canvasX, canvasY are
+            // outside of the clip bounding box
+            // if so, deselect
+
+            Vector2D position = state.draggingClip->getPos();
+            Vector2D size = state.draggingClip->getSize();
+
+            // top 10 laziest developer moments
+            if (!(canvasX >= position.x && canvasX <= position.x + size.x &&
+                canvasY >= position.y && canvasY <= position.y + size.y)
+            ) {
+                isDraggingClip = false;
+                state.draggingClip = nullptr;    
+                deselected = true;   
+            }
+        }
+
+        if (!deselected) {
+            if (isDraggingClip) {
+                int dx = canvasX - initialPos.x;
+                int dy = canvasY - initialPos.y;
+
+                initialPos = { canvasX, canvasY };
+
+                if (state.draggingClip->m_properties.getProperties().contains("position")) {
+                    auto property = state.draggingClip->m_properties.getProperty("position");
+                    auto oldPos = Vector2D::fromString(property->data);
+                    Vector2D newPos = {
+                        .x = std::clamp(oldPos.x + dx, 0, state.video->resolution.x),
+                        .y = std::clamp(oldPos.y + dy, 0, state.video->resolution.y)
+                    };
+                    setData(property, newPos.toString());
+                }
+            }
+
+            if (!isDraggingClip) {
+                // find the clip currently being clicked on
+                // set state.draggingClip
+                // and initialPos
+
+                for (auto track : state.video->videoTracks) {
+                    for (auto clip : track->getClips()) {
+                        Vector2D position = clip->getPos();
+                        Vector2D size = clip->getSize();
+                        std::println("-------------------------");
+                        std::println("{}, {}", canvasX >= position.x, canvasX <= position.x + size.x);
+                        std::println("{}, {}", canvasY >= position.y, canvasY <= position.y + size.y);
+                        std::println("-------------------------");
+                        std::println("{}, {}", position.x, position.y);
+                        std::println("{}, {}", size.x, size.y);
+                        std::println("{}, {}", canvasX, canvasY);
+                        std::println("-------------------------");
+                        if (canvasX >= position.x && canvasX <= position.x + size.x &&
+                            canvasY >= position.y && canvasY <= position.y + size.y
+                        ) {
+                            std::println("found clip!");
+                            state.draggingClip = clip;
+                            initialPos = { canvasX, canvasY };
+                            isDraggingClip = true;
+                            break;
+                        }
+                    }
+
+                    if (isDraggingClip) {
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    ImDrawList* drawList = ImGui::GetWindowDrawList();
+    if (state.draggingClip) {
+        Vector2D position = state.draggingClip->getPos();
+        Vector2D size = state.draggingClip->getSize();
+        drawList->AddRect({
+            imagePos.x + windowPos.x + position.x * scale,
+            imagePos.y + windowPos.y + position.y * scale
+        }, {
+            imagePos.x + windowPos.x + (position.x + size.x) * scale,
+            imagePos.y + windowPos.y + (position.y + size.y) * scale
+        }, ImColor(255, 0, 0, 127), 0.f, 0, 5.f);
+    }
+
     ImGui::Separator();
     if (ButtonCenteredOnLine(
         state.isPlaying ? "Pause" : "Play"

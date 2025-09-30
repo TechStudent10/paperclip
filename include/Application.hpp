@@ -54,4 +54,7 @@ protected:
     std::thread convertThread;
 
     std::vector<unsigned char> lastRenderedFrameData;
+
+    bool isDraggingClip = false;
+    Vector2D initialPos;
 };

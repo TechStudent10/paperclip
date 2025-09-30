@@ -341,6 +341,8 @@ public:
     }
 
     virtual ClipType getType() { return ClipType::None; }
+    virtual Vector2D getSize() { return { 0, 0 }; }
+    virtual Vector2D getPos() { return { 0, 0 }; }
 };
 
 
@@ -348,21 +350,32 @@ class Rectangle : public Clip {
 public:
     Rectangle();
     void render(Frame* frame) override;
+
     ClipType getType() override { return ClipType::Rectangle; }
+    Vector2D getSize() override;
+    Vector2D getPos() override;
 };
 
 class Circle : public Clip {
 public:
     Circle();
     void render(Frame* frame) override;
+
     ClipType getType() override { return ClipType::Circle; }
+    Vector2D getSize() override;
+    Vector2D getPos() override;
 };
 
 class Text : public Clip {
 public:
+    float width = 0.f;
+
     Text();
     void render(Frame* frame) override;
+
     ClipType getType() override { return ClipType::Text; }
+    Vector2D getSize() override;
+    Vector2D getPos() override;
 };
 
 class ImageClip : public Clip {
@@ -397,6 +410,9 @@ public:
         Clip::read(reader);
         path = reader.readStringU32().unwrapOr("");
     }
+
+    Vector2D getSize() override;
+    Vector2D getPos() override;
 };
 
 class VideoClip : public Clip {
@@ -430,6 +446,9 @@ public:
         Clip::read(reader);
         path = reader.readStringU32().unwrapOr("");
     }
+
+    Vector2D getSize() override;
+    Vector2D getPos() override;
 };
 
 class AudioClip : public Clip {
@@ -703,7 +722,7 @@ protected:
 public:
     TextRenderer();
     void loadFont(std::string fontName);
-    void drawText(Frame* frame, std::string text, std::string fontName, Vector2D pos, RGBAColor color, float pixelHeight = 48.f);
+    float drawText(Frame* frame, std::string text, std::string fontName, Vector2D pos, RGBAColor color, float pixelHeight = 48.f);
 };
 
 class VideoRenderer {
