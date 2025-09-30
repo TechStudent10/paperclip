@@ -23,6 +23,15 @@ target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/in
 
 include(cmake/CPM.cmake)
 
+set(NFD_PORTAL ON)
+CPMAddPackage("gh:stephenberry/glaze@5.6.1")
+CPMAddPackage("gh:libsdl-org/SDL#release-3.2.20")
+CPMAddPackage("gh:USCiLab/cereal#a56bad8")
+CPMAddPackage("gh:mackron/miniaudio#0.11.23")
+CPMAddPackage("gh:btzy/nativefiledialog-extended#6db343a")
+CPMAddPackage("gh:lemenkov/libyuv#5b22f31")
+CPMAddPackage("gh:nothings/stb#fede005")
+
 CPMAddPackage(
     NAME imgui
     GITHUB_REPOSITORY ocornut/imgui
@@ -40,28 +49,27 @@ add_library(imgui STATIC
     ${imgui_SOURCE_DIR}/misc/cpp/imgui_stdlib.cpp
 )
 target_include_directories(imgui PUBLIC ${imgui_SOURCE_DIR} ${imgui_SOURCE_DIR}/backends ${imgui_SOURCE_DIR}/misc/cpp)
+target_link_libraries(imgui PUBLIC SDL3::SDL3 OpenGL::GL)
 
-CPMAddPackage("gh:stephenberry/glaze@5.6.1")
-CPMAddPackage("gh:libsdl-org/SDL#release-3.2.20")
-CPMAddPackage("gh:USCiLab/cereal#a56bad8")
-CPMAddPackage("gh:mackron/miniaudio#0.11.23")
-CPMAddPackage("gh:btzy/nativefiledialog-extended#6db343a")
-CPMAddPackage("gh:lemenkov/libyuv#5b22f31")
-CPMAddPackage("gh:nothings/stb#fede005")
+# if (WIN32)
+#     file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/out/share/mlt)
 
-if (WIN32)
-    file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/out/lib/mlt)
+#     set(WIN_ICONV_BUILD_EXECUTABLE OFF)
+#     set(WIN_ICONV_BUILD_SHARED OFF)
+#     CPMAddPackage("gh:win-iconv/win-iconv#82f00fb")
+#     set(Iconv_LIBRARY iconv_static)
+#     set(Iconv_INCLUDE_DIR ${win-iconv_SOURCE_DIR})
 
-    CPMAddPackage("gh:win-iconv/win-iconv#82f00fb")
-    add_library(Iconv STATIC ${win-iconv_SOURCE_DIR}/win_iconv.c)
-    target_include_directories(Iconv PUBLIC ${win-iconv_SOURCE_DIR})
-    set(Iconv_LIBRARY Iconv)
-    set(Iconv_INCLUDE_DIR ${win-iconv_SOURCE_DIR})
+#     CPMAddPackage("gh:dlfcn-win32/dlfcn-win32#8bfddb5")
+#     set(CMAKE_DL_LIBS dl)
 
-    CPMAddPackage("gh:dlfcn-win32/dlfcn-win32#8bfddb5")
-    # add alias
-    add_library(dlfcn-win32::dl ALIAS dlfcn)
-endif ()
+#     CPMAddPackage("gh:G-P-S/pthreads-win32-2-9-1#43d3a62")
+#     set(Threads_LIBRARY ${pthreads-win32-2-9-1_SOURCE_DIR}/x64/pthreadVC2.lib)
+#     set(Threads_INCLUDE_DIR ${pthreads-win32-2-9-1_SOURCE_DIR})
+#     include_directories(${pthreads-win32-2-9-1_SOURCE_DIR})
+#     add_definitions(-DHAVE_STRUCT_TIMESPEC)
+#     add_definitions(-D_USE_MATH_DEFINES)
+# endif ()
 
 CPMAddPackage(
     NAME mlt
@@ -70,6 +78,7 @@ CPMAddPackage(
     OPTIONS
         "MLT_DATA_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/out/lib/mlt"
         "ENABLE_QT OFF"
+        "MOD_QT OFF"
         "ENABLE_QT6 OFF"
         "ENABLE_QT5 OFF"
         "ENABLE_AVFORMAT ON"
