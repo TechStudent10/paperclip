@@ -35,6 +35,9 @@ jobs:
           mkdir C:\ffmpeg
           powershell -Command "Expand-Archive ffmpeg-dev.zip C:\ffmpeg"
 
+          setx PKG_CONFIG_PATH C:\ffmpeg\lib\pkgconfig
+          setx PATH C:\ffmpeg\bin;%PATH%
+
           # Set environment variables for CMake to find FFmpeg
           echo "CMAKE_PREFIX_PATH=C:\\ffmpeg" >> $GITHUB_ENV
           echo "PATH=C:\\ffmpeg\\bin;$Env:PATH" >> $GITHUB_ENV
@@ -58,18 +61,13 @@ jobs:
           libegl1-mesa-dev libdbus-1-dev libibus-1.0-dev libudev-dev clang ffmpeg libavutil-dev \
           libavcodec-dev libavformat-dev libswscale-dev libswresample-dev
 
-          git clone https://github.com/FFmpeg/FFmpeg.git
-          cd FFmpeg
-          git checkout n7.1.1
-          ./configure --prefix=$HOME/ffmpeg7 --enable-shared --disable-doc --disable-programs
-          make -j$(nproc)
-          make install
-
-          export PKG_CONFIG_PATH=$HOME/ffmpeg7/lib/pkgconfig:$PKG_CONFIG_PATH
-          export PATH=$HOME/ffmpeg7/bin:$PATH
-          export LD_LIBRARY_PATH=$HOME/ffmpeg7/lib:$LD_LIBRARY_PATH
-
-          cd ..
+          curl -L -o ffmpeg.tar.xz https://github.com/BtbN/FFmpeg-Builds/releases/download/2025-09-30/ffmpeg-master-latest-linux64-lgpl-shared.tar.xz
+          mkdir -p $HOME/ffmpeg
+          tar -xvf ffmpeg.tar.xz -C $HOME/ffmpeg
+          
+          export PATH=$HOME/ffmpeg/bin:$PATH
+          export LD_LIBRARY_PATH=$HOME/ffmpeg/lib:$LD_LIBRARY_PATH
+          export PKG_CONFIG_PATH=$HOME/ffmpeg/lib/pkgconfig:$PKG_CONFIG_PATH
 
       - name: Configure (win)
         if: runner.os == 'Windows'
