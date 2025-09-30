@@ -2,7 +2,7 @@
 #include <memory>
 #include <unordered_map>
 #include <vector>
-#include <array>
+#include <print>
 #include <string>
 
 extern "C" {
@@ -22,13 +22,8 @@ extern "C" {
 
 #include <mlt++/Mlt.h>
 
-#include <cereal/cereal.hpp>
-#include <cereal/types/memory.hpp>
-#include <cereal/types/map.hpp>
-#include <cereal/types/vector.hpp>
-#include <cereal/types/string.hpp>
-#include <cereal/types/complex.hpp>
-#include <cereal/types/base_class.hpp>
+#include <format/binary/reader.hpp>
+#include <format/binary/writer.hpp>
 
 #define JSON_METHODS(className) public: \
     std::string toString() { \
@@ -51,10 +46,14 @@ struct Vector2D {
 
     JSON_METHODS(Vector2D)
 
-    // archive
-    template<class Archive>
-    void serialize(Archive& archive) {
-        archive(x, y);
+    void write(qn::HeapByteWriter& writer) {
+        writer.writeI16(x);
+        writer.writeI16(y);
+    }
+
+    void read(qn::ByteReader& reader) {
+        x = reader.readI16().unwrapOr(0);
+        y = reader.readI16().unwrapOr(0);
     }
 };
 
@@ -62,12 +61,6 @@ struct Vector1D {
     int number;
 
     JSON_METHODS(Vector1D);
-
-    // archive
-    template<class Archive>
-    void serialize(Archive& archive) {
-        archive(number);
-    }
 };
 
 struct Dimensions {
@@ -75,36 +68,18 @@ struct Dimensions {
     Vector2D size;
     
     JSON_METHODS(Dimensions)
-
-    // archive
-    template<class Archive>
-    void serialize(Archive& archive) {
-        archive(pos, size);
-    }
 };
 
 struct RGBAColor {
     int r; int g; int b; int a = 255;
 
     JSON_METHODS(RGBAColor)
-
-    // archive
-    template<class Archive>
-    void serialize(Archive& archive) {
-        archive(r, g, b, a);
-    }
 };
 
 struct DropdownOptions {
     std::vector<std::string> options;
 
     JSON_METHODS(DropdownOptions)
-
-    // archive
-    template<class Archive>
-    void serialize(Archive& archive) {
-        archive(options);
-    }
 };
 
 class Frame {
@@ -147,10 +122,14 @@ struct PropertyKeyframeMeta {
     animation::Easing easing;
     animation::EasingMode mode;
 
-    // archive
-    template<class Archive>
-    void serialize(Archive& archive) {
-        archive(easing, mode);
+    void write(qn::HeapByteWriter& writer) {
+        writer.writeI16((int)easing);
+        writer.writeI16((int)mode);
+    }
+
+    void read(qn::ByteReader& reader) {
+        easing = (animation::Easing)(reader.readI16().unwrapOr(0));
+        mode = (animation::EasingMode)(reader.readI16().unwrapOr(0));
     }
 };
 
@@ -164,6 +143,49 @@ public:
     std::string options; // can be interpreted by each individual property
     std::map<int, std::string> keyframes;
     std::map<int, PropertyKeyframeMeta> keyframeInfo;
+
+    void write(qn::HeapByteWriter& writer) {
+        writer.writeStringU32(id);
+        writer.writeStringU32(name);
+        writer.writeI16((int)type);
+        writer.writeStringU32(data);
+        writer.writeStringU32(options);
+
+        writer.writeI16(keyframes.size());
+        for (auto keyframe : keyframes) {
+            writer.writeI16(keyframe.first);
+            writer.writeStringU32(keyframe.second);
+        }
+
+        writer.writeI16(keyframeInfo.size());
+        for (auto info : keyframeInfo) {
+            writer.writeI16(info.first);
+            info.second.write(writer);
+        }
+    }
+
+    void read(qn::ByteReader& reader) {
+        id = reader.readStringU32().unwrapOr("");
+        name = reader.readStringU32().unwrapOr("");
+        type = (PropertyType)(reader.readI16().unwrapOr(0));
+        data = reader.readStringU32().unwrapOr("");
+        options = reader.readStringU32().unwrapOr("");
+
+        auto keyframesSize = reader.readI16().unwrapOr(0);
+        for (int i = 0; i < keyframesSize; i++) {
+            auto key = reader.readI16().unwrapOr(0);
+            auto keyframe = reader.readStringU32().unwrapOr("{}");
+            keyframes[key] = keyframe;
+        }
+
+        auto infoSize = reader.readI16().unwrapOr(0);
+        for (int j = 0; j < infoSize; j++) {
+            auto key = reader.readI16().unwrapOr(0);
+            PropertyKeyframeMeta info;
+            info.read(reader);
+            keyframeInfo[key] = info;
+        }
+    }
 
     ClipProperty* setId(std::string_view id) {
         this->id = id;
@@ -235,20 +257,6 @@ public:
             ->setName("Position")
             ->setDefaultKeyframe(Vector2D{ .x = 0, .y = 0 }.toString());
     }
-
-    // archive
-    template<class Archive>
-    void serialize(Archive& archive) {
-        archive(
-            id,
-            name,
-            type,
-            data,
-            options,
-            keyframes,
-            keyframeInfo
-        );
-    }
 };
 
 struct ClipProperties {
@@ -262,33 +270,46 @@ public:
     void setKeyframe(std::string id, int frame, std::string data);
     void setKeyframeMeta(std::string id, int frame, PropertyKeyframeMeta data);
 
-    // archive
-    template<class Archive>
-    void serialize(Archive& archive) {
-        archive(properties);
+    void write(qn::HeapByteWriter& writer) {
+        writer.writeI16(properties.size());
+        for (auto prop : properties) {
+            writer.writeStringU32(prop.first);
+            prop.second->write(writer);
+        }
+    }
+
+    void read(qn::ByteReader& reader) {
+        auto size = reader.readI16().unwrapOr(0);
+        for (int i = 0; i < size; i++) {
+            auto key = reader.readStringU32().unwrapOr("");
+            auto prop = std::make_shared<ClipProperty>();
+            prop->read(reader);
+            properties[key] = prop;
+        }
     }
 };
 
 struct ClipMetadata {
     std::string name;
-    // archive
-    template<class Archive>
-    void serialize(Archive& archive) {
-        archive(name);
+    
+    void write(qn::HeapByteWriter& writer) {
+        writer.writeStringU32(name);
+    }
+    void read(qn::ByteReader& reader) {
+        name = reader.readStringU32().unwrapOr("");
     }
 };
 
-// archive
-// ex: CEREAL_CLIP(, myThing)
-// yes the stupid comma is needed
-#define CEREAL_CLIP(...) \
-    template<class Archive> \
-    void serialize(Archive& archive) { \
-        archive( \
-            cereal::base_class<Clip>(this) \
-            __VA_ARGS__ \
-        ); \
-    }
+// lesson learned: always use enum class.
+// - underscored
+enum class ClipType {
+    Rectangle,
+    Circle,
+    Text,
+    Image,
+    Video,
+    None
+};
 
 class Clip {
 protected:
@@ -302,16 +323,24 @@ public:
     virtual void render(Frame* frame) {}
     virtual void onDelete() {}
 
-    // archive
-    template<class Archive>
-    void serialize(Archive& archive) {
-        archive(
-            m_properties,
-            m_metadata,
-            startFrame,
-            duration
-        );
+    virtual void write(qn::HeapByteWriter& writer) {
+        writer.writeI16((int)getType());
+        std::println("wrote {} as type", (int)getType());
+        m_properties.write(writer);
+        m_metadata.write(writer);
+        writer.writeI16(startFrame);
+        writer.writeI16(duration);
     }
+
+    virtual void read(qn::ByteReader& reader) {
+        m_properties.read(reader);
+        m_metadata.read(reader);
+        auto res = reader.readI16();
+        startFrame = res.unwrapOr(0);
+        duration = reader.readI16().unwrapOr(0);
+    }
+
+    virtual ClipType getType() { return ClipType::None; }
 };
 
 
@@ -319,25 +348,22 @@ class Rectangle : public Clip {
 public:
     Rectangle();
     void render(Frame* frame) override;
-
-    CEREAL_CLIP()
+    ClipType getType() override { return ClipType::Rectangle; }
 };
 
 class Circle : public Clip {
 public:
     Circle();
     void render(Frame* frame) override;
-
-    CEREAL_CLIP()
+    ClipType getType() override { return ClipType::Circle; }
 };
 
 class Text : public Clip {
 public:
     Text();
     void render(Frame* frame) override;
-    CEREAL_CLIP()
+    ClipType getType() override { return ClipType::Text; }
 };
-
 
 class ImageClip : public Clip {
 private:
@@ -357,12 +383,16 @@ public:
     void render(Frame* frame) override;
     void onDelete() override;
 
-    template<class Archive>
-    void serialize(Archive& archive) {
-        archive(
-            cereal::base_class<Clip>(this),
-            path
-        );
+    ClipType getType() override { return ClipType::Image; }
+
+    void write(qn::HeapByteWriter& writer) override {
+        Clip::write(writer);
+        writer.writeStringU32(path);
+    }
+
+    void read(qn::ByteReader& reader) override {
+        Clip::read(reader);
+        path = reader.readStringU32().unwrapOr("");
     }
 };
 
@@ -384,14 +414,18 @@ public:
     VideoClip();
     ~VideoClip();
 
+    ClipType getType() override { return ClipType::Video; }
+
     void render(Frame* frame) override;
     
-    template<class Archive>
-    void serialize(Archive& archive) {
-        archive(
-            cereal::base_class<Clip>(this),
-            path
-        );
+    void write(qn::HeapByteWriter& writer) override {
+        Clip::write(writer);
+        writer.writeStringU32(path);
+    }
+
+    void read(qn::ByteReader& reader) override {
+        Clip::read(reader);
+        path = reader.readStringU32().unwrapOr("");
     }
 };
 
@@ -415,12 +449,14 @@ public:
 
     float getCursor();
     
-    template<class Archive>
-    void serialize(Archive& archive) {
-        archive(
-            cereal::base_class<Clip>(this),
-            path
-        );
+    void write(qn::HeapByteWriter& writer) override {
+        Clip::write(writer);
+        writer.writeStringU32(path);
+    }
+
+    void read(qn::ByteReader& reader) override {
+        Clip::read(reader);
+        path = reader.readStringU32().unwrapOr("");
     }
 };
 
@@ -448,10 +484,51 @@ public:
 
     void render(Frame* frame, int currentFrame);
 
-    // archive
-    template<class Archive>
-    void serialize(Archive& archive) {
-        archive(clips);
+    void write(qn::HeapByteWriter& writer) {
+        writer.writeI16(clips.size());
+        for (auto clip : clips) {
+            clip->write(writer);
+        }
+    }
+
+    void read(qn::ByteReader& reader) {
+        auto size = reader.readI16().unwrapOr(0);
+        for (int i = 0; i < size; i++) {
+            auto clipType = (ClipType)(reader.readI16().unwrapOr(0));
+            std::println("love me some {}", (int)clipType);
+            std::shared_ptr<Clip> clip;
+
+            switch (clipType) {
+                case ClipType::Rectangle:
+                    std::println("making rect");
+                    clip = std::make_shared<Rectangle>();
+                    break;
+                case ClipType::Circle:
+                    std::println("making circ");
+                    clip = std::make_shared<Circle>();
+                    break;
+                case ClipType::Text:
+                    std::println("making text");
+                    clip = std::make_shared<Text>();
+                    break;
+                case ClipType::Image:
+                    std::println("making imag");
+                    clip = std::make_shared<ImageClip>();
+                    break;
+                case ClipType::Video:
+                    std::println("making vide");
+                    clip = std::make_shared<VideoClip>();
+                    break;
+                default:
+                    std::println("making god knows what");
+                    clip = std::make_shared<Clip>();
+                    break;
+            }
+
+            clip->read(reader);
+            std::println("{}", clip->m_metadata.name);
+            clips.push_back(clip);
+        }
     }
 };
 
@@ -479,10 +556,20 @@ public:
     void onPlay();
     void onStop();
 
-    // archive
-    template<class Archive>
-    void serialize(Archive& archive) {
-        archive(clips);
+    void write(qn::HeapByteWriter& writer) {
+        writer.writeI16(clips.size());
+        for (auto clip : clips) {
+            clip->write(writer);
+        }
+    }
+
+    void read(qn::ByteReader& reader) {
+        auto size = reader.readI16().unwrapOr(0);
+        for (int i = 0; i < size; i++) {
+            auto clip = std::make_shared<AudioClip>();
+            clip->read(reader);
+            clips.push_back(clip);
+        }
     }
 };
 
@@ -490,20 +577,24 @@ struct ExtClipMetadata {
     std::string filePath;
     int frameCount;
 
-    // archive
-    template<class Archive>
-    void serialize(Archive& archive) {
-        archive(filePath, frameCount);
+    void write(qn::HeapByteWriter& writer) {
+        writer.writeStringU32(filePath);
+        writer.writeI16(frameCount);
+    }
+
+    void read(qn::ByteReader& reader) {
+        filePath = reader.readStringU32().unwrapOr("");
+        frameCount = reader.readI16().unwrapOr(0);
     }
 };
 
 class Video {
 protected:
-    std::vector<std::shared_ptr<VideoTrack>> videoTracks;
 public:
     int framerate;
 
     Vector2D resolution;
+    std::vector<std::shared_ptr<VideoTrack>> videoTracks;
     std::vector<std::shared_ptr<AudioTrack>> audioTracks;
     std::vector<ExtClipMetadata> clipPool;
     std::vector<ExtClipMetadata> imagePool;
@@ -532,18 +623,74 @@ public:
     int frameForTime(float time);
     float timeForFrame(int time);
 
-    // archive
-    template<class Archive>
-    void serialize(Archive& archive) {
-        archive(
-            framerate,
-            resolution,
-            videoTracks,
-            audioTracks,
-            clipPool,
-            imagePool,
-            audioClipPool
-        );
+    void write(qn::HeapByteWriter& writer) {
+        writer.writeI16(framerate);
+        resolution.write(writer);
+        
+        writer.writeI16(videoTracks.size());
+        for (auto track : videoTracks) {
+            track->write(writer);
+        }
+
+        writer.writeI16(audioTracks.size());
+        for (auto audTrack : audioTracks) {
+            audTrack->write(writer);
+        }
+
+        writer.writeI16(clipPool.size());
+        for (auto clip : clipPool) {
+            clip.write(writer);
+        }
+
+        writer.writeI16(audioClipPool.size());
+        for (auto audClip : audioClipPool) {
+            audClip.write(writer);
+        }
+
+        writer.writeI16(imagePool.size());
+        for (auto imgClip : imagePool) {
+            imgClip.write(writer);
+        }
+    }
+
+    void read(qn::ByteReader& reader) {
+        framerate = reader.readI16().unwrapOr(0);
+        resolution.read(reader);
+
+        auto vidSize = reader.readI16().unwrapOr(0);
+        for (int i = 0; i < vidSize; i++) {
+            auto track = std::make_shared<VideoTrack>();
+            track->read(reader);
+            videoTracks.push_back(track);
+        }
+
+        auto audSize = reader.readI16().unwrapOr(0);
+        for (int i = 0; i < audSize; i++) {
+            auto track = std::make_shared<AudioTrack>();
+            track->read(reader);
+            audioTracks.push_back(track);
+        }
+
+        auto poolSize = reader.readI16().unwrapOr(0);
+        for (int i = 0; i < poolSize; i++) {
+            ExtClipMetadata meta;
+            meta.read(reader);
+            clipPool.push_back(meta);
+        }
+
+        auto audPoolSize = reader.readI16().unwrapOr(0);
+        for (int i = 0; i < audPoolSize; i++) {
+            ExtClipMetadata meta;
+            meta.read(reader);
+            audioClipPool.push_back(meta);
+        }
+
+        auto imgPoolSize = reader.readI16().unwrapOr(0);
+        for (int i = 0; i < imgPoolSize; i++) {
+            ExtClipMetadata meta;
+            meta.read(reader);
+            imagePool.push_back(meta);
+        }
     }
 };
 
@@ -606,13 +753,3 @@ public:
     void addClip(std::string path, float start, float end, std::shared_ptr<ClipProperty> volume);
     void render(float fps);
 };
-
-#define REGISTER(type) CEREAL_REGISTER_TYPE(type) \
-    CEREAL_REGISTER_POLYMORPHIC_RELATION(Clip, type)
-
-REGISTER(Rectangle)
-REGISTER(ImageClip)
-REGISTER(Circle)
-REGISTER(Text)
-REGISTER(VideoClip)
-REGISTER(AudioClip)

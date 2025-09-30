@@ -26,7 +26,8 @@ include(cmake/CPM.cmake)
 set(NFD_PORTAL ON)
 CPMAddPackage("gh:stephenberry/glaze@5.6.1")
 CPMAddPackage("gh:libsdl-org/SDL#release-3.2.20")
-CPMAddPackage("gh:USCiLab/cereal#a56bad8")
+# CPMAddPackage("gh:USCiLab/cereal#a56bad8")
+CPMAddPackage("gh:geode-sdk/result@1.3.2")
 CPMAddPackage("gh:mackron/miniaudio#0.11.23")
 CPMAddPackage("gh:btzy/nativefiledialog-extended#6db343a")
 CPMAddPackage("gh:lemenkov/libyuv#5b22f31")
@@ -99,7 +100,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     OpenGL::GL
     # ${OpenCV_LIBS}
     yuv
-    cereal
+    # cereal
     imgui
     nfd
     SDL3::SDL3
@@ -107,6 +108,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     miniaudio
     mlt
     mlt++
+    GeodeResult
 )
 
 add_dependencies(${PROJECT_NAME} mltavformat)

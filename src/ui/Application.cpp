@@ -1,7 +1,6 @@
 #include <Application.hpp>
 #include <print>
 
-#include <cereal/archives/portable_binary.hpp>
 #include <state.hpp>
 #include <widgets.hpp>
 
@@ -60,9 +59,12 @@ void Application::draw() {
                 );
 
                 if (result == NFD_OKAY) {
-                    std::ofstream file(outPath);
-                    cereal::PortableBinaryOutputArchive oarchive(file);
-                    oarchive(state.video);
+                    std::ofstream file(outPath, std::ios::binary);
+                    qn::HeapByteWriter writer;
+                    state.video->write(writer);
+                    auto written = writer.written();
+                    file.write(reinterpret_cast<const char*>(written.data()), written.size());
+                    file.close();
                 }
                 else if (result == NFD_CANCEL) {}
             }
@@ -77,10 +79,11 @@ void Application::draw() {
                 );
 
                 if (result == NFD_OKAY) {
-                    std::ifstream file(outPath);
-                    std::shared_ptr<Video> video;
-                    cereal::PortableBinaryInputArchive iarchive(file);
-                    iarchive(video);
+                    std::ifstream file(outPath, std::ios::binary);
+                    std::vector<unsigned char> fileBuffer(std::istreambuf_iterator<char>(file), {});
+                    qn::ByteReader reader(fileBuffer);
+                    std::shared_ptr<Video> video = std::make_shared<Video>();
+                    video->read(reader);
                     std::println("{}", video->getTracks().size());
 
                     state.video = video;

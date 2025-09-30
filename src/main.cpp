@@ -18,8 +18,6 @@
 
 #include <misc/cpp/imgui_stdlib.h>
 
-#include <cereal/types/polymorphic.hpp>
-
 #include <nfd.h>
 
 static constexpr double PI_DIV_180 = std::numbers::pi / 180.f;
@@ -930,10 +928,6 @@ void AudioTrack::onStop() {
         clip->stop();
     }
 }
-
-CEREAL_REGISTER_DYNAMIC_INIT(AudioClip)
-CEREAL_REGISTER_DYNAMIC_INIT(ImageClip)
-CEREAL_REGISTER_DYNAMIC_INIT(VideoClip)
 
 int main() {
     if (mlt_factory_init("resources/mlt") == 0) {
