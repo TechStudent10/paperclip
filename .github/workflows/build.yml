@@ -29,19 +29,25 @@ jobs:
       - name: Deps (win)
         if: runner.os == 'Windows'
         run: |
-          choco install cmake pkgconfiglite mingw -y
-          choco install ffmpeg --version=6.1.1
+          choco install cmake mingw -y
+
+          curl -L -o ffmpeg-dev.zip https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-n4.5-latest-win64-gpl-shared.zip
+          mkdir C:\ffmpeg
+          powershell -Command "Expand-Archive ffmpeg-dev.zip C:\ffmpeg"
+
+          # Set environment variables for CMake to find FFmpeg
+          echo "CMAKE_PREFIX_PATH=C:\\ffmpeg" >> $GITHUB_ENV
+          echo "PATH=C:\\ffmpeg\\bin;$Env:PATH" >> $GITHUB_ENV
       
       - name: Deps (mac)
         if: runner.os == 'macOS'
         run: |
           brew update
-          brew install cmake ninja ffmpeg@6
+          brew install cmake ninja ffmpeg
 
       - name: Deps (lin)
         if: runner.os == 'Linux'
         run: |
-          sudo add-apt-repository ppa:ubuntuhandbook1/ffmpeg6 -y
           sudo apt-get update
           sudo apt-get install -y build-essential git make \
           pkg-config cmake ninja-build gnome-desktop-testing libasound2-dev libpulse-dev \
