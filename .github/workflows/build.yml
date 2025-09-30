@@ -29,7 +29,7 @@ jobs:
       - name: Deps (win)
         if: runner.os == 'Windows'
         run: |
-          choco install cmake mingw -y
+          choco install cmake pkgconfiglite mingw -y
 
           curl -L -o ffmpeg-dev.zip https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-n4.5-latest-win64-gpl-shared.zip
           mkdir C:\ffmpeg
@@ -43,19 +43,33 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           brew update
-          brew install cmake ninja ffmpeg
+          brew install cmake ninja ffmpeg@7
+          brew link --force ffmpeg@7
 
       - name: Deps (lin)
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential git make \
+          sudo apt-get install -y build-essential git yasm nasm make \
           pkg-config cmake ninja-build gnome-desktop-testing libasound2-dev libpulse-dev \
           libaudio-dev libjack-dev libsndio-dev libx11-dev libxext-dev \
           libxrandr-dev libxcursor-dev libxfixes-dev libxi-dev libxss-dev libxtst-dev \
           libxkbcommon-dev libdrm-dev libgbm-dev libgl1-mesa-dev libgles2-mesa-dev \
           libegl1-mesa-dev libdbus-1-dev libibus-1.0-dev libudev-dev clang ffmpeg libavutil-dev \
           libavcodec-dev libavformat-dev libswscale-dev libswresample-dev
+
+          git clone https://github.com/FFmpeg/FFmpeg.git
+          cd FFmpeg
+          git checkout n7.1.1
+          ./configure --prefix=$HOME/ffmpeg7 --enable-shared --disable-doc --disable-programs
+          make -j$(nproc)
+          make install
+
+          export PKG_CONFIG_PATH=$HOME/ffmpeg7/lib/pkgconfig:$PKG_CONFIG_PATH
+          export PATH=$HOME/ffmpeg7/bin:$PATH
+          export LD_LIBRARY_PATH=$HOME/ffmpeg7/lib:$LD_LIBRARY_PATH
+
+          cd ..
 
       - name: Configure (win)
         if: runner.os == 'Windows'
