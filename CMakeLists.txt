@@ -92,6 +92,7 @@ if (WIN32)
     include_directories(${pthreads-win32-2-9-1_SOURCE_DIR})
     add_definitions(-DHAVE_STRUCT_TIMESPEC)
     add_definitions(-D_USE_MATH_DEFINES)
+    add_compile_definitions(WIN_PTHREADS_TIME_H=1)
 endif ()
 
 CPMAddPackage(
