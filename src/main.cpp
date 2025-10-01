@@ -4,7 +4,8 @@
 #include <Application.hpp>
 #include <state.hpp>
 
-#include <print>
+#include <fmt/base.h>
+#include <fmt/format.h>
 
 #include <format/vpf.hpp>
 

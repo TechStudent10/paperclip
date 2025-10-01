@@ -10,7 +10,8 @@
 
 #include "imgui_internal.h"
 #include <format>
-#include <print>
+#include <fmt/base.h>
+#include <fmt/format.h>
 #include <widgets.hpp>
 #include <imgui.h>
 #include <algorithm>

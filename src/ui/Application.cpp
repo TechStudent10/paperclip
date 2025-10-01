@@ -1,5 +1,6 @@
 #include <Application.hpp>
-#include <print>
+#include <fmt/base.h>
+#include <fmt/format.h>
 
 #include <state.hpp>
 #include <widgets.hpp>
@@ -798,12 +799,12 @@ bool Application::initImGui() {
 
 void Application::setup() {
     if (!initSDL()) {
-        std::print("could not initialize SDL");
+        fmt::print("could not initialize SDL");
         return;
     }
 
     if (!initImGui()) {
-        std::print("could not initalize ImGui");
+        fmt::print("could not initalize ImGui");
         return;
     }
 }

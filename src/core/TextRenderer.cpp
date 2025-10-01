@@ -5,7 +5,8 @@
 #define STB_TRUETYPE_IMPLEMENTATION
 #include <stb_truetype.h>
 
-#include <print>
+#include <fmt/base.h>
+#include <fmt/format.h>
 
 TextRenderer::TextRenderer() {}
 
