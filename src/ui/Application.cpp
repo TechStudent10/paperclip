@@ -236,9 +236,9 @@ void Application::draw() {
 
     if (ImGui::BeginTabBar("MediaTabBar")) {
         if (ImGui::BeginTabItem("Bultin")) {
-            drawClipButton<Rectangle>("Rectangle", 50);
-            drawClipButton<Circle>("Circle", 50);
-            drawClipButton<Text>("Text", 50);
+            drawClipButton<clips::Rectangle>("Rectangle", 50);
+            drawClipButton<clips::Circle>("Circle", 50);
+            drawClipButton<clips::Text>("Text", 50);
 
             ImGui::EndTabItem();
         }
@@ -337,7 +337,7 @@ void Application::draw() {
                     timeline.placeType = TrackType::Video;
                     timeline.placeCb = [this, clipMeta](int frame, int trackIdx) {
                         auto& state = State::get();
-                        auto clip = std::make_shared<VideoClip>(clipMeta.filePath);
+                        auto clip = std::make_shared<clips::VideoClip>(clipMeta.filePath);
                         clip->startFrame = frame;
                         clip->duration = clipMeta.frameCount;
                         state.lastRenderedFrame = -1;
@@ -372,7 +372,7 @@ void Application::draw() {
                     timeline.placeType = TrackType::Video;
                     timeline.placeCb = [this, imageFile](int frame, int trackIdx) {
                         auto& state = State::get();
-                        auto clip = std::make_shared<ImageClip>(imageFile.filePath);
+                        auto clip = std::make_shared<clips::ImageClip>(imageFile.filePath);
                         clip->startFrame = frame;
                         clip->duration = imageFile.frameCount;
                         state.lastRenderedFrame = -1;

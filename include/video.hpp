@@ -346,112 +346,112 @@ public:
     virtual Vector2D getSize() { return { 0, 0 }; }
     virtual Vector2D getPos() { return { 0, 0 }; }
 };
+namespace clips {
+    class Rectangle : public Clip {
+    public:
+        Rectangle();
+        void render(Frame* frame) override;
 
+        ClipType getType() override { return ClipType::Rectangle; }
+        Vector2D getSize() override;
+        Vector2D getPos() override;
+    };
 
-class Rectangle : public Clip {
-public:
-    Rectangle();
-    void render(Frame* frame) override;
+    class Circle : public Clip {
+    public:
+        Circle();
+        void render(Frame* frame) override;
 
-    ClipType getType() override { return ClipType::Rectangle; }
-    Vector2D getSize() override;
-    Vector2D getPos() override;
-};
+        ClipType getType() override { return ClipType::Circle; }
+        Vector2D getSize() override;
+        Vector2D getPos() override;
+    };
 
-class Circle : public Clip {
-public:
-    Circle();
-    void render(Frame* frame) override;
+    class Text : public Clip {
+    public:
+        float width = 0.f;
 
-    ClipType getType() override { return ClipType::Circle; }
-    Vector2D getSize() override;
-    Vector2D getPos() override;
-};
+        Text();
+        void render(Frame* frame) override;
 
-class Text : public Clip {
-public:
-    float width = 0.f;
+        ClipType getType() override { return ClipType::Text; }
+        Vector2D getSize() override;
+        Vector2D getPos() override;
+    };
 
-    Text();
-    void render(Frame* frame) override;
+    class ImageClip : public Clip {
+    private:
+        unsigned char* imageData;
+        std::vector<unsigned char> resizedData;
 
-    ClipType getType() override { return ClipType::Text; }
-    Vector2D getSize() override;
-    Vector2D getPos() override;
-};
+        int width, height;
+        int scaledW = 0, scaledH = 0;
 
-class ImageClip : public Clip {
-private:
-    unsigned char* imageData;
-    std::vector<unsigned char> resizedData;
+        bool initialize();
+    public:
+        bool initialized = false;
+        std::string path;
+        ImageClip();
+        ImageClip(const std::string& path);
+        ~ImageClip();
 
-    int width, height;
-    int scaledW = 0, scaledH = 0;
+        ImageClip& operator=( const ImageClip& ) = delete;
 
-    bool initialize();
-public:
-    bool initialized = false;
-    std::string path;
-    ImageClip();
-    ImageClip(const std::string& path);
-    ~ImageClip();
+        void render(Frame* frame) override;
+        void onDelete() override;
 
-    ImageClip& operator=( const ImageClip& ) = delete;
+        ClipType getType() override { return ClipType::Image; }
 
-    void render(Frame* frame) override;
-    void onDelete() override;
+        void write(qn::HeapByteWriter& writer) override {
+            Clip::write(writer);
+            writer.writeStringU32(path);
+        }
 
-    ClipType getType() override { return ClipType::Image; }
+        void read(qn::ByteReader& reader) override {
+            Clip::read(reader);
+            path = reader.readStringU32().unwrapOr("");
+        }
 
-    void write(qn::HeapByteWriter& writer) override {
-        Clip::write(writer);
-        writer.writeStringU32(path);
-    }
+        Vector2D getSize() override;
+        Vector2D getPos() override;
+    };
 
-    void read(qn::ByteReader& reader) override {
-        Clip::read(reader);
-        path = reader.readStringU32().unwrapOr("");
-    }
+    class VideoClip : public Clip {
+    private:
+        bool decodeFrame(int frameNumber);
 
-    Vector2D getSize() override;
-    Vector2D getPos() override;
-};
+        bool initialize();
 
-class VideoClip : public Clip {
-private:
-    bool decodeFrame(int frameNumber);
+        mlt_profile profile;
+        mlt_producer producer;
 
-    bool initialize();
+        int width = 0, height = 0, fps = 0;
+        std::vector<unsigned char> vidFrame;
+        std::string path;
+        bool initialized = false;
+    public:
+        VideoClip(const std::string& path);
+        VideoClip();
+        ~VideoClip();
 
-    mlt_profile profile;
-    mlt_producer producer;
+        ClipType getType() override { return ClipType::Video; }
 
-    int width = 0, height = 0, fps = 0;
-    std::vector<unsigned char> vidFrame;
-    std::string path;
-    bool initialized = false;
-public:
-    VideoClip(const std::string& path);
-    VideoClip();
-    ~VideoClip();
+        void render(Frame* frame) override;
+        
+        void write(qn::HeapByteWriter& writer) override {
+            Clip::write(writer);
+            writer.writeStringU32(path);
+        }
 
-    ClipType getType() override { return ClipType::Video; }
+        void read(qn::ByteReader& reader) override {
+            Clip::read(reader);
+            path = reader.readStringU32().unwrapOr("");
+        }
 
-    void render(Frame* frame) override;
-    
-    void write(qn::HeapByteWriter& writer) override {
-        Clip::write(writer);
-        writer.writeStringU32(path);
-    }
-
-    void read(qn::ByteReader& reader) override {
-        Clip::read(reader);
-        path = reader.readStringU32().unwrapOr("");
-    }
-
-    Vector2D getSize() override;
-    Vector2D getPos() override;
-};
+        Vector2D getSize() override;
+        Vector2D getPos() override;
+    };
+}
 
 class AudioClip : public Clip {
 private:
@@ -525,27 +525,27 @@ public:
             switch (clipType) {
                 case ClipType::Rectangle:
                     fmt::println("making rect");
-                    clip = std::make_shared<::Rectangle>();
+                    clip = std::make_shared<clips::Rectangle>();
                     break;
                 case ClipType::Circle:
                     fmt::println("making circ");
-                    clip = std::make_shared<::Circle>();
+                    clip = std::make_shared<clips::Circle>();
                     break;
                 case ClipType::Text:
                     fmt::println("making text");
-                    clip = std::make_shared<::Text>();
+                    clip = std::make_shared<clips::Text>();
                     break;
                 case ClipType::Image:
                     fmt::println("making imag");
-                    clip = std::make_shared<::ImageClip>();
+                    clip = std::make_shared<clips::ImageClip>();
                     break;
                 case ClipType::Video:
                     fmt::println("making vide");
-                    clip = std::make_shared<::VideoClip>();
+                    clip = std::make_shared<clips::VideoClip>();
                     break;
                 default:
                     fmt::println("making god knows what");
-                    clip = std::make_shared<::Clip>();
+                    clip = std::make_shared<Clip>();
                     break;
             }
 

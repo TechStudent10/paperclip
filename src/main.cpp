@@ -232,457 +232,459 @@ void ClipProperties::setKeyframeMeta(std::string id, int frame, PropertyKeyframe
     properties[id]->keyframeInfo[frame] = data;
 }
 
-Rectangle::Rectangle(): Clip(60, 120) {
-    m_properties.addProperty(
-        ClipProperty::dimensions()
-    );
+namespace clips {
+    Rectangle::Rectangle(): Clip(60, 120) {
+        m_properties.addProperty(
+            ClipProperty::dimensions()
+        );
 
-    m_properties.addProperty(
-        ClipProperty::color()
-    );
+        m_properties.addProperty(
+            ClipProperty::color()
+        );
 
-    m_metadata.name = "Rectangle";
-}
+        m_metadata.name = "Rectangle";
+    }
 
-Vector2D Rectangle::getPos() {
-    Dimensions dimensions = Dimensions::fromString(m_properties.getProperty("dimensions")->data);
-    return dimensions.pos;
-}
+    Vector2D Rectangle::getPos() {
+        Dimensions dimensions = Dimensions::fromString(m_properties.getProperty("dimensions")->data);
+        return dimensions.pos;
+    }
 
-Vector2D Rectangle::getSize() {
-    Dimensions dimensions = Dimensions::fromString(m_properties.getProperty("dimensions")->data);
-    return dimensions.size;
-}
+    Vector2D Rectangle::getSize() {
+        Dimensions dimensions = Dimensions::fromString(m_properties.getProperty("dimensions")->data);
+        return dimensions.size;
+    }
 
-void Rectangle::render(Frame* frame) {
-    Dimensions dimensions = Dimensions::fromString(m_properties.getProperty("dimensions")->data);
-    RGBAColor color = RGBAColor::fromString(m_properties.getProperty("color")->data);
-    frame->drawRect(dimensions, color);
-}
+    void Rectangle::render(Frame* frame) {
+        Dimensions dimensions = Dimensions::fromString(m_properties.getProperty("dimensions")->data);
+        RGBAColor color = RGBAColor::fromString(m_properties.getProperty("color")->data);
+        frame->drawRect(dimensions, color);
+    }
 
 
-Circle::Circle(): Clip(60, 120) {
-    m_properties.addProperty(
-        ClipProperty::position()
-    );
+    Circle::Circle(): Clip(60, 120) {
+        m_properties.addProperty(
+            ClipProperty::position()
+        );
 
-    m_properties.addProperty(
-        ClipProperty::number()
-            ->setName("Radius")
-            ->setId("radius")
-            ->setDefaultKeyframe(Vector1D{ .number = 500 }.toString())
-    );
+        m_properties.addProperty(
+            ClipProperty::number()
+                ->setName("Radius")
+                ->setId("radius")
+                ->setDefaultKeyframe(Vector1D{ .number = 500 }.toString())
+        );
 
-    m_properties.addProperty(
-        ClipProperty::color()
-    );
+        m_properties.addProperty(
+            ClipProperty::color()
+        );
 
-    m_metadata.name = "Circle";
-}
+        m_metadata.name = "Circle";
+    }
 
-Vector2D Circle::getSize() {
-    int diameter = Vector1D::fromString(m_properties.getProperty("radius")->data).number * 2;
-    
-    return { diameter, diameter };
-}
+    Vector2D Circle::getSize() {
+        int diameter = Vector1D::fromString(m_properties.getProperty("radius")->data).number * 2;
+        
+        return { diameter, diameter };
+    }
 
-Vector2D Circle::getPos() {
-    Vector2D position = Vector2D::fromString(m_properties.getProperty("position")->data);
-    int radius = Vector1D::fromString(m_properties.getProperty("radius")->data).number;
-    return { position.x - radius, position.y - radius };
-}
+    Vector2D Circle::getPos() {
+        Vector2D position = Vector2D::fromString(m_properties.getProperty("position")->data);
+        int radius = Vector1D::fromString(m_properties.getProperty("radius")->data).number;
+        return { position.x - radius, position.y - radius };
+    }
 
-void Circle::render(Frame* frame) {
-    Vector2D position = Vector2D::fromString(m_properties.getProperty("position")->data);
-    Vector1D radius = Vector1D::fromString(m_properties.getProperty("radius")->data);
-    RGBAColor color = RGBAColor::fromString(m_properties.getProperty("color")->data);
-    frame->drawCircle(position, radius.number, color);
-}
+    void Circle::render(Frame* frame) {
+        Vector2D position = Vector2D::fromString(m_properties.getProperty("position")->data);
+        Vector1D radius = Vector1D::fromString(m_properties.getProperty("radius")->data);
+        RGBAColor color = RGBAColor::fromString(m_properties.getProperty("color")->data);
+        frame->drawCircle(position, radius.number, color);
+    }
 
-Text::Text(): Clip(60, 120) {
-    m_properties.addProperty(
-        ClipProperty::position()
-    );
+    Text::Text(): Clip(60, 120) {
+        m_properties.addProperty(
+            ClipProperty::position()
+        );
 
-    m_properties.addProperty(
-        ClipProperty::color()
-    );
+        m_properties.addProperty(
+            ClipProperty::color()
+        );
 
-    // default text property is fine here
-    m_properties.addProperty(
-        ClipProperty::text()
-    );
+        // default text property is fine here
+        m_properties.addProperty(
+            ClipProperty::text()
+        );
 
-    m_properties.addProperty(
-        ClipProperty::dropdown()
-            ->setId("font")
-            ->setName("Font")
-            ->setOptions(DropdownOptions{
-                .options = std::vector<std::string>({
-                    "Inter",
-                    "JetBrains Mono",
-                    "Noto Sans",
-                    "Noto Serif",
-                    "Open Sans",
-                    "Oswald",
-                    "Raleway",
-                    "Raleway Dots",
-                    "Roboto",
-                    "Source Code Pro",
-                    "Source Serif 4"
-                })
-            }.toString())
-            ->setDefaultKeyframe("Inter")
-    );
+        m_properties.addProperty(
+            ClipProperty::dropdown()
+                ->setId("font")
+                ->setName("Font")
+                ->setOptions(DropdownOptions{
+                    .options = std::vector<std::string>({
+                        "Inter",
+                        "JetBrains Mono",
+                        "Noto Sans",
+                        "Noto Serif",
+                        "Open Sans",
+                        "Oswald",
+                        "Raleway",
+                        "Raleway Dots",
+                        "Roboto",
+                        "Source Code Pro",
+                        "Source Serif 4"
+                    })
+                }.toString())
+                ->setDefaultKeyframe("Inter")
+        );
 
-    m_properties.addProperty(
-        ClipProperty::number()
-            ->setId("size")
-            ->setName("Font Size")
-            ->setDefaultKeyframe(Vector1D{ .number = 90 }.toString())
-    );
+        m_properties.addProperty(
+            ClipProperty::number()
+                ->setId("size")
+                ->setName("Font Size")
+                ->setDefaultKeyframe(Vector1D{ .number = 90 }.toString())
+        );
 
-    m_metadata.name = "Text";
-}
+        m_metadata.name = "Text";
+    }
 
-Vector2D Text::getSize() {
-    auto fontSize = Vector1D::fromString(m_properties.getProperty("size")->data).number;
+    Vector2D Text::getSize() {
+        auto fontSize = Vector1D::fromString(m_properties.getProperty("size")->data).number;
 
-    return { static_cast<int>(width), fontSize };
-}
+        return { static_cast<int>(width), fontSize };
+    }
 
-Vector2D Text::getPos() {
-    Vector2D position = Vector2D::fromString(m_properties.getProperty("position")->data);
-    return position;
-}
+    Vector2D Text::getPos() {
+        Vector2D position = Vector2D::fromString(m_properties.getProperty("position")->data);
+        return position;
+    }
 
-void Text::render(Frame* frame) {
-    auto& state = State::get();
-    auto text = m_properties.getProperty("text")->data;
-    auto font = fmt::format("resources/fonts/{}.ttf", m_properties.getProperty("font")->data);
-    auto fontSize = Vector1D::fromString(m_properties.getProperty("size")->data).number;
-    auto pos = Vector2D::fromString(m_properties.getProperty("position")->data);
-    auto color = RGBAColor::fromString(m_properties.getProperty("color")->data);
+    void Text::render(Frame* frame) {
+        auto& state = State::get();
+        auto text = m_properties.getProperty("text")->data;
+        auto font = fmt::format("resources/fonts/{}.ttf", m_properties.getProperty("font")->data);
+        auto fontSize = Vector1D::fromString(m_properties.getProperty("size")->data).number;
+        auto pos = Vector2D::fromString(m_properties.getProperty("position")->data);
+        auto color = RGBAColor::fromString(m_properties.getProperty("color")->data);
 
-    width = state.textRenderer->drawText(frame, text, font, pos, color, fontSize);
-}
+        width = state.textRenderer->drawText(frame, text, font, pos, color, fontSize);
+    }
 
-void drawImage(Frame* frame, unsigned char* data, Vector2D size, Vector2D position, double rotation = 0) {
-    // x'' = (x' * cos(θ)) - (y' * sin(θ))
-    // y'' = (x' * sin(θ)) + (y' * cos(θ))
-    // x'' = rotated x
-    // y'' = rotated y
-    // x' = x - center x
-    // y' = y - center y
+    void drawImage(Frame* frame, unsigned char* data, Vector2D size, Vector2D position, double rotation = 0) {
+        // x'' = (x' * cos(θ)) - (y' * sin(θ))
+        // y'' = (x' * sin(θ)) + (y' * cos(θ))
+        // x'' = rotated x
+        // y'' = rotated y
+        // x' = x - center x
+        // y' = y - center y
 
-    double radians = rotation * PI_DIV_180;
+        double radians = rotation * PI_DIV_180;
 
-    double cosR = cosf(radians);
-    double sinR = sinf(radians);
-    double centerX = (double)size.x / 2.f;
-    double centerY = (double)size.y / 2.f;
+        double cosR = cosf(radians);
+        double sinR = sinf(radians);
+        double centerX = (double)size.x / 2.f;
+        double centerY = (double)size.y / 2.f;
 
-    auto forwardMappedPos = [cosR, sinR, centerX, centerY](int x, int y) {
-        Vector2D result;
+        auto forwardMappedPos = [cosR, sinR, centerX, centerY](int x, int y) {
+            Vector2D result;
 
-        double xPrime = x - centerX;
-        double yPrime = y - centerY;
-        result.x = static_cast<int>(std::round((xPrime * cosR) - (yPrime * sinR) + centerX));
-        result.y = static_cast<int>(std::round((xPrime * sinR) + (yPrime * cosR) + centerY));
+            double xPrime = x - centerX;
+            double yPrime = y - centerY;
+            result.x = static_cast<int>(std::round((xPrime * cosR) - (yPrime * sinR) + centerX));
+            result.y = static_cast<int>(std::round((xPrime * sinR) + (yPrime * cosR) + centerY));
 
-        return result;
-    };
+            return result;
+        };
 
-    auto inverseMappedPos = [cosR, sinR, centerX, centerY](int x, int y) {
-        Vector2D result;
+        auto inverseMappedPos = [cosR, sinR, centerX, centerY](int x, int y) {
+            Vector2D result;
 
-        double xPrime = x - centerX;
-        double yPrime = y - centerY;
-        result.x = static_cast<int>(std::round((xPrime * cosR) + (yPrime * sinR) + centerX));
-        result.y = static_cast<int>(std::round(-(xPrime * sinR) + (yPrime * cosR) + centerY));
+            double xPrime = x - centerX;
+            double yPrime = y - centerY;
+            result.x = static_cast<int>(std::round((xPrime * cosR) + (yPrime * sinR) + centerX));
+            result.y = static_cast<int>(std::round(-(xPrime * sinR) + (yPrime * cosR) + centerY));
 
-        return result;
-    };
+            return result;
+        };
 
-    // precompute rotated positions for the corners
-    // 0, 0
-    auto topLeft = forwardMappedPos(0, 0);
+        // precompute rotated positions for the corners
+        // 0, 0
+        auto topLeft = forwardMappedPos(0, 0);
 
-    // width, 0
-    auto topRight = forwardMappedPos(size.x, 0);
+        // width, 0
+        auto topRight = forwardMappedPos(size.x, 0);
 
-    // 0, height
-    auto bottomLeft = forwardMappedPos(0, size.y);
+        // 0, height
+        auto bottomLeft = forwardMappedPos(0, size.y);
 
-    // width, height
-    auto bottomRight = forwardMappedPos(size.x, size.y);
+        // width, height
+        auto bottomRight = forwardMappedPos(size.x, size.y);
 
-    int minX = std::min({ topLeft.x, topRight.x, bottomLeft.x, bottomRight.x });
-    int minY = std::min({ topLeft.y, topRight.y, bottomLeft.y, bottomRight.y });
+        int minX = std::min({ topLeft.x, topRight.x, bottomLeft.x, bottomRight.x });
+        int minY = std::min({ topLeft.y, topRight.y, bottomLeft.y, bottomRight.y });
 
-    int maxX = std::max({ topLeft.x, topRight.x, bottomLeft.x, bottomRight.x });
-    int maxY = std::max({ topLeft.y, topRight.y, bottomLeft.y, bottomRight.y });
+        int maxX = std::max({ topLeft.x, topRight.x, bottomLeft.x, bottomRight.x });
+        int maxY = std::max({ topLeft.y, topRight.y, bottomLeft.y, bottomRight.y });
 
-    // fmt::println("drawImage: size=({}, {})", size.x, size.y);
-    for (int dstY = minY; dstY < maxY; dstY++) {
-        for (int dstX = minX; dstX < maxX; dstX++) {
-            int frameX = dstX + position.x;
-            int frameY = dstY + position.y;
+        // fmt::println("drawImage: size=({}, {})", size.x, size.y);
+        for (int dstY = minY; dstY < maxY; dstY++) {
+            for (int dstX = minX; dstX < maxX; dstX++) {
+                int frameX = dstX + position.x;
+                int frameY = dstY + position.y;
 
-            auto res = inverseMappedPos(dstX, dstY);
-            res.x = std::clamp(res.x, 0, size.x - 1);
-            res.y = std::clamp(res.y, 0, size.y - 1);
-            
-            if (res.x < 0 || res.x >= size.x) continue;
-            if (res.y < 0 || res.y >= size.y) continue;
-            
-            if (frameX < 0 || frameX >= frame->width) continue;
-            if (frameY < 0 || frameY >= frame->height) continue;
-            
-            int srcLoc = (res.y * size.x + res.x) * 3;
-            int dstLoc = (frameY * frame->width + frameX) * 4;
-            uint8_t* dst = &frame->imageData[dstLoc];
-            // if (!data[srcLoc] || !data[srcLoc + 1] || !data[srcLoc + 2]) continue;
+                auto res = inverseMappedPos(dstX, dstY);
+                res.x = std::clamp(res.x, 0, size.x - 1);
+                res.y = std::clamp(res.y, 0, size.y - 1);
+                
+                if (res.x < 0 || res.x >= size.x) continue;
+                if (res.y < 0 || res.y >= size.y) continue;
+                
+                if (frameX < 0 || frameX >= frame->width) continue;
+                if (frameY < 0 || frameY >= frame->height) continue;
+                
+                int srcLoc = (res.y * size.x + res.x) * 3;
+                int dstLoc = (frameY * frame->width + frameX) * 4;
+                uint8_t* dst = &frame->imageData[dstLoc];
+                // if (!data[srcLoc] || !data[srcLoc + 1] || !data[srcLoc + 2]) continue;
 
-            // fmt::println("{}, {}, {}", data[srcLoc], data[srcLoc + 1], data[srcLoc + 2]);
-            // if (srcLoc + 2 >= size.x * size.y * 3) {
-                // fmt::println("OOB: res=({}, {}), srcLoc={}", res.x, res.y, srcLoc);
-                // continue;
-            // }
-            dst[0] = data[srcLoc];
-            dst[1] = data[srcLoc + 1];
-            dst[2] = data[srcLoc + 2];
-            dst[3] = 255;
+                // fmt::println("{}, {}, {}", data[srcLoc], data[srcLoc + 1], data[srcLoc + 2]);
+                // if (srcLoc + 2 >= size.x * size.y * 3) {
+                    // fmt::println("OOB: res=({}, {}), srcLoc={}", res.x, res.y, srcLoc);
+                    // continue;
+                // }
+                dst[0] = data[srcLoc];
+                dst[1] = data[srcLoc + 1];
+                dst[2] = data[srcLoc + 2];
+                dst[3] = 255;
+            }
         }
     }
-}
 
-VideoClip::VideoClip(const std::string& path): Clip(10, 60), path(path) {
-    m_metadata.name = path;
+    VideoClip::VideoClip(const std::string& path): Clip(10, 60), path(path) {
+        m_metadata.name = path;
 
-    m_properties.addProperty(
-        ClipProperty::position()
-    );
+        m_properties.addProperty(
+            ClipProperty::position()
+        );
 
-    m_properties.addProperty(
-        ClipProperty::number()
-            ->setId("scale")
-            ->setName("Scale")
-            ->setDefaultKeyframe(Vector1D{ .number = 1 }.toString())
-    );
+        m_properties.addProperty(
+            ClipProperty::number()
+                ->setId("scale")
+                ->setName("Scale")
+                ->setDefaultKeyframe(Vector1D{ .number = 1 }.toString())
+        );
 
-    if (!path.empty()) {
+        if (!path.empty()) {
+            initialize();
+        }
+    }
+
+    VideoClip::VideoClip(): VideoClip("") {}
+
+    bool VideoClip::initialize() {
+        if (initialized) {
+            return true;
+        }
+
+        profile = mlt_profile_init("hdv_720_30p");
+        if (profile == NULL) {
+            fmt::println("no profile!");
+            return false;
+        }
+        producer = mlt_factory_producer(profile, "avformat", path.c_str());
+        if (producer == NULL) {
+            fmt::println("no video!");
+            return false;
+        }
+
+        fps = mlt_producer_get_fps(producer);
+        mlt_producer_get_out(producer);
+
+        initialized = true;
+
+        return true;
+    }
+
+    Vector2D VideoClip::getSize() {    
+        return { width, height };
+    }
+
+    Vector2D VideoClip::getPos() {
+        Vector2D position = Vector2D::fromString(m_properties.getProperty("position")->data);
+        return position;
+    }
+
+    VideoClip::~VideoClip() {
+        mlt_producer_close(producer);
+        mlt_profile_close(profile);
+    }
+
+    bool VideoClip::decodeFrame(int frameNumber) {
+        if (!producer) {
+            return false;
+        }
+
+        mlt_producer_seek(producer, frameNumber);
+
+        mlt_frame frame = nullptr;
+        if (mlt_service_get_frame(MLT_PRODUCER_SERVICE(producer), &frame, 0) != 0) {
+            fmt::println("Failed to get frame");
+            return false;
+        }
+
+        if (!frame) {
+            fmt::println("Frame is null");
+            return false;
+        }
+
+        mlt_image_format format = mlt_image_format::mlt_image_yuv420p;
+        uint8_t* image = nullptr;
+
+        if (mlt_frame_get_image(frame, &image, &format, &width, &height, 0) != 0 || !image) {
+            mlt_frame_close(frame);
+            return false;
+        }
+
+        if (vidFrame.empty()) {
+            vidFrame.resize(width * height * 3);
+        }
+
+        uint8_t* y = image;
+        uint8_t* u = y + width * height;
+        uint8_t* v = u + static_cast<int>(std::rint((float)width / 2.f)) * static_cast<int>(std::rint((float)height / 2.f));
+
+        libyuv::I420ToRGB24(
+            y, width,
+            v, std::rint((float)width / 2.f),
+            u, std::rint((float)width / 2.f),
+            vidFrame.data(), width * 3,
+            width, height
+        );
+
+        mlt_frame_close(frame);
+        return true;
+    }
+
+    void VideoClip::render(Frame* frame) {
+        initialize();
+
+        auto& state = State::get();
+        int targetFrame = floor((float)(state.currentFrame - startFrame) / ((float)state.video->getFPS() / (float)fps));
+        if (targetFrame < 0) return;
+
+        if (!decodeFrame(targetFrame) || vidFrame.empty()) return;
+
+        float scale = Vector1D::fromString(m_properties.getProperty("scale")->data).number;
+        if (scale <= 0) {
+            return;
+        }
+
+        auto position = Vector2D::fromString(m_properties.getProperty("position")->data);
+        drawImage(frame, vidFrame.data(), { width, height }, position);
+    }
+
+    ImageClip::ImageClip(const std::string& path): Clip(0, 120), path(path) {
+        m_properties.addProperty(
+            ClipProperty::position()
+        );
+
+        m_properties.addProperty(
+            ClipProperty::number()
+                ->setId("scale-x")
+                ->setName("Scale X")
+                ->setDefaultKeyframe(Vector1D{ .number = 100 }.toString())   
+        );
+
+        m_properties.addProperty(
+            ClipProperty::number()
+                ->setId("scale-y")
+                ->setName("Scale Y")
+                ->setDefaultKeyframe(Vector1D{ .number = 100 }.toString())   
+        );
+
+        m_properties.addProperty(
+            ClipProperty::number()
+                ->setId("rotation")
+                ->setName("Rotation (deg)")
+                ->setDefaultKeyframe(Vector1D{ .number = 0 }.toString())
+        );
+
+        m_metadata.name = path;
+
+        if (path.empty()) return;
+
         initialize();
     }
-}
 
-VideoClip::VideoClip(): VideoClip("") {}
+    bool ImageClip::initialize() {
+        if (initialized) {
+            return true;
+        }
 
-bool VideoClip::initialize() {
-    if (initialized) {
+        imageData = stbi_load(path.c_str(), &width, &height, NULL, 3);
+        if (imageData == NULL) {
+            fmt::println("could not load image {}", path);
+            return false;
+        }
+
+        initialized = true;
+
         return true;
     }
 
-    profile = mlt_profile_init("hdv_720_30p");
-    if (profile == NULL) {
-        fmt::println("no profile!");
-        return false;
-    }
-    producer = mlt_factory_producer(profile, "avformat", path.c_str());
-    if (producer == NULL) {
-        fmt::println("no video!");
-        return false;
+    Vector2D ImageClip::getSize() {    
+        return { scaledW, scaledH };
     }
 
-    fps = mlt_producer_get_fps(producer);
-    mlt_producer_get_out(producer);
-
-    initialized = true;
-
-    return true;
-}
-
-Vector2D VideoClip::getSize() {    
-    return { width, height };
-}
-
-Vector2D VideoClip::getPos() {
-    Vector2D position = Vector2D::fromString(m_properties.getProperty("position")->data);
-    return position;
-}
-
-VideoClip::~VideoClip() {
-    mlt_producer_close(producer);
-    mlt_profile_close(profile);
-}
-
-bool VideoClip::decodeFrame(int frameNumber) {
-    if (!producer) {
-        return false;
+    Vector2D ImageClip::getPos() {
+        Vector2D position = Vector2D::fromString(m_properties.getProperty("position")->data);
+        return position;
     }
 
-    mlt_producer_seek(producer, frameNumber);
-
-    mlt_frame frame = nullptr;
-    if (mlt_service_get_frame(MLT_PRODUCER_SERVICE(producer), &frame, 0) != 0) {
-        fmt::println("Failed to get frame");
-        return false;
+    ImageClip::ImageClip(): ImageClip("") {
+        fmt::println("construct: {} ({})", path, sizeof(imageData));
     }
 
-    if (!frame) {
-        fmt::println("Frame is null");
-        return false;
-    }
+    void ImageClip::render(Frame* frame) {
+        initialize();
 
-    mlt_image_format format = mlt_image_format::mlt_image_yuv420p;
-    uint8_t* image = nullptr;
+        float scaleX = (float)Vector1D::fromString(m_properties.getProperty("scale-x")->data).number / 100.f;
+        float scaleY = (float)Vector1D::fromString(m_properties.getProperty("scale-y")->data).number / 100.f;
+        int rotation = Vector1D::fromString(m_properties.getProperty("rotation")->data).number;
+        if (scaleX <= 0 || scaleY <= 0) {
+            return;
+        }
+        auto position = Vector2D::fromString(m_properties.getProperty("position")->data);
 
-    if (mlt_frame_get_image(frame, &image, &format, &width, &height, 0) != 0 || !image) {
-        mlt_frame_close(frame);
-        return false;
-    }
-
-    if (vidFrame.empty()) {
-        vidFrame.resize(width * height * 3);
-    }
-
-    uint8_t* y = image;
-    uint8_t* u = y + width * height;
-    uint8_t* v = u + static_cast<int>(std::rint((float)width / 2.f)) * static_cast<int>(std::rint((float)height / 2.f));
-
-    libyuv::I420ToRGB24(
-        y, width,
-        v, std::rint((float)width / 2.f),
-        u, std::rint((float)width / 2.f),
-        vidFrame.data(), width * 3,
-        width, height
-    );
-
-    mlt_frame_close(frame);
-    return true;
-}
-
-void VideoClip::render(Frame* frame) {
-    initialize();
-
-    auto& state = State::get();
-    int targetFrame = floor((float)(state.currentFrame - startFrame) / ((float)state.video->getFPS() / (float)fps));
-    if (targetFrame < 0) return;
-
-    if (!decodeFrame(targetFrame) || vidFrame.empty()) return;
-
-    float scale = Vector1D::fromString(m_properties.getProperty("scale")->data).number;
-    if (scale <= 0) {
-        return;
-    }
-
-    auto position = Vector2D::fromString(m_properties.getProperty("position")->data);
-    drawImage(frame, vidFrame.data(), { width, height }, position);
-}
-
-ImageClip::ImageClip(const std::string& path): Clip(0, 120), path(path) {
-    m_properties.addProperty(
-        ClipProperty::position()
-    );
-
-    m_properties.addProperty(
-        ClipProperty::number()
-            ->setId("scale-x")
-            ->setName("Scale X")
-            ->setDefaultKeyframe(Vector1D{ .number = 100 }.toString())   
-    );
-
-    m_properties.addProperty(
-        ClipProperty::number()
-            ->setId("scale-y")
-            ->setName("Scale Y")
-            ->setDefaultKeyframe(Vector1D{ .number = 100 }.toString())   
-    );
-
-    m_properties.addProperty(
-        ClipProperty::number()
-            ->setId("rotation")
-            ->setName("Rotation (deg)")
-            ->setDefaultKeyframe(Vector1D{ .number = 0 }.toString())
-    );
-
-    m_metadata.name = path;
-
-    if (path.empty()) return;
-
-    initialize();
-}
-
-bool ImageClip::initialize() {
-    if (initialized) {
-        return true;
-    }
-
-    imageData = stbi_load(path.c_str(), &width, &height, NULL, 3);
-    if (imageData == NULL) {
-        fmt::println("could not load image {}", path);
-        return false;
-    }
-
-    initialized = true;
-
-    return true;
-}
-
-Vector2D ImageClip::getSize() {    
-    return { scaledW, scaledH };
-}
-
-Vector2D ImageClip::getPos() {
-    Vector2D position = Vector2D::fromString(m_properties.getProperty("position")->data);
-    return position;
-}
-
-ImageClip::ImageClip(): ImageClip("") {
-    fmt::println("construct: {} ({})", path, sizeof(imageData));
-}
-
-void ImageClip::render(Frame* frame) {
-    initialize();
-
-    float scaleX = (float)Vector1D::fromString(m_properties.getProperty("scale-x")->data).number / 100.f;
-    float scaleY = (float)Vector1D::fromString(m_properties.getProperty("scale-y")->data).number / 100.f;
-    int rotation = Vector1D::fromString(m_properties.getProperty("rotation")->data).number;
-    if (scaleX <= 0 || scaleY <= 0) {
-        return;
-    }
-    auto position = Vector2D::fromString(m_properties.getProperty("position")->data);
-
-    int currentScaledW = static_cast<int>(std::floor(width * scaleX));
-    int currentScaledH = static_cast<int>(std::floor(height * scaleY));
-    
-    if (currentScaledW != scaledW || currentScaledH != scaledH) {
-        // fmt::println("scale change!");
-        scaledW = currentScaledW;
-        scaledH = currentScaledH;
+        int currentScaledW = static_cast<int>(std::floor(width * scaleX));
+        int currentScaledH = static_cast<int>(std::floor(height * scaleY));
         
-        resizedData.resize(scaledW * scaledH * 3);
-        auto res = stbir_resize_uint8_linear(
-            imageData, width, height, width * 3,
-            resizedData.data(), scaledW, scaledH, scaledW * 3,
-            stbir_pixel_layout::STBIR_RGB
-        );
-        // fmt::println("{}", res == 0);
+        if (currentScaledW != scaledW || currentScaledH != scaledH) {
+            // fmt::println("scale change!");
+            scaledW = currentScaledW;
+            scaledH = currentScaledH;
+            
+            resizedData.resize(scaledW * scaledH * 3);
+            auto res = stbir_resize_uint8_linear(
+                imageData, width, height, width * 3,
+                resizedData.data(), scaledW, scaledH, scaledW * 3,
+                stbir_pixel_layout::STBIR_RGB
+            );
+            // fmt::println("{}", res == 0);
+        }
+
+        drawImage(frame, resizedData.data(), { scaledW, scaledH }, position, rotation);
     }
 
-    drawImage(frame, resizedData.data(), { scaledW, scaledH }, position, rotation);
-}
-
-ImageClip::~ImageClip() {
-    onDelete();
-}
-
-void ImageClip::onDelete() {
-    if (imageData) {
-        fmt::println("deletion!");
-        stbi_image_free(imageData);
+    ImageClip::~ImageClip() {
+        onDelete();
     }
-}
+
+    void ImageClip::onDelete() {
+        if (imageData) {
+            fmt::println("deletion!");
+            stbi_image_free(imageData);
+        }
+    }
+} // namespace clips
 
 void VideoTrack::render(Frame* frame, int currentFrame) {
     for (auto clip : clips) {
@@ -1024,7 +1026,7 @@ int main() {
     video->addTrack(std::make_shared<VideoTrack>());
     video->addTrack(std::make_shared<VideoTrack>());
 
-    auto rectClip = std::make_shared<Circle>();
+    auto rectClip = std::make_shared<clips::Circle>();
     rectClip->m_properties.setKeyframe("position", 120, Vector2D{ .x = 500, .y = 1000}.toString());
     rectClip->m_properties.setKeyframe("position", 180, Vector2D{ .x = 200, .y = 800}.toString());
     rectClip->m_properties.setKeyframe("position", 240, Vector2D{ .x = 0, .y = 500}.toString());
