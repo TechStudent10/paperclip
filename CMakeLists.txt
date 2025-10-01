@@ -146,7 +146,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     avutil avcodec avformat swscale swresample
 )
 
-add_dependencies(${PROJECT_NAME} mltavformat)
+# add_dependencies(${PROJECT_NAME} mltavformat)
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${stb_SOURCE_DIR} ${libyuv_SOURCE_DIR}/include)
 
