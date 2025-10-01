@@ -357,7 +357,7 @@ void VideoTimeline::handleInteractions(const ImVec2& canvasPos, const ImVec2& ca
 
     if (isHovered) {
         if (io.MouseWheel != 0.0f && !io.KeyShift) {
-            fmt::print("{}", io.KeyShift);
+            fmt::println("{}", io.KeyShift);
             if (io.KeyCtrl) {
                 float old_zoom = zoomFactor;
                 setZoom(zoomFactor * (1.0f + io.MouseWheel * 0.1f));

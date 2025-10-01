@@ -85,7 +85,7 @@ void Application::draw() {
                     qn::ByteReader reader(fileBuffer);
                     std::shared_ptr<Video> video = std::make_shared<Video>();
                     video->read(reader);
-                    fmt::print("{}", video->getTracks().size());
+                    fmt::println("{}", video->getTracks().size());
 
                     state.video = video;
                 }
@@ -599,7 +599,7 @@ void Application::draw() {
     );
 
     if (ImGui::InvisibleButton("btn", imageSize)) {
-        // fmt::print("btn");
+        // fmt::println("btn");
     }
 
     if (ImGui::IsItemHovered() && ImGui::IsMouseDown(0)) {
@@ -655,18 +655,18 @@ void Application::draw() {
                     for (auto clip : track->getClips()) {
                         Vector2D position = clip->getPos();
                         Vector2D size = clip->getSize();
-                        fmt::print("-------------------------");
-                        fmt::print("{}, {}", canvasX >= position.x, canvasX <= position.x + size.x);
-                        fmt::print("{}, {}", canvasY >= position.y, canvasY <= position.y + size.y);
-                        fmt::print("-------------------------");
-                        fmt::print("{}, {}", position.x, position.y);
-                        fmt::print("{}, {}", size.x, size.y);
-                        fmt::print("{}, {}", canvasX, canvasY);
-                        fmt::print("-------------------------");
+                        fmt::println("-------------------------");
+                        fmt::println("{}, {}", canvasX >= position.x, canvasX <= position.x + size.x);
+                        fmt::println("{}, {}", canvasY >= position.y, canvasY <= position.y + size.y);
+                        fmt::println("-------------------------");
+                        fmt::println("{}, {}", position.x, position.y);
+                        fmt::println("{}, {}", size.x, size.y);
+                        fmt::println("{}, {}", canvasX, canvasY);
+                        fmt::println("-------------------------");
                         if (canvasX >= position.x && canvasX <= position.x + size.x &&
                             canvasY >= position.y && canvasY <= position.y + size.y
                         ) {
-                            fmt::print("found clip!");
+                            fmt::println("found clip!");
                             state.draggingClip = clip;
                             initialPos = { canvasX, canvasY };
                             isDraggingClip = true;
@@ -799,12 +799,12 @@ bool Application::initImGui() {
 
 void Application::setup() {
     if (!initSDL()) {
-        fmt::print("could not initialize SDL");
+        fmt::println("could not initialize SDL");
         return;
     }
 
     if (!initImGui()) {
-        fmt::print("could not initalize ImGui");
+        fmt::println("could not initalize ImGui");
         return;
     }
 }

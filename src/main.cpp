@@ -423,7 +423,7 @@ void drawImage(Frame* frame, unsigned char* data, Vector2D size, Vector2D positi
     int maxX = std::max({ topLeft.x, topRight.x, bottomLeft.x, bottomRight.x });
     int maxY = std::max({ topLeft.y, topRight.y, bottomLeft.y, bottomRight.y });
 
-    // fmt::print("drawImage: size=({}, {})", size.x, size.y);
+    // fmt::println("drawImage: size=({}, {})", size.x, size.y);
     for (int dstY = minY; dstY < maxY; dstY++) {
         for (int dstX = minX; dstX < maxX; dstX++) {
             int frameX = dstX + position.x;
@@ -444,9 +444,9 @@ void drawImage(Frame* frame, unsigned char* data, Vector2D size, Vector2D positi
             uint8_t* dst = &frame->imageData[dstLoc];
             // if (!data[srcLoc] || !data[srcLoc + 1] || !data[srcLoc + 2]) continue;
 
-            // fmt::print("{}, {}, {}", data[srcLoc], data[srcLoc + 1], data[srcLoc + 2]);
+            // fmt::println("{}, {}, {}", data[srcLoc], data[srcLoc + 1], data[srcLoc + 2]);
             // if (srcLoc + 2 >= size.x * size.y * 3) {
-                // fmt::print("OOB: res=({}, {}), srcLoc={}", res.x, res.y, srcLoc);
+                // fmt::println("OOB: res=({}, {}), srcLoc={}", res.x, res.y, srcLoc);
                 // continue;
             // }
             dst[0] = data[srcLoc];
@@ -485,12 +485,12 @@ bool VideoClip::initialize() {
 
     profile = mlt_profile_init("hdv_720_30p");
     if (profile == NULL) {
-        fmt::print("no profile!");
+        fmt::println("no profile!");
         return false;
     }
     producer = mlt_factory_producer(profile, "avformat", path.c_str());
     if (producer == NULL) {
-        fmt::print("no video!");
+        fmt::println("no video!");
         return false;
     }
 
@@ -525,12 +525,12 @@ bool VideoClip::decodeFrame(int frameNumber) {
 
     mlt_frame frame = nullptr;
     if (mlt_service_get_frame(MLT_PRODUCER_SERVICE(producer), &frame, 0) != 0) {
-        fmt::print("Failed to get frame");
+        fmt::println("Failed to get frame");
         return false;
     }
 
     if (!frame) {
-        fmt::print("Frame is null");
+        fmt::println("Frame is null");
         return false;
     }
 
@@ -620,7 +620,7 @@ bool ImageClip::initialize() {
 
     imageData = stbi_load(path.c_str(), &width, &height, NULL, 3);
     if (imageData == NULL) {
-        fmt::print("could not load image {}", path);
+        fmt::println("could not load image {}", path);
         return false;
     }
 
@@ -639,7 +639,7 @@ Vector2D ImageClip::getPos() {
 }
 
 ImageClip::ImageClip(): ImageClip("") {
-    fmt::print("construct: {} ({})", path, sizeof(imageData));
+    fmt::println("construct: {} ({})", path, sizeof(imageData));
 }
 
 void ImageClip::render(Frame* frame) {
@@ -657,7 +657,7 @@ void ImageClip::render(Frame* frame) {
     int currentScaledH = static_cast<int>(std::floor(height * scaleY));
     
     if (currentScaledW != scaledW || currentScaledH != scaledH) {
-        // fmt::print("scale change!");
+        // fmt::println("scale change!");
         scaledW = currentScaledW;
         scaledH = currentScaledH;
         
@@ -667,7 +667,7 @@ void ImageClip::render(Frame* frame) {
             resizedData.data(), scaledW, scaledH, scaledW * 3,
             stbir_pixel_layout::STBIR_RGB
         );
-        // fmt::print("{}", res == 0);
+        // fmt::println("{}", res == 0);
     }
 
     drawImage(frame, resizedData.data(), { scaledW, scaledH }, position, rotation);
@@ -679,7 +679,7 @@ ImageClip::~ImageClip() {
 
 void ImageClip::onDelete() {
     if (imageData) {
-        fmt::print("deletion!");
+        fmt::println("deletion!");
         stbi_image_free(imageData);
     }
 }
@@ -879,7 +879,7 @@ bool AudioClip::initalize() {
     auto& state = State::get();
     
     if (ma_sound_init_from_file(&state.soundEngine, path.c_str(), 0, NULL, NULL, &sound) != MA_SUCCESS) {
-        fmt::print("could not init file");
+        fmt::println("could not init file");
         return false;
     }
 
@@ -894,7 +894,7 @@ void AudioClip::play() {
     auto volume = Vector1D::fromString(m_properties.getProperty("volume")->data).number;
     ma_sound_set_volume(&sound, (float)volume / 255);
     if (ma_sound_start(&sound) != MA_SUCCESS) {
-        fmt::print("no success :(");
+        fmt::println("no success :(");
     }
     this->playing = true;
 }
@@ -1009,7 +1009,7 @@ void AudioTrack::onStop() {
 
 int main() {
     if (mlt_factory_init("resources/mlt") == 0) {
-        fmt::print("unable to init mlt factory");
+        fmt::println("unable to init mlt factory");
     }
     std::cout << "hello!" << std::endl;
     NFD_Init();
@@ -1091,7 +1091,7 @@ int main() {
 
     auto& state = State::get();
     if (ma_engine_init(NULL, &state.soundEngine) != MA_SUCCESS) {
-        fmt::print("could not init engine");
+        fmt::println("could not init engine");
     }
     
     state.video = video;

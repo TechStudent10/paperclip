@@ -327,7 +327,7 @@ public:
 
     virtual void write(qn::HeapByteWriter& writer) {
         writer.writeI16((int)getType());
-        fmt::print("wrote {} as type", (int)getType());
+        fmt::println("wrote {} as type", (int)getType());
         m_properties.write(writer);
         m_metadata.write(writer);
         writer.writeI16(startFrame);
@@ -519,38 +519,38 @@ public:
         auto size = reader.readI16().unwrapOr(0);
         for (int i = 0; i < size; i++) {
             auto clipType = (ClipType)(reader.readI16().unwrapOr(0));
-            fmt::print("love me some {}", (int)clipType);
+            fmt::println("love me some {}", (int)clipType);
             std::shared_ptr<Clip> clip;
 
             switch (clipType) {
                 case ClipType::Rectangle:
-                    fmt::print("making rect");
-                    clip = std::make_shared<Rectangle>();
+                    fmt::println("making rect");
+                    clip = std::make_shared<::Rectangle>();
                     break;
                 case ClipType::Circle:
-                    fmt::print("making circ");
-                    clip = std::make_shared<Circle>();
+                    fmt::println("making circ");
+                    clip = std::make_shared<::Circle>();
                     break;
                 case ClipType::Text:
-                    fmt::print("making text");
-                    clip = std::make_shared<Text>();
+                    fmt::println("making text");
+                    clip = std::make_shared<::Text>();
                     break;
                 case ClipType::Image:
-                    fmt::print("making imag");
-                    clip = std::make_shared<ImageClip>();
+                    fmt::println("making imag");
+                    clip = std::make_shared<::ImageClip>();
                     break;
                 case ClipType::Video:
-                    fmt::print("making vide");
-                    clip = std::make_shared<VideoClip>();
+                    fmt::println("making vide");
+                    clip = std::make_shared<::VideoClip>();
                     break;
                 default:
-                    fmt::print("making god knows what");
-                    clip = std::make_shared<Clip>();
+                    fmt::println("making god knows what");
+                    clip = std::make_shared<::Clip>();
                     break;
             }
 
             clip->read(reader);
-            fmt::print("{}", clip->m_metadata.name);
+            fmt::println("{}", clip->m_metadata.name);
             clips.push_back(clip);
         }
     }
