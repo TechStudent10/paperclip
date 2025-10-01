@@ -51,6 +51,7 @@ jobs:
 
       - name: Setup MSYS2 (win)
         if: runner.os == 'Windows'
+        id: msys2
         uses: msys2/setup-msys2@v2
         with:
           msystem: MINGW64
@@ -123,10 +124,11 @@ jobs:
           brew link --force ffmpeg@7
 
       - name: Compile (win)
+        shell: cmd
         if: runner.os == 'Windows'
         run: |
-          C:/msys64/mingw64/bin/cmake.exe -S . -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
-          C:/msys64/mingw64/bin/cmake.exe --build build --config Release
+          ${{ steps.msys2.outputs.msys2-location }}/mingw64/bin/cmake.exe -S . -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
+          ${{ steps.msys2.outputs.msys2-location }}/mingw64/bin/cmake.exe --build build --config Release
 
       - name: Compile (everyone else)
         if: runner.os != 'Windows'
