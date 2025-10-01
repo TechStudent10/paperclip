@@ -123,16 +123,10 @@ jobs:
           brew link --force ffmpeg@7
 
       - name: Compile (win)
-        shell: msys2 {0}
         if: runner.os == 'Windows'
         run: |
-          cmake -S . -B build \
-            -G "MinGW Makefiles" \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_C_COMPILER=/mingw64/bin/gcc \
-            -DCMAKE_CXX_COMPILER=/mingw64/bin/g++
-          
-          cmake --build build --config Release
+          C:/msys64/usr/bin/bash.exe -lc "cmake -S . -B build -G 'MinGW Makefiles' -DCMAKE_BUILD_TYPE=Release"
+          C:/msys64/usr/bin/bash.exe -lc "cmake --build build --config Release"
 
       - name: Compile (everyone else)
         if: runner.os != 'Windows'
