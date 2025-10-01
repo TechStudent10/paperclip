@@ -1,0 +1,1 @@
+This directory will contain FFMPEG shared object files to link to.

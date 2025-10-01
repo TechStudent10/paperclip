@@ -10,6 +10,7 @@
 - [x] fix MLT building
 - [x] project saving
 - [x] scaling
+- [x] dragging clips on the canvas
 
 once all of these are done
 

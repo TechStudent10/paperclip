@@ -11,12 +11,18 @@ jobs:
         config:
           - name: Windows
             os: windows-latest
+            ffmpeg: ffmpeg-n7.1.1-20-g9373b442a6-win64-lgpl-shared-7.1.zip
+            plat: windows-x64
           
           - name: macOS
             os: macos-latest
+            ffmpeg: ffmpeg-n7.1.1-20-g9373b442a6-macos64-lgpl-shared-7.1.tar.xz
+            plat: macos-arm64
 
           - name: Linux
             os: ubuntu-latest
+            ffmpeg: ffmpeg-n7.1.1-20-g9373b442a6-linux64-lgpl-shared-7.1.tar.xz
+            plat: linux-x64
     
     name: ${{ matrix.config.name }}
     runs-on: ${{ matrix.config.os }}
@@ -31,51 +37,49 @@ jobs:
         run: |
           choco install cmake pkgconfiglite mingw -y
 
-          curl -L -o ffmpeg-dev.zip https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-n4.5-latest-win64-gpl-shared.zip
-          mkdir C:\ffmpeg
-          powershell -Command "Expand-Archive ffmpeg-dev.zip C:\ffmpeg"
-
-          exit
-
-          setx PKG_CONFIG_PATH C:\ffmpeg\lib\pkgconfig
-          setx PATH C:\ffmpeg\bin;%PATH%
-
-          # Set environment variables for CMake to find FFmpeg
-          echo "CMAKE_PREFIX_PATH=C:\\ffmpeg" >> $GITHUB_ENV
-          echo "PATH=C:\\ffmpeg\\bin;$Env:PATH" >> $GITHUB_ENV
-      
       - name: Deps (mac)
         if: runner.os == 'macOS'
         run: |
           brew update
-          brew install cmake ninja ffmpeg@7
-          brew link --force ffmpeg@7
+          brew install cmake ninja
 
       - name: Deps (lin)
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential git yasm nasm make \
-          pkg-config cmake ninja-build gnome-desktop-testing libasound2-dev libpulse-dev \
-          libaudio-dev libjack-dev libsndio-dev libx11-dev libxext-dev \
-          libxrandr-dev libxcursor-dev libxfixes-dev libxi-dev libxss-dev libxtst-dev \
-          libxkbcommon-dev libdrm-dev libgbm-dev libgl1-mesa-dev libgles2-mesa-dev \
-          libegl1-mesa-dev libdbus-1-dev libibus-1.0-dev libudev-dev clang ffmpeg libavutil-dev \
-          libavcodec-dev libavformat-dev libswscale-dev libswresample-dev
+          sudo apt-get install -y build-essential git make \
+          pkg-config cmake ninja-build clang \
+          libasound2-dev libpulse-dev libaudio-dev libjack-dev libsndio-dev \
+          libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev \
+          libxi-dev libxss-dev libxtst-dev libxkbcommon-dev libdrm-dev libgbm-dev \
+          libgl1-mesa-dev libgles2-mesa-dev libegl1-mesa-dev libdbus-1-dev libibus-1.0-dev libudev-dev
 
-          curl -L -o ffmpeg.tar.xz https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl-shared.tar.xz
-          mkdir -p $HOME/ffmpeg
-          tar -xvf ffmpeg.tar.xz -C $HOME/ffmpeg
-          
-          export PATH=$HOME/ffmpeg/bin:$PATH
-          export LD_LIBRARY_PATH=$HOME/ffmpeg/lib:$LD_LIBRARY_PATH
-          export PKG_CONFIG_PATH=$HOME/ffmpeg/lib/pkgconfig:$PKG_CONFIG_PATH
+      - name: Download FFmpeg
+        run: |
+          mkdir -p third_party/ffmpeg/${{ matrix.config.plat }}
+          url="https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2025-05-31-14-01/${{ matrix.config.ffmpeg }}"
+          echo "Downloading $url"
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            curl -L "$url" -o ffmpeg.zip
+            unzip -q ffmpeg.zip -d ffmpeg
+            cp -r ffmpeg/*/include third_party/ffmpeg/
+            cp -r ffmpeg/*/lib third_party/ffmpeg/${{ matrix.config.plat }}/
+            cp -r ffmpeg/*/bin third_party/ffmpeg/${{ matrix.config.plat }}/
+          else
+            curl -L "$url" -o ffmpeg.tar.xz
+            tar -xf ffmpeg.tar.xz
+            cp -r ffmpeg-*/include third_party/ffmpeg/
+            cp -r ffmpeg-*/lib third_party/ffmpeg/${{ matrix.config.plat }}/
+            cp -r ffmpeg-*/bin third_party/ffmpeg/${{ matrix.config.plat }}/ || true
+          fi
+          ls -R third_party/ffmpeg
 
       - name: Configure (win)
         if: runner.os == 'Windows'
         run: cmake -S . -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
 
       - name: Configure (everyone else)
+        if: runner.os != 'Windows'
         run: cmake -S . -B build -G Ninja -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release
 
       - name: Compile

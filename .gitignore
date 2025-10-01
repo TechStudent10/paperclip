@@ -5,3 +5,13 @@ build/
 .cache/
 imgui.ini
 .idea/
+
+# you'll need to obtain these on your own :D
+# https://github.com/BtbN/FFmpeg-Builds/releases/tag/autobuild-2025-05-31-14-01
+libs/ffmpeg/ext/linux/*
+libs/ffmpeg/ext/windows/*
+libs/ffmpeg/ext/mac/*
+
+!libs/ffmpeg/ext/linux/README.md
+!libs/ffmpeg/ext/windows/README.md
+!libs/ffmpeg/ext/mac/README.md

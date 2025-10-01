@@ -109,15 +109,28 @@ CPMAddPackage(
         "RELOCATABLE OFF"
 )
 
+set(FFMPEG_ROOT "libs/ffmpeg")
+
+if(WIN32)
+    set(FFMPEG_LIB_DIR "${FFMPEG_ROOT}/ext/windows")
+elseif(APPLE)
+    set(FFMPEG_LIB_DIR "${FFMPEG_ROOT}/ext/mac")
+else()
+    set(FFMPEG_LIB_DIR "${FFMPEG_ROOT}/ext/linux")
+endif()
+
+include_directories(${FFMPEG_ROOT}/include)
+link_directories(${FFMPEG_LIB_DIR})
+
 find_package(OpenGL REQUIRED)
 # find_package(OpenCV REQUIRED)
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(FFMPEG REQUIRED IMPORTED_TARGET
-    libavutil libavcodec libavformat libswscale libswresample
-)
+# find_package(PkgConfig REQUIRED)
+# pkg_check_modules(FFMPEG REQUIRED IMPORTED_TARGET
+#     libavutil libavcodec libavformat libswscale libswresample
+# )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
-    PkgConfig::FFMPEG
+    # PkgConfig::FFMPEG
     OpenGL::GL
     # ${OpenCV_LIBS}
     yuv
@@ -130,6 +143,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     mlt
     mlt++
     GeodeResult
+    avutil avcodec avformat swscale swresample
 )
 
 add_dependencies(${PROJECT_NAME} mltavformat)
