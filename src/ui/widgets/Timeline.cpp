@@ -185,7 +185,7 @@ void VideoTimeline::drawTrack(ImDrawList* drawList, const ImVec2& canvasPos, con
     drawList->AddRectFilled(header_pos, ImVec2(header_pos.x + header_size.x, header_pos.y + header_size.y), IM_COL32(55, 55, 58, 255));
     drawList->AddRect(header_pos, ImVec2(header_pos.x + header_size.x, header_pos.y + header_size.y), IM_COL32(70, 70, 73, 255));
 
-    drawList->AddText(ImVec2(header_pos.x + 10, header_pos.y + 10), IM_COL32(200, 200, 200, 255), std::format("{} {}", type == TrackType::Audio ? "Audio" : "Video", trackIndex + 1).c_str());
+    drawList->AddText(ImVec2(header_pos.x + 10, header_pos.y + 10), IM_COL32(200, 200, 200, 255), fmt::format("{} {}", type == TrackType::Audio ? "Audio" : "Video", trackIndex + 1).c_str());
 
     ImU32 track_bg_color = (trackIndex % 2 == 0) ? IM_COL32(50, 50, 53, 255) : IM_COL32(45, 45, 48, 255);
     drawList->AddRectFilled(content_pos, ImVec2(content_pos.x + content_size.x, content_pos.y + content_size.y), track_bg_color);
@@ -356,7 +356,7 @@ void VideoTimeline::handleInteractions(const ImVec2& canvasPos, const ImVec2& ca
 
     if (isHovered) {
         if (io.MouseWheel != 0.0f && !io.KeyShift) {
-            std::println("{}", io.KeyShift);
+            fmt::print("{}", io.KeyShift);
             if (io.KeyCtrl) {
                 float old_zoom = zoomFactor;
                 setZoom(zoomFactor * (1.0f + io.MouseWheel * 0.1f));

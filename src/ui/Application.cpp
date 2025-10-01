@@ -84,7 +84,7 @@ void Application::draw() {
                     qn::ByteReader reader(fileBuffer);
                     std::shared_ptr<Video> video = std::make_shared<Video>();
                     video->read(reader);
-                    std::println("{}", video->getTracks().size());
+                    fmt::print("{}", video->getTracks().size());
 
                     state.video = video;
                 }
@@ -149,10 +149,10 @@ void Application::draw() {
             auto exportPath = std::filesystem::path(state.exportPath);
             auto videoFilename = std::filesystem::path(exportPath)
                 .replace_extension(
-                    std::format(".na.{}", exportPath.extension().string())
+                    fmt::format(".na.{}", exportPath.extension().string())
                 ).string();
 
-            auto audioFilename = std::format("{}.wav", state.exportPath);
+            auto audioFilename = fmt::format("{}.wav", state.exportPath);
             VideoRenderer renderer(videoFilename, state.video->getResolution().x, state.video->getResolution().y, state.video->getFPS());
             state.video->render(&renderer);
 
@@ -259,7 +259,7 @@ void Application::draw() {
 
                         ma_decoder decoder;
                         ma_uint64 pcmLength;
-                        ma_decoder_init_file(std::format("{}.mp3", outFile).c_str(), NULL, &decoder);
+                        ma_decoder_init_file(fmt::format("{}.mp3", outFile).c_str(), NULL, &decoder);
                         ma_decoder_get_length_in_pcm_frames(&decoder, &pcmLength);
 
                         auto& state = State::get();
@@ -270,7 +270,7 @@ void Application::draw() {
                             .frameCount = frameCount
                         });
                         state.video->audioClipPool.push_back({
-                            .filePath = std::format("{}.mp3", outFile),
+                            .filePath = fmt::format("{}.mp3", outFile),
                             .frameCount = frameCount
                         });
                     });
@@ -391,7 +391,7 @@ void Application::draw() {
         ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f), ImGuiCond_Always, ImVec2(0.5f,0.5f));
         ImGui::SetNextWindowFocus();
         ImGui::Begin("Uploading", &showUploadDialog);
-        ImGui::Text("%s", std::format("{}%", convertProgress * 100).c_str());
+        ImGui::Text("%s", fmt::format("{}%", convertProgress * 100).c_str());
         ImGui::End();
     }
 
@@ -442,7 +442,7 @@ void Application::draw() {
         auto drawInt = [&](std::shared_ptr<ClipProperty> property) {
             Vector1D number = Vector1D::fromString(property->data);
             if (ImGui::DragInt(
-                std::format("##{}", property->name).c_str(),
+                fmt::format("##{}", property->name).c_str(),
                 &number.number,
                 1.0f,
                 0,
@@ -468,7 +468,7 @@ void Application::draw() {
 
         auto drawText = [&](std::shared_ptr<ClipProperty> property) {
             std::string text = property->data;
-            if (ImGui::InputText(std::format("##{}", property->id).c_str(), &text)) {
+            if (ImGui::InputText(fmt::format("##{}", property->id).c_str(), &text)) {
                 setData(property, text);
             }
         };
@@ -598,7 +598,7 @@ void Application::draw() {
     );
 
     if (ImGui::InvisibleButton("btn", imageSize)) {
-        // std::println("btn");
+        // fmt::print("btn");
     }
 
     if (ImGui::IsItemHovered() && ImGui::IsMouseDown(0)) {
@@ -654,18 +654,18 @@ void Application::draw() {
                     for (auto clip : track->getClips()) {
                         Vector2D position = clip->getPos();
                         Vector2D size = clip->getSize();
-                        std::println("-------------------------");
-                        std::println("{}, {}", canvasX >= position.x, canvasX <= position.x + size.x);
-                        std::println("{}, {}", canvasY >= position.y, canvasY <= position.y + size.y);
-                        std::println("-------------------------");
-                        std::println("{}, {}", position.x, position.y);
-                        std::println("{}, {}", size.x, size.y);
-                        std::println("{}, {}", canvasX, canvasY);
-                        std::println("-------------------------");
+                        fmt::print("-------------------------");
+                        fmt::print("{}, {}", canvasX >= position.x, canvasX <= position.x + size.x);
+                        fmt::print("{}, {}", canvasY >= position.y, canvasY <= position.y + size.y);
+                        fmt::print("-------------------------");
+                        fmt::print("{}, {}", position.x, position.y);
+                        fmt::print("{}, {}", size.x, size.y);
+                        fmt::print("{}, {}", canvasX, canvasY);
+                        fmt::print("-------------------------");
                         if (canvasX >= position.x && canvasX <= position.x + size.x &&
                             canvasY >= position.y && canvasY <= position.y + size.y
                         ) {
-                            std::println("found clip!");
+                            fmt::print("found clip!");
                             state.draggingClip = clip;
                             initialPos = { canvasX, canvasY };
                             isDraggingClip = true;
@@ -700,7 +700,7 @@ void Application::draw() {
     )) {
         togglePlay();
     }
-    TextCentered(std::format("{}s / {}s", std::floor((float)state.currentFrame / (float)state.video->getFPS()), std::floor((float)state.video->frameCount / (float)state.video->getFPS())));
+    TextCentered(fmt::format("{}s / {}s", std::floor((float)state.currentFrame / (float)state.video->getFPS()), std::floor((float)state.video->frameCount / (float)state.video->getFPS())));
 
     ImGui::End();
 }

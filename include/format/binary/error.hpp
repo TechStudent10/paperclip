@@ -5,6 +5,7 @@
 #include <Geode/Result.hpp>
 #include <cassert>
 #include <string_view>
+#include <fmt/format.h>
 
 // taken from qsox
 #define QN_MAKE_ERROR_STRUCT(name, ...) \
@@ -69,7 +70,7 @@ QN_MAKE_ERROR_STRUCT(ByteWriterError,
 );
 
 [[noreturn]] inline void _assertionFail(std::string_view what, std::string_view file, int line) {
-    throw std::runtime_error(std::format("Assertion failed ({}) at {}:{}", what, file, line));
+    throw std::runtime_error(fmt::format("Assertion failed ({}) at {}:{}", what, file, line));
 }
 
 }

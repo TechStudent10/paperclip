@@ -72,7 +72,7 @@ void ClipProperty::drawProperty() {
     auto drawInt = [&]() {
         Vector1D number = Vector1D::fromString(data);
         if (ImGui::DragInt(
-            std::format("##{}", name).c_str(),
+            fmt::format("##{}", name).c_str(),
             &number.number,
             1.0f,
             0,
@@ -98,7 +98,7 @@ void ClipProperty::drawProperty() {
 
     auto drawText = [&]() {
         std::string text = data;
-        if (ImGui::InputText(std::format("##{}", id).c_str(), &text)) {
+        if (ImGui::InputText(fmt::format("##{}", id).c_str(), &text)) {
             setData(text);
         }
     };
@@ -137,7 +137,7 @@ void ClipProperty::drawProperty() {
     int keyframe = state.currentFrame - state.draggingClip->startFrame;
     bool isKeyframed = keyframes.contains(keyframe);
 
-    if (ImGui::Button(std::format("{}Keyframe {}", isKeyframed ? "Remove " : "", name).c_str())) {
+    if (ImGui::Button(fmt::format("{}Keyframe {}", isKeyframed ? "Remove " : "", name).c_str())) {
         if (isKeyframed) {
             keyframes.erase(keyframe);
 
@@ -164,18 +164,18 @@ void ClipProperty::drawProperty() {
             }
         }
 
-        if (ImGui::Button(std::format("Go to next##{}", id).c_str())) {
+        if (ImGui::Button(fmt::format("Go to next##{}", id).c_str())) {
             state.currentFrame = state.draggingClip->startFrame + nextKeyframe;
         }
 
         ImGui::SameLine();
 
-        if (ImGui::Button(std::format("Go to previous##{}", id).c_str())) {
+        if (ImGui::Button(fmt::format("Go to previous##{}", id).c_str())) {
             state.currentFrame = state.draggingClip->startFrame + previousKeyframe;
         }
 
         auto currentEasing = animation::EASING_NAMES[(int)keyframeInfo[nextKeyframe].easing];
-        if (ImGui::BeginCombo(std::format("Easing##{}", id).c_str(), currentEasing)) {
+        if (ImGui::BeginCombo(fmt::format("Easing##{}", id).c_str(), currentEasing)) {
             for (int i = 0; i < animation::EASING_NAMES.size(); i++) {
                 auto easingName = animation::EASING_NAMES[i];
                 bool selected = easingName == currentEasing;
@@ -193,7 +193,7 @@ void ClipProperty::drawProperty() {
         }
 
         auto currentMode = animation::EASING_MODE_NAMES[(int)keyframeInfo[nextKeyframe].mode];
-        if (ImGui::BeginCombo(std::format("Mode##{}", id).c_str(), currentMode)) {
+        if (ImGui::BeginCombo(fmt::format("Mode##{}", id).c_str(), currentMode)) {
             for (int i = 0; i < animation::EASING_MODE_NAMES.size(); i++) {
                 auto modeName = animation::EASING_MODE_NAMES[i];
                 bool selected = modeName == currentMode;
@@ -355,7 +355,7 @@ Vector2D Text::getPos() {
 void Text::render(Frame* frame) {
     auto& state = State::get();
     auto text = m_properties.getProperty("text")->data;
-    auto font = std::format("resources/fonts/{}.ttf", m_properties.getProperty("font")->data);
+    auto font = fmt::format("resources/fonts/{}.ttf", m_properties.getProperty("font")->data);
     auto fontSize = Vector1D::fromString(m_properties.getProperty("size")->data).number;
     auto pos = Vector2D::fromString(m_properties.getProperty("position")->data);
     auto color = RGBAColor::fromString(m_properties.getProperty("color")->data);
@@ -419,7 +419,7 @@ void drawImage(Frame* frame, unsigned char* data, Vector2D size, Vector2D positi
     int maxX = std::max({ topLeft.x, topRight.x, bottomLeft.x, bottomRight.x });
     int maxY = std::max({ topLeft.y, topRight.y, bottomLeft.y, bottomRight.y });
 
-    // std::println("drawImage: size=({}, {})", size.x, size.y);
+    // fmt::print("drawImage: size=({}, {})", size.x, size.y);
     for (int dstY = minY; dstY < maxY; dstY++) {
         for (int dstX = minX; dstX < maxX; dstX++) {
             int frameX = dstX + position.x;
@@ -440,9 +440,9 @@ void drawImage(Frame* frame, unsigned char* data, Vector2D size, Vector2D positi
             uint8_t* dst = &frame->imageData[dstLoc];
             // if (!data[srcLoc] || !data[srcLoc + 1] || !data[srcLoc + 2]) continue;
 
-            // std::println("{}, {}, {}", data[srcLoc], data[srcLoc + 1], data[srcLoc + 2]);
+            // fmt::print("{}, {}, {}", data[srcLoc], data[srcLoc + 1], data[srcLoc + 2]);
             // if (srcLoc + 2 >= size.x * size.y * 3) {
-                // std::println("OOB: res=({}, {}), srcLoc={}", res.x, res.y, srcLoc);
+                // fmt::print("OOB: res=({}, {}), srcLoc={}", res.x, res.y, srcLoc);
                 // continue;
             // }
             dst[0] = data[srcLoc];
@@ -481,12 +481,12 @@ bool VideoClip::initialize() {
 
     profile = mlt_profile_init("hdv_720_30p");
     if (profile == NULL) {
-        std::println("no profile!");
+        fmt::print("no profile!");
         return false;
     }
     producer = mlt_factory_producer(profile, "avformat", path.c_str());
     if (producer == NULL) {
-        std::println("no video!");
+        fmt::print("no video!");
         return false;
     }
 
@@ -521,12 +521,12 @@ bool VideoClip::decodeFrame(int frameNumber) {
 
     mlt_frame frame = nullptr;
     if (mlt_service_get_frame(MLT_PRODUCER_SERVICE(producer), &frame, 0) != 0) {
-        std::println("Failed to get frame");
+        fmt::print("Failed to get frame");
         return false;
     }
 
     if (!frame) {
-        std::println("Frame is null");
+        fmt::print("Frame is null");
         return false;
     }
 
@@ -616,7 +616,7 @@ bool ImageClip::initialize() {
 
     imageData = stbi_load(path.c_str(), &width, &height, NULL, 3);
     if (imageData == NULL) {
-        std::println("could not load image {}", path);
+        fmt::print("could not load image {}", path);
         return false;
     }
 
@@ -635,7 +635,7 @@ Vector2D ImageClip::getPos() {
 }
 
 ImageClip::ImageClip(): ImageClip("") {
-    std::println("construct: {} ({})", path, sizeof(imageData));
+    fmt::print("construct: {} ({})", path, sizeof(imageData));
 }
 
 void ImageClip::render(Frame* frame) {
@@ -653,7 +653,7 @@ void ImageClip::render(Frame* frame) {
     int currentScaledH = static_cast<int>(std::floor(height * scaleY));
     
     if (currentScaledW != scaledW || currentScaledH != scaledH) {
-        // std::println("scale change!");
+        // fmt::print("scale change!");
         scaledW = currentScaledW;
         scaledH = currentScaledH;
         
@@ -663,7 +663,7 @@ void ImageClip::render(Frame* frame) {
             resizedData.data(), scaledW, scaledH, scaledW * 3,
             stbir_pixel_layout::STBIR_RGB
         );
-        // std::println("{}", res == 0);
+        // fmt::print("{}", res == 0);
     }
 
     drawImage(frame, resizedData.data(), { scaledW, scaledH }, position, rotation);
@@ -675,7 +675,7 @@ ImageClip::~ImageClip() {
 
 void ImageClip::onDelete() {
     if (imageData) {
-        std::println("deletion!");
+        fmt::print("deletion!");
         stbi_image_free(imageData);
     }
 }
@@ -875,7 +875,7 @@ bool AudioClip::initalize() {
     auto& state = State::get();
     
     if (ma_sound_init_from_file(&state.soundEngine, path.c_str(), 0, NULL, NULL, &sound) != MA_SUCCESS) {
-        std::println("could not init file");
+        fmt::print("could not init file");
         return false;
     }
 
@@ -890,7 +890,7 @@ void AudioClip::play() {
     auto volume = Vector1D::fromString(m_properties.getProperty("volume")->data).number;
     ma_sound_set_volume(&sound, (float)volume / 255);
     if (ma_sound_start(&sound) != MA_SUCCESS) {
-        std::println("no success :(");
+        fmt::print("no success :(");
     }
     this->playing = true;
 }
@@ -1005,7 +1005,7 @@ void AudioTrack::onStop() {
 
 int main() {
     if (mlt_factory_init("resources/mlt") == 0) {
-        std::println("unable to init mlt factory");
+        fmt::print("unable to init mlt factory");
     }
     std::cout << "hello!" << std::endl;
     NFD_Init();
@@ -1087,7 +1087,7 @@ int main() {
 
     auto& state = State::get();
     if (ma_engine_init(NULL, &state.soundEngine) != MA_SUCCESS) {
-        std::println("could not init engine");
+        fmt::print("could not init engine");
     }
     
     state.video = video;

@@ -23,7 +23,7 @@ void VPFFile::extractAudio(std::string filename) {
 
     int audio_stream_index = 0;
 
-    auto output_filename = std::format("{}.mp3", filename);
+    auto output_filename = fmt::format("{}.mp3", filename);
 
     if (avformat_open_input(&fmt_ctx, filename.c_str(), nullptr, nullptr) < 0) {
         goto cleanup;
@@ -264,37 +264,37 @@ void VPFFile::combineAV(std::string audio, std::string video, std::string disco)
     };
 
     if ((ret = avformat_open_input(&in_v_fmt, video.c_str(), nullptr, nullptr)) < 0) {
-        std::println("open video input: {}", fferr(ret)); return;
+        fmt::print("open video input: {}", fferr(ret)); return;
     }
     if ((ret = avformat_find_stream_info(in_v_fmt, nullptr)) < 0) {
-        std::println("find video stream info: {}", fferr(ret)); return;
+        fmt::print("find video stream info: {}", fferr(ret)); return;
     }
 
     if ((ret = avformat_open_input(&in_a_fmt, audio.c_str(), nullptr, nullptr)) < 0) {
-        std::println("open audio input: {}", fferr(ret)); return;
+        fmt::print("open audio input: {}", fferr(ret)); return;
     }
     if ((ret = avformat_find_stream_info(in_a_fmt, nullptr)) < 0) {
-        std::println("find audio stream info: {}", fferr(ret)); return;
+        fmt::print("find audio stream info: {}", fferr(ret)); return;
     }
 
     ret = av_find_best_stream(in_v_fmt, AVMEDIA_TYPE_VIDEO, -1, -1, nullptr, 0);
-    if (ret < 0) { std::println("no video stream: {}", fferr(ret)); return; }
+    if (ret < 0) { fmt::print("no video stream: {}", fferr(ret)); return; }
     in_v_stream = in_v_fmt->streams[ret];
 
     ret = av_find_best_stream(in_a_fmt, AVMEDIA_TYPE_AUDIO, -1, -1, nullptr, 0);
-    if (ret < 0) { std::println("no audio stream: {}", fferr(ret)); return; }
+    if (ret < 0) { fmt::print("no audio stream: {}", fferr(ret)); return; }
     in_a_stream = in_a_fmt->streams[ret];
 
     const AVCodec *dec = avcodec_find_decoder(in_a_stream->codecpar->codec_id);
-    if (!dec) { std::println("No audio decoder"); return; }
+    if (!dec) { fmt::print("No audio decoder"); return; }
     dec_ctx = avcodec_alloc_context3(dec);
     avcodec_parameters_to_context(dec_ctx, in_a_stream->codecpar);
     if ((ret = avcodec_open2(dec_ctx, dec, nullptr)) < 0) {
-        std::println("open audio decoder: {}", fferr(ret)); return;
+        fmt::print("open audio decoder: {}", fferr(ret)); return;
     }
 
     const AVCodec *enc = avcodec_find_encoder(AV_CODEC_ID_AAC);
-    if (!enc) { std::println("No AAC encoder"); return; }
+    if (!enc) { fmt::print("No AAC encoder"); return; }
     enc_ctx = avcodec_alloc_context3(enc);
     enc_ctx->sample_rate = dec_ctx->sample_rate;
     enc_ctx->ch_layout = dec_ctx->ch_layout;
@@ -304,7 +304,7 @@ void VPFFile::combineAV(std::string audio, std::string video, std::string disco)
     enc_ctx->time_base = AVRational{1, enc_ctx->sample_rate};
 
     if ((ret = avcodec_open2(enc_ctx, enc, nullptr)) < 0) {
-        std::println("open AAC encoder: {}", fferr(ret)); return;
+        fmt::print("open AAC encoder: {}", fferr(ret)); return;
     }
 
     swr = swr_alloc();
@@ -315,14 +315,14 @@ void VPFFile::combineAV(std::string audio, std::string video, std::string disco)
     av_opt_set_int(swr, "out_sample_rate",  enc_ctx->sample_rate, 0);
     av_opt_set_sample_fmt(swr, "out_sample_fmt", enc_ctx->sample_fmt, 0);
     if ((ret = swr_init(swr)) < 0) {
-        std::println("swr_init: {}", fferr(ret)); return;
+        fmt::print("swr_init: {}", fferr(ret)); return;
     }
 
     AVDictionary *opts = nullptr;
     av_dict_set(&opts, "max_muxing_queue_size", "9999", 0);
 
     if ((ret = avformat_alloc_output_context2(&out_fmt, nullptr, nullptr, disco.c_str())) < 0) {
-        std::println("alloc output context: {}", fferr(ret)); return;
+        fmt::print("alloc output context: {}", fferr(ret)); return;
     }
 
     out_v_stream = avformat_new_stream(out_fmt, nullptr);
@@ -335,12 +335,12 @@ void VPFFile::combineAV(std::string audio, std::string video, std::string disco)
 
     if (!(out_fmt->oformat->flags & AVFMT_NOFILE)) {
         if ((ret = avio_open(&out_fmt->pb, disco.c_str(), AVIO_FLAG_WRITE)) < 0) {
-            std::println("avio_open: {}", fferr(ret)); return;
+            fmt::print("avio_open: {}", fferr(ret)); return;
         }
     }
 
     if ((ret = avformat_write_header(out_fmt, &opts)) < 0) {
-        std::println("write header: {}", fferr(ret));
+        fmt::print("write header: {}", fferr(ret));
         av_dict_free(&opts);
         return;
     }
@@ -376,7 +376,7 @@ void VPFFile::combineAV(std::string audio, std::string video, std::string disco)
             av_channel_layout_copy(&out_frame->ch_layout, &enc_ctx->ch_layout);
 
             if ((ret = av_frame_get_buffer(out_frame, 0)) < 0) {
-                std::println("av_frame_get_buffer {}", ret);
+                fmt::print("av_frame_get_buffer {}", ret);
                 goto cleanup;
             }
 
@@ -385,7 +385,7 @@ void VPFFile::combineAV(std::string audio, std::string video, std::string disco)
                 out_frame->data, out_frame->nb_samples,
                 (const uint8_t **)in_frame->data, in_frame->nb_samples
             );
-            if (converted_samples < 0) { std::println("swr_convert: {}", converted_samples); goto cleanup; }
+            if (converted_samples < 0) { fmt::print("swr_convert: {}", converted_samples); goto cleanup; }
 
             int frame_size = enc_ctx->frame_size;
             int offset = 0;
@@ -397,7 +397,7 @@ void VPFFile::combineAV(std::string audio, std::string video, std::string disco)
                 av_channel_layout_copy(&chunk->ch_layout, &enc_ctx->ch_layout);
 
                 if ((ret = av_frame_get_buffer(chunk, 0)) < 0) {
-                    std::println("av_frame_get_buffer {}", ret);
+                    fmt::print("av_frame_get_buffer {}", ret);
                     av_frame_free(&chunk);
                     break;
                 }
@@ -414,7 +414,7 @@ void VPFFile::combineAV(std::string audio, std::string video, std::string disco)
 
                 ret = avcodec_send_frame(enc_ctx, chunk);
                 if (ret < 0) {
-                    std::println("send frame: {}", ret);
+                    fmt::print("send frame: {}", ret);
                     av_frame_free(&chunk);
                     break;
                 }

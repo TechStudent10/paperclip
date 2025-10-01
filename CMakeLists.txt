@@ -36,6 +36,7 @@ CPMAddPackage("gh:mackron/miniaudio#0.11.23")
 CPMAddPackage("gh:btzy/nativefiledialog-extended#6db343a")
 CPMAddPackage("gh:lemenkov/libyuv#5b22f31")
 CPMAddPackage("gh:nothings/stb#fede005")
+CPMAddPackage("gh:fmtlib/fmt#12.0.0")
 
 CPMAddPackage(
     NAME imgui
@@ -76,11 +77,11 @@ target_link_libraries(imgui PUBLIC SDL3::SDL3 OpenGL::GL)
 if (WIN32)
     file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/out/share/mlt)
 
-    set(WIN_ICONV_BUILD_EXECUTABLE OFF)
-    set(WIN_ICONV_BUILD_SHARED OFF)
-    CPMAddPackage("gh:win-iconv/win-iconv#82f00fb")
-    set(Iconv_LIBRARY iconv_static)
-    set(Iconv_INCLUDE_DIR ${win-iconv_SOURCE_DIR})
+    # set(WIN_ICONV_BUILD_EXECUTABLE OFF)
+    # set(WIN_ICONV_BUILD_SHARED OFF)
+    # CPMAddPackage("gh:win-iconv/win-iconv#82f00fb")
+    # set(Iconv_LIBRARY iconv_static)
+    # set(Iconv_INCLUDE_DIR ${win-iconv_SOURCE_DIR})
 
     CPMAddPackage("gh:dlfcn-win32/dlfcn-win32#8bfddb5")
     set(CMAKE_DL_LIBS dl)
@@ -144,6 +145,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     mlt++
     GeodeResult
     avutil avcodec avformat swscale swresample
+    fmt
 )
 
 # add_dependencies(${PROJECT_NAME} mltavformat)

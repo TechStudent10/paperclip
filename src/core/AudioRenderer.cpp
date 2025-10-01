@@ -8,7 +8,7 @@
 AudioRenderer::AudioRenderer(std::string_view outputPath, float length): outputPath(outputPath), length(length) {
     ma_encoder_config config = ma_encoder_config_init(ma_encoding_format_wav, ma_format_f32, CHANNELS, SAMPLE_RATE);
     if (ma_encoder_init_file(this->outputPath.c_str(), &config, &encoder) != MA_SUCCESS) {
-        std::println("could not init encoder");
+        fmt::print("could not init encoder");
         return;
     }
 
@@ -32,7 +32,7 @@ void AudioRenderer::render(float fps) {
     double step = (double)FRAME_COUNT / SAMPLE_RATE;
 
     while (currentTime < length) {
-        // std::println("current time: {}", currentTime);
+        // fmt::print("current time: {}", currentTime);
         for (int i = 0; i < FRAME_COUNT * CHANNELS; i++) outBuffer[i] = 0.0f;
 
         for (auto clip : clips) {
@@ -50,14 +50,14 @@ void AudioRenderer::render(float fps) {
 
                 // only one keyframe? use that
                 if (clip.keyframes.size() == 1) {
-                    // std::println("a {}", clip.keyframes[0]);
+                    // fmt::print("a {}", clip.keyframes[0]);
                     outBuffer[i] += temp[i] * ((float)Vector1D::fromString(clip.keyframes[0]).number / 100.f);
                     continue;
                 }
 
                 // beyond the last keyframe? use that
                 if (std::prev(clip.keyframes.end())->first <= currentFrame - (clip.startTime / fps)) {
-                    // std::println("b {}", clip.keyframes.rbegin()->second);
+                    // fmt::print("b {}", clip.keyframes.rbegin()->second);
                     outBuffer[i] += temp[i] * ((float)Vector1D::fromString(clip.keyframes.rbegin()->second).number / 100.f);
                     continue;
                 }
@@ -78,7 +78,7 @@ void AudioRenderer::render(float fps) {
 
                 if (nextKeyframe == 0) {
                     // somehow we did not catch the last keyframe, so we just set it here
-                    // std::println("c {}", clip.keyframes[previousKeyframe]);
+                    // fmt::print("c {}", clip.keyframes[previousKeyframe]);
                     outBuffer[i] += temp[i] * ((float)Vector1D::fromString(clip.keyframes[previousKeyframe]).number / 100.f);
                     continue;
                 }
@@ -93,9 +93,9 @@ void AudioRenderer::render(float fps) {
 
                 float vol = std ::rint(oldNumber.number +
                                 (float)(nextNumber.number - oldNumber.number) * progress) / 100.f;
-                // std::println("d {}", vol);
+                // fmt::print("d {}", vol);
                 outBuffer[i] += temp[i] * vol;
-                // std::println("{}", outBuffer[i]);
+                // fmt::print("{}", outBuffer[i]);
             }
         }
 

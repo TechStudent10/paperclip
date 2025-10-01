@@ -47,7 +47,7 @@ float TextRenderer::drawText(Frame* frame, std::string text, std::string fontNam
         int dw = x1 - x0;
         int dh = y1 - y0;
 
-        // std::println("dw: {}, dh: {}", dw, dh);
+        // fmt::print("dw: {}, dh: {}", dw, dh);
         if (dw * dh < 0) return cursor - pos.x;
 
         std::vector<unsigned char> bitmap(dw * dh);
