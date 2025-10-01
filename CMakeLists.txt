@@ -144,9 +144,20 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     mlt
     mlt++
     GeodeResult
-    avutil avcodec avformat swscale swresample
     fmt
 )
+
+if (APPLE)
+    find_library(AVCODEC_LIBRARY avcodec)
+    find_library(AVFORMAT_LIBRARY avformat)
+    find_library(AVUTIL_LIBRARY avutil)
+    find_library(SWSCALE_LIBRARY swscale)
+    find_library(SWRESAMPLE_LIBRARY swresample)
+
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${AVCODEC_LIBRARY} ${AVFORMAT_LIBRARY} ${AVUTIL_LIBRARY} ${SWSCALE_LIBRARY} ${SWRESAMPLE_LIBRARY})
+else()
+    target_link_libraries(${PROJECT_NAME} PRIVATE avutil avcodec avformat swscale swresample)
+endif()
 
 # add_dependencies(${PROJECT_NAME} mltavformat)
 
