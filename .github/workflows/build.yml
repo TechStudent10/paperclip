@@ -135,3 +135,9 @@ jobs:
         run: |
           cmake -S . -B build -G Ninja -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Release
           cmake --build build --config Release
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: Paperclip ${{ matrix.config.name }}
+          path: paperclip/build/Release
