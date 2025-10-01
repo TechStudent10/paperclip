@@ -23,7 +23,10 @@
 
 #include <nfd.h>
 
-static constexpr double PI_DIV_180 = std::numbers::pi / 180.f;
+// i roll my OWN pi
+#define PI 3.14159265358927
+
+static constexpr double PI_DIV_180 = PI / 180.f;
 
 void ClipProperty::drawProperty() {
     auto& state = State::get();
