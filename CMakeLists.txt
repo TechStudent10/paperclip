@@ -92,7 +92,10 @@ if (WIN32)
     include_directories(${pthreads-win32-2-9-1_SOURCE_DIR})
     add_definitions(-DHAVE_STRUCT_TIMESPEC)
     add_definitions(-D_USE_MATH_DEFINES)
+
+    # some hacky mlt fixes im sure i won't regret later
     add_compile_definitions(WIN_PTHREADS_TIME_H=1)
+    add_compile_definitions(stat64i32=_stati64)
 endif ()
 
 CPMAddPackage(
