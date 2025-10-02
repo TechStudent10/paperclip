@@ -1,6 +1,7 @@
 #pragma once
 
 #include "imgui_internal.h"
+#include <functional>
 #include <imgui.h>
 
 #include <video.hpp>

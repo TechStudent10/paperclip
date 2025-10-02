@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.21...4.0)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-set(BUILD_SHARED_LIBS ON)
+set(BUILD_SHARED_LIBS OFF)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
@@ -28,7 +28,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/in
 include(cmake/CPM.cmake)
 
 set(NFD_PORTAL ON)
-CPMAddPackage("gh:stephenberry/glaze@5.6.1")
+CPMAddPackage("gh:geode-sdk/json@3.2.1")
 CPMAddPackage("gh:libsdl-org/SDL#release-3.2.20")
 # CPMAddPackage("gh:USCiLab/cereal#a56bad8")
 CPMAddPackage("gh:geode-sdk/result@1.3.2")
@@ -54,7 +54,7 @@ add_library(imgui STATIC
     ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp
     ${imgui_SOURCE_DIR}/misc/cpp/imgui_stdlib.cpp
 )
-target_include_directories(imgui PUBLIC ${imgui_SOURCE_DIR} ${imgui_SOURCE_DIR}/backends ${imgui_SOURCE_DIR}/misc/cpp)
+target_include_directories(imgui PUBLIC ${imgui_SOURCE_DIR} ${imgui_SOURCE_DIR}/backends ${imgui_SOURCE_DIR}/misc/cpp ${json_SOURCE_DIR}/include)
 target_link_libraries(imgui PUBLIC SDL3::SDL3 OpenGL::GL)
 
 # CPMAddPackage(
@@ -83,15 +83,15 @@ if (WIN32)
     # set(Iconv_LIBRARY iconv_static)
     # set(Iconv_INCLUDE_DIR ${win-iconv_SOURCE_DIR})
 
-    CPMAddPackage("gh:dlfcn-win32/dlfcn-win32#8bfddb5")
-    set(CMAKE_DL_LIBS dl)
+    # CPMAddPackage("gh:dlfcn-win32/dlfcn-win32#8bfddb5")
+    # set(CMAKE_DL_LIBS dl)
 
-    CPMAddPackage("gh:G-P-S/pthreads-win32-2-9-1#43d3a62")
-    set(Threads_LIBRARY ${pthreads-win32-2-9-1_SOURCE_DIR}/x64/pthreadVC2.lib)
-    set(Threads_INCLUDE_DIR ${pthreads-win32-2-9-1_SOURCE_DIR})
-    include_directories(${pthreads-win32-2-9-1_SOURCE_DIR})
-    add_definitions(-DHAVE_STRUCT_TIMESPEC)
-    add_definitions(-D_USE_MATH_DEFINES)
+    # CPMAddPackage("gh:G-P-S/pthreads-win32-2-9-1#43d3a62")
+    # set(Threads_LIBRARY ${pthreads-win32-2-9-1_SOURCE_DIR}/x64/pthreadVC2.lib)
+    # set(Threads_INCLUDE_DIR ${pthreads-win32-2-9-1_SOURCE_DIR})
+    # include_directories(${pthreads-win32-2-9-1_SOURCE_DIR})
+    # add_definitions(-DHAVE_STRUCT_TIMESPEC)
+    # add_definitions(-D_USE_MATH_DEFINES)
 
     # some hacky mlt fixes im sure i won't regret later
     add_compile_definitions(WIN_PTHREADS_TIME_H=1)
@@ -143,7 +143,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     imgui
     nfd
     SDL3::SDL3
-    glaze::glaze
+    mat-json
     miniaudio
     mlt
     mlt++

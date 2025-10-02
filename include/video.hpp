@@ -1,5 +1,6 @@
 #pragma once
 #include <memory>
+#include <map>
 #include <unordered_map>
 #include <vector>
 #include <string>
@@ -11,8 +12,6 @@ extern "C" {
 #include <libswscale/swscale.h>
 #include <libavutil/imgutils.h>
 }
-
-#include <glaze/glaze.hpp>
 
 #include <format/vpf.hpp>
 #include <miniaudio.h>
@@ -27,19 +26,26 @@ extern "C" {
 #include <fmt/base.h>
 #include <fmt/format.h>
 
+#include <matjson.hpp>
+#include <matjson/std.hpp>
+#include <matjson/reflect.hpp>
+
 #define JSON_METHODS(className) public: \
     std::string toString() { \
-        auto res = glz::write_json(this).value_or("{}"); \
-        return res; \
+        matjson::Value res = *this; \
+        return res.dump(); \
     } \
-    \
+     \
     static className fromString(std::string string) { \
-        auto obj = glz::read_json<className>(string); \
-        if (obj) { \
-            return obj.value(); \
-        } else { \
+        auto temp = matjson::parse(string); \
+        if (temp.isErr()) { \
             return {}; \
         } \
+        auto res = temp.unwrap().as<className>(); \
+        if (res.isErr()) { \
+            return {}; \
+        } \
+        return res.unwrap(); \
     }
 
 struct Vector2D {
