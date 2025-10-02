@@ -100,8 +100,8 @@ endif ()
 
 CPMAddPackage(
     NAME mlt
-    GITHUB_REPOSITORY mltframework/mlt
-    GIT_TAG v7.32.0
+    GITHUB_REPOSITORY TechStudent10/mlt
+    GIT_TAG ebd6d91
     OPTIONS
         "MLT_DATA_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/out/lib/mlt"
         "ENABLE_QT OFF"
