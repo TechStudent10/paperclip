@@ -94,7 +94,6 @@ if (WIN32)
     # add_definitions(-D_USE_MATH_DEFINES)
 
     # some hacky mlt fixes im sure i won't regret later
-    add_compile_definitions(WIN_PTHREADS_TIME_H=1)
     add_compile_definitions(stat64i32=_stati64)
     # add_compile_definitions(pthread_cond_timedwait64=pthread_cond_timedwait)
 endif ()
@@ -114,6 +113,8 @@ CPMAddPackage(
         "ENABLE_MLTPLUSPLUS ON"
         "RELOCATABLE OFF"
 )
+
+add_compile_definitions(mlt PUBLIC WIN_PTHREADS_TIME_H=1)
 
 target_link_libraries(mlt PUBLIC pthread)
 
