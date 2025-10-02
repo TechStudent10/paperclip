@@ -101,7 +101,7 @@ endif ()
 CPMAddPackage(
     NAME mlt
     GITHUB_REPOSITORY TechStudent10/mlt
-    GIT_TAG ebd6d91
+    GIT_TAG sans-nanosleep
     OPTIONS
         "MLT_DATA_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/out/lib/mlt"
         "ENABLE_QT OFF"
