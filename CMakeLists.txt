@@ -114,7 +114,7 @@ CPMAddPackage(
         "RELOCATABLE OFF"
 )
 
-add_compile_definitions(mlt PUBLIC WIN_PTHREADS_TIME_H=1)
+# add_compile_definitions(mlt PUBLIC WIN_PTHREADS_TIME_H=1)
 
 target_link_libraries(mlt PUBLIC pthread)
 
