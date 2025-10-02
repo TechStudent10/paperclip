@@ -114,6 +114,8 @@ CPMAddPackage(
         "RELOCATABLE OFF"
 )
 
+target_link_libraries(mlt PUBLIC pthread)
+
 set(FFMPEG_ROOT "libs/ffmpeg")
 
 if(WIN32)
