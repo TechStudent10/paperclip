@@ -96,7 +96,7 @@ if (WIN32)
     # some hacky mlt fixes im sure i won't regret later
     add_compile_definitions(WIN_PTHREADS_TIME_H=1)
     add_compile_definitions(stat64i32=_stati64)
-    add_compile_definitions(pthread_cond_timedwait64=pthread_cond_timedwait)
+    # add_compile_definitions(pthread_cond_timedwait64=pthread_cond_timedwait)
 endif ()
 
 CPMAddPackage(
