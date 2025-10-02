@@ -94,7 +94,7 @@ if (WIN32)
     # add_definitions(-D_USE_MATH_DEFINES)
 
     # some hacky mlt fixes im sure i won't regret later
-    # add_compile_definitions(WIN_PTHREADS_TIME_H=1)
+    add_compile_definitions(WIN_PTHREADS_TIME_H=1)
     add_compile_definitions(stat64i32=_stati64)
 endif ()
 
