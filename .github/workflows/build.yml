@@ -54,7 +54,7 @@ jobs:
         id: msys2
         uses: msys2/setup-msys2@v2
         with:
-          msystem: CLANG64
+          msystem: UCRT64
           update: true
           install: >-
             autotools base-devel bzip2 coreutils git gzip tar xz zip
@@ -128,8 +128,8 @@ jobs:
         shell: cmd
         if: runner.os == 'Windows'
         run: |
-          ${{ steps.msys2.outputs.msys2-location }}/mingw64/bin/cmake.exe -S . -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
-          ${{ steps.msys2.outputs.msys2-location }}/mingw64/bin/cmake.exe --build build --config Release
+          ${{ steps.msys2.outputs.msys2-location }}/ucrt64/bin/cmake.exe -S . -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
+          ${{ steps.msys2.outputs.msys2-location }}/ucrt64/bin/cmake.exe --build build --config Release
 
       - name: Compile (everyone else)
         if: runner.os != 'Windows'
