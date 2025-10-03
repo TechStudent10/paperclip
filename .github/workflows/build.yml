@@ -128,8 +128,8 @@ jobs:
         shell: cmd
         if: runner.os == 'Windows'
         run: |
-          ${{ steps.msys2.outputs.msys2-location }}/ucrt64/bin/cmake.exe -S . -B build -DCMAKE_BUILD_TYPE=Release
-          ${{ steps.msys2.outputs.msys2-location }}/ucrt64/bin/cmake.exe --build build --config Release
+          ${{ steps.msys2.outputs.msys2-location }}\ucrt64\bin\cmake.exe -S . -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
+          ${{ steps.msys2.outputs.msys2-location }}\ucrt64\bin\cmake.exe --build build --config Release
 
       - name: Compile (everyone else)
         if: runner.os != 'Windows'
