@@ -70,7 +70,6 @@ jobs:
             mingw-w64-clang-x86_64-eigen3
             mingw-w64-clang-x86_64-dlfcn
             mingw-w64-clang-x86_64-fftw
-            mingw-w64-clang-x86_64-gcc-fortran
             mingw-w64-clang-x86_64-gettext-tools
             mingw-w64-clang-x86_64-harfbuzz
             mingw-w64-clang-x86_64-lame
