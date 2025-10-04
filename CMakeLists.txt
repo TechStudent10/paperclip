@@ -86,7 +86,7 @@ if (WIN32)
     # CPMAddPackage("gh:dlfcn-win32/dlfcn-win32#8bfddb5")
     # set(CMAKE_DL_LIBS dl)
 
-    CPMAddPackage("gh:GerHobbelt/pthread-win32#version-3.1.0-release")
+    # CPMAddPackage("gh:GerHobbelt/pthread-win32#version-3.1.0-release")
     # set(Threads_LIBRARY ${pthreads-win32-2-9-1_SOURCE_DIR}/x64/pthreadVC2.lib)
     # set(Threads_INCLUDE_DIR ${pthreads-win32-2-9-1_SOURCE_DIR})
     # include_directories(${pthreads-win32-2-9-1_SOURCE_DIR})
@@ -95,7 +95,7 @@ if (WIN32)
 
     # some hacky mlt fixes im sure i won't regret later
     add_compile_definitions(stat64i32=_stati64)
-    # add_compile_definitions(_TIME_BITS=32)
+    add_compile_definitions(_TIME_BITS=64)
     # add_compile_definitions(pthread_cond_timedwait64=pthread_cond_timedwait)
 endif ()
 
@@ -117,7 +117,9 @@ CPMAddPackage(
 
 # add_compile_definitions(mlt PUBLIC WIN_PTHREADS_TIME_H=1)
 
-target_link_libraries(mlt PUBLIC pthread)
+if(WIN32)
+    target_link_libraries(mlt PRIVATE winpthread)
+endif()
 
 set(FFMPEG_ROOT "libs/ffmpeg")
 
