@@ -86,7 +86,7 @@ if (WIN32)
     # CPMAddPackage("gh:dlfcn-win32/dlfcn-win32#8bfddb5")
     # set(CMAKE_DL_LIBS dl)
 
-    # CPMAddPackage("gh:G-P-S/pthreads-win32-2-9-1#43d3a62")
+    CPMAddPackage("gh:GerHobbelt/pthread-win32#c66d2aa")
     # set(Threads_LIBRARY ${pthreads-win32-2-9-1_SOURCE_DIR}/x64/pthreadVC2.lib)
     # set(Threads_INCLUDE_DIR ${pthreads-win32-2-9-1_SOURCE_DIR})
     # include_directories(${pthreads-win32-2-9-1_SOURCE_DIR})

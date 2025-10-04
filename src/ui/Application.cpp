@@ -686,12 +686,13 @@ void Application::draw() {
     if (state.draggingClip) {
         Vector2D position = state.draggingClip->getPos();
         Vector2D size = state.draggingClip->getSize();
+        Vector2D resolution = state.video->getResolution();
         drawList->AddRect({
-            imagePos.x + windowPos.x + position.x * scale,
-            imagePos.y + windowPos.y + position.y * scale
+            imagePos.x + windowPos.x + std::clamp(position.x, 0, resolution.x) * scale,
+            imagePos.y + windowPos.y + std::clamp(position.y, 0, resolution.y) * scale
         }, {
-            imagePos.x + windowPos.x + (position.x + size.x) * scale,
-            imagePos.y + windowPos.y + (position.y + size.y) * scale
+            imagePos.x + windowPos.x + std::clamp(position.x + size.x, 0, resolution.x) * scale,
+            imagePos.y + windowPos.y + std::clamp(position.y + size.y, 0, resolution.y) * scale
         }, ImColor(255, 0, 0, 127), 0.f, 0, 5.f);
     }
 
