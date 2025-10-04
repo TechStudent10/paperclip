@@ -18,7 +18,7 @@ extern "C" {
 
 #include <easings.hpp>
 
-#include <mlt++/Mlt.h>
+#include <framework/mlt.h>
 
 #include <format/binary/reader.hpp>
 #include <format/binary/writer.hpp>

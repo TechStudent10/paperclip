@@ -118,7 +118,12 @@ CPMAddPackage(
 # add_compile_definitions(mlt PUBLIC WIN_PTHREADS_TIME_H=1)
 
 if(WIN32)
-    target_link_libraries(mlt PRIVATE winpthread)
+    set_target_properties(mlt PROPERTIES EXCLUDE_FROM_ALL TRUE)
+    add_library(mlt SHARED IMPORTED)
+    set_target_properties(mlt PROPERTIES
+        IMPORTED_LOCATION "libs/mlt/libmlt-7.dll"
+        INTERFACE_INCLUDE_DIRECTORIES "${mlt_SOURCE_DIR}/src"
+    )
 endif()
 
 set(FFMPEG_ROOT "libs/ffmpeg")
@@ -153,7 +158,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     mat-json
     miniaudio
     mlt
-    mlt++
+    # mlt++
     GeodeResult
     fmt
 )
