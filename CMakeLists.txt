@@ -119,11 +119,14 @@ CPMAddPackage(
 
 if(WIN32)
     set_target_properties(mlt PROPERTIES EXCLUDE_FROM_ALL TRUE)
-    add_library(mlt SHARED IMPORTED)
-    set_target_properties(mlt PROPERTIES
+    add_library(_mlt SHARED IMPORTED)
+    set_target_properties(_mlt PROPERTIES
         IMPORTED_LOCATION "libs/mlt/libmlt-7.dll"
         INTERFACE_INCLUDE_DIRECTORIES "${mlt_SOURCE_DIR}/src"
     )
+    target_link_libraries(${PROJECT_NAME} PRIVATE _mlt)
+else()
+    target_link_libraries(${PROJECT_NAME} PRIVATE mlt)
 endif()
 
 set(FFMPEG_ROOT "libs/ffmpeg")
@@ -157,7 +160,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     SDL3::SDL3
     mat-json
     miniaudio
-    mlt
     # mlt++
     GeodeResult
     fmt
