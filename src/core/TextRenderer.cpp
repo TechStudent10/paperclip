@@ -1,4 +1,3 @@
-#include <video.hpp>
 #include <fstream>
 #include <iostream>
 
@@ -7,6 +6,9 @@
 
 #include <fmt/base.h>
 #include <fmt/format.h>
+
+#include <renderer/text.hpp>
+#include <frame.hpp>
 
 TextRenderer::TextRenderer() {}
 

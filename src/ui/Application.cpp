@@ -15,6 +15,10 @@
 
 #include <fstream>
 
+#include <renderer/audio.hpp>
+
+#include <format/vpf.hpp>
+
 bool ButtonCenteredOnLine(const char* label, float alignment = 0.5f) {
     ImGuiStyle& style = ImGui::GetStyle();
 
