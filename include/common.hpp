@@ -42,6 +42,23 @@ struct Vector2D {
     }
 };
 
+struct Vector2DF {
+    float x;
+    float y;
+
+    JSON_METHODS(Vector2DF)
+
+    void write(qn::HeapByteWriter& writer) {
+        writer.writeF32(x);
+        writer.writeF32(y);
+    }
+
+    void read(qn::ByteReader& reader) {
+        x = reader.readF32().unwrapOr(0);
+        y = reader.readF32().unwrapOr(0);
+    }
+};
+
 struct Vector1D {
     int number;
 

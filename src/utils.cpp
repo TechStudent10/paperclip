@@ -76,18 +76,19 @@ namespace utils {
                 
                 int srcLoc = (res.y * size.x + res.x) * 3;
                 int dstLoc = (frameY * frame->width + frameX) * 4;
-                uint8_t* dst = &frame->imageData[dstLoc];
-                // if (!data[srcLoc] || !data[srcLoc + 1] || !data[srcLoc + 2]) continue;
+                fmt::println("unimplemented");
+                // uint8_t* dst = &frame->imageData[dstLoc];
+                // // if (!data[srcLoc] || !data[srcLoc + 1] || !data[srcLoc + 2]) continue;
 
-                // fmt::println("{}, {}, {}", data[srcLoc], data[srcLoc + 1], data[srcLoc + 2]);
-                // if (srcLoc + 2 >= size.x * size.y * 3) {
-                    // fmt::println("OOB: res=({}, {}), srcLoc={}", res.x, res.y, srcLoc);
-                    // continue;
-                // }
-                dst[0] = data[srcLoc];
-                dst[1] = data[srcLoc + 1];
-                dst[2] = data[srcLoc + 2];
-                dst[3] = 255;
+                // // fmt::println("{}, {}, {}", data[srcLoc], data[srcLoc + 1], data[srcLoc + 2]);
+                // // if (srcLoc + 2 >= size.x * size.y * 3) {
+                //     // fmt::println("OOB: res=({}, {}), srcLoc={}", res.x, res.y, srcLoc);
+                //     // continue;
+                // // }
+                // dst[0] = data[srcLoc];
+                // dst[1] = data[srcLoc + 1];
+                // dst[2] = data[srcLoc + 2];
+                // dst[3] = 255;
             }
         }
     }

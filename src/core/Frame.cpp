@@ -1,52 +1,196 @@
 #include <cstdint>
-#include <video.hpp>
+#include <frame.hpp>
+
+#include <shaders/shape.hpp>
+#include <shaders/shader.hpp>
+
+Frame::Frame(int width, int height) : width(width), height(height) {
+    glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_2D, textureID);
+    glTexImage2D(
+        GL_TEXTURE_2D,
+        0,
+        GL_RGBA,
+        width, height,
+        0,
+        GL_RGBA,
+        GL_UNSIGNED_BYTE,
+        nullptr
+    );
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    glGenFramebuffers(1, &fbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureID, 0);
+
+    // Set the list of draw buffers.
+    GLenum DrawBuffers[1] = {GL_COLOR_ATTACHMENT0};
+    glDrawBuffers(1, DrawBuffers); // "1" is the size of DrawBuffers
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    glGenBuffers(1, &VBO);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+
+    shapeShaderProgram = shader::createProgram(shapeVertex, shapeFragment);
+
+    glGenBuffers(1, &VBO);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+
+    glGenVertexArrays(1, &VAO);
+    glBindVertexArray(VAO);
+
+    glGenBuffers(1, &EBO);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+
+    // float rectVerts[] = {
+    //     0, 0,
+    //     1, 0,
+    //     1, 1,
+    //     0, 0,
+    //     1, 1,
+    //     0, 1
+    // };
+
+    // glGenVertexArrays(1, &rectVAO);
+    // glGenBuffers(1, &rectVBO);
+
+    // glBindVertexArray(rectVAO);
+    // glBindBuffer(GL_ARRAY_BUFFER, rectVBO);
+    // glBufferData(GL_ARRAY_BUFFER, sizeof(rectVerts), rectVerts, GL_STATIC_DRAW);
+
+    // glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
+    // glEnableVertexAttribArray(0);
+
+    // glBindVertexArray(0);
+    // glBindBuffer(GL_ARRAY_BUFFER, 0);
+}
+
+void Frame::clearFrame() {
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+
+    glViewport(0, 0, width, height);
+    glClearColor(1, 1, 1, 1);
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    // GLenum DrawBuffers[1] = {GL_COLOR_ATTACHMENT0};
+    // glDrawBuffers(1, DrawBuffers);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
 
 const std::vector<unsigned char>& Frame::getFrameData() const {
-    return imageData;
+    fmt::println("getFrameData unimplemented");
+    std::vector<unsigned char> res;
+    return res;
 }
 
 void Frame::putPixel(Vector2D position, RGBAColor color) {
-    int x = position.x;
-    int y = position.y;
+    // fmt::println("putPixel unimplemented");
+//     int x = position.x;
+//     int y = position.y;
 
-    if (x < 0 || x >= width || y < 0 || y >= height) return;
+//     if (x < 0 || x >= width || y < 0 || y >= height) return;
 
-    int loc = (y * width + x) * 4;
-    uint8_t* dst = &imageData[loc];
+//     int loc = (y * width + x) * 4;
+//     uint8_t* dst = &imageData[loc];
 
-    if (color.a == 255) {
-        dst[0] = color.r;
-        dst[1] = color.g;
-        dst[2] = color.b;
-        dst[3] = 255;
-        return;
-    }
+//     if (color.a == 255) {
+//         dst[0] = color.r;
+//         dst[1] = color.g;
+//         dst[2] = color.b;
+//         dst[3] = 255;
+//         return;
+//     }
 
-    int alpha = color.a;
-    int invAlpha = 255 - alpha;
+//     int alpha = color.a;
+//     int invAlpha = 255 - alpha;
 
-    dst[0] = (dst[0] * invAlpha + color.r * alpha) >> 8; // R
-    dst[1] = (dst[1] * invAlpha + color.g * alpha) >> 8; // G
-    dst[2] = (dst[2] * invAlpha + color.b * alpha) >> 8; // B
-    dst[3] = 255;
+//     dst[0] = (dst[0] * invAlpha + color.r * alpha) >> 8; // R
+//     dst[1] = (dst[1] * invAlpha + color.g * alpha) >> 8; // G
+//     dst[2] = (dst[2] * invAlpha + color.b * alpha) >> 8; // B
+//     dst[3] = 255;
 }
 
 RGBAColor Frame::getPixel(Vector2D position) {
-    int location = (position.y * width + position.x) * 4;
+    fmt::println("getPixel unimplemented");
+    // int location = (position.y * width + position.x) * 4;
+    // return {
+    //     .r = imageData[location],
+    //     .g = imageData[location + 1],
+    //     .b = imageData[location + 2],
+    //     .a = imageData[location + 3]
+    // };
+
     return {
-        .r = imageData[location],
-        .g = imageData[location + 1],
-        .b = imageData[location + 2],
-        .a = imageData[location + 3]
+        0,
+        0,
+        0,
+        0
+    };
+}
+
+Vector2DF normalizeToOpenGL(Vector2D in, Vector2D resolution) {
+    return {
+        .x = in.x / ((float)resolution.x / 2.f) - 1,
+        .y = in.y / ((float)resolution.y / 2.f) - 1
     };
 }
 
 void Frame::drawRect(Dimensions dimensions, RGBAColor color) {
-    for (int y = dimensions.pos.y; y < dimensions.size.y + dimensions.pos.y; y++) {
-        for (int x = dimensions.pos.x; x < dimensions.size.x + dimensions.pos.x; x++) {
-            putPixel({x, y}, color);
-        }
-    }
+    // for (int y = dimensions.pos.y; y < dimensions.size.y + dimensions.pos.y; y++) {
+    //     for (int x = dimensions.pos.x; x < dimensions.size.x + dimensions.pos.x; x++) {
+    //         putPixel({x, y}, color);
+    //     }
+    // }
+
+    Vector2D resolution = { width, height };
+    // top left
+    auto normalizedTL = normalizeToOpenGL(dimensions.pos, resolution);
+    // top right
+    auto normalizedTR = normalizeToOpenGL({ dimensions.pos.x + dimensions.size.x, dimensions.pos.y }, resolution);
+    // bottom left
+    auto normalizedBL = normalizeToOpenGL({ dimensions.pos.x, dimensions.pos.y + dimensions.size.y }, resolution);
+    // bottom right
+    auto normalizedBR = normalizeToOpenGL({ dimensions.pos.x + dimensions.size.x, dimensions.pos.y + dimensions.size.y }, resolution);
+
+    // fmt::println("{}, {}", normalizedTL.x, normalizedTL.y);
+    // fmt::println("{}, {}", normalizedTR.x, normalizedTR.y);
+    // fmt::println("{}, {}", normalizedBL.x, normalizedBL.y);
+    // fmt::println("{}, {}", normalizedBR.x, normalizedBR.y);
+
+    float vertices[] = {
+        (float)normalizedTL.x,  (float)normalizedTL.y, 0.0f,   // top left 
+        (float)normalizedTR.x,  (float)normalizedTR.y, 0.0f,  // top right
+        (float)normalizedBL.x, (float)normalizedBL.y, 0.0f,  // bottom left
+        (float)normalizedBR.x, (float)normalizedBR.y, 0.0f,  // bottom right
+    };
+    unsigned int indices[] = {  // note that we start from 0!
+        0, 1, 3,   // first triangle
+        0, 2, 3    // second triangle
+    };
+
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+    glUseProgram(shapeShaderProgram);
+    glUniform4f(
+        glGetUniformLocation(shapeShaderProgram, "outColor"),
+        color.r / 255.f, color.g / 255.f, color.b / 255.f, color.a / 255.f
+    );
+
+    glBindVertexArray(VAO);
+    
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 void Frame::drawLine(Vector2D start, Vector2D end, RGBAColor color, int thickness) {

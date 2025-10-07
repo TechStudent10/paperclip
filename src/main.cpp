@@ -16,6 +16,9 @@ int main() {
     std::cout << "hello!" << std::endl;
     NFD_Init();
 
+    Application app;
+    app.setup();
+
     int width = 1920;
     int height = 1080;
     int fps = 60;
@@ -99,8 +102,6 @@ int main() {
     state.video = video;
     state.textRenderer = std::make_shared<TextRenderer>();
 
-    Application app;
-    app.setup();
     app.run();
 
     // cleanup

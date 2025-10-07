@@ -3,21 +3,26 @@
 #include <vector>
 #include <common.hpp>
 
+#include <glad/include/glad/gl.h>
+#include <SDL3/SDL_opengl.h>
+
 class Frame {
 protected:
 public:
-    std::vector<unsigned char> imageData;
+    // std::vector<unsigned char> imageData;
     int width;
     int height;
-    Frame(int width, int height) : width(width), height(height) {
-        this->imageData = std::vector<unsigned char>(width * height * 4);
-        this->imageData.resize(width * height * 4);
-        clearFrame();
-    }
 
-    void clearFrame() {
-        std::fill(this->imageData.begin(), this->imageData.end(), 255);
-    }
+    GLuint fbo;
+    GLuint textureID;
+
+    GLuint shapeShaderProgram;
+    // GLuint rectVAO, rectVBO;
+    GLuint VAO, VBO, EBO;
+
+    Frame(int width, int height);
+
+    void clearFrame();
 
     void putPixel(Vector2D position, RGBAColor color);
     RGBAColor getPixel(Vector2D position);
