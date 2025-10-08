@@ -8,6 +8,12 @@
 
 class Frame {
 protected:
+    enum class ShapeType {
+        Rect,
+        Circle
+    };
+
+    void primitiveDraw(Vector2D pos, Vector2D size, RGBAColor color, ShapeType type = ShapeType::Rect);
 public:
     // std::vector<unsigned char> imageData;
     int width;

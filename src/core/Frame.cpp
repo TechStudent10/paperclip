@@ -140,17 +140,17 @@ Vector2DF normalizeToOpenGL(Vector2D in, Vector2D resolution) {
     };
 }
 
-void Frame::drawRect(Dimensions dimensions, RGBAColor color) {
+void Frame::primitiveDraw(Vector2D pos, Vector2D size, RGBAColor color, ShapeType type) {
     Vector2D resolution = { width, height };
 
     // top left
-    Vector2D tl = dimensions.pos;
+    Vector2D tl = pos;
     // top right
-    Vector2D tr = { dimensions.pos.x + dimensions.size.x, dimensions.pos.y };
+    Vector2D tr = { pos.x + size.x, pos.y };
     // bottom left
-    Vector2D bl = { dimensions.pos.x, dimensions.pos.y + dimensions.size.y };
+    Vector2D bl = { pos.x, pos.y + size.y };
     // bottom right
-    Vector2D br = { dimensions.pos.x + dimensions.size.x, dimensions.pos.y + dimensions.size.y };
+    Vector2D br = { pos.x + size.x, pos.y + size.y };
 
     float vertices[] = {
         (float)tl.x,  (float)tl.y, 0.0f,   // top left 
@@ -178,6 +178,20 @@ void Frame::drawRect(Dimensions dimensions, RGBAColor color) {
         glGetUniformLocation(shapeShaderProgram, "screenSize"),
         (float)resolution.x, (float)resolution.y
     );
+    glUniform1i(
+        glGetUniformLocation(shapeShaderProgram, "type"),
+        (int)type
+    );
+    if (type == ShapeType::Circle) {
+        glUniform1f(
+            glGetUniformLocation(shapeShaderProgram, "radius"),
+            size.x / 2.f
+        );
+        glUniform2f(
+            glGetUniformLocation(shapeShaderProgram, "center"),
+            pos.x + (size.x / 2.f), pos.y + (size.y / 2.f)
+        );
+    }
 
     glBindVertexArray(VAO);
     
@@ -185,6 +199,10 @@ void Frame::drawRect(Dimensions dimensions, RGBAColor color) {
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+void Frame::drawRect(Dimensions dimensions, RGBAColor color) {
+    primitiveDraw(dimensions.pos, dimensions.size, color);
 }
 
 void Frame::drawLine(Vector2D start, Vector2D end, RGBAColor color, int thickness) {
@@ -261,60 +279,6 @@ void Frame::drawLine(Vector2D start, Vector2D end, RGBAColor color, int thicknes
 }
 
 void Frame::drawCircle(Vector2D center, int radius, RGBAColor color, bool filled) {
-    auto putPixelAlpha = [this](Vector2D p, RGBAColor color, float alpha) {
-        RGBAColor existing = getPixel(p);
-        RGBAColor blended;
-        blended.r = static_cast<uint8_t>(existing.r * (1 - alpha) + color.r * alpha);
-        blended.g = static_cast<uint8_t>(existing.g * (1 - alpha) + color.g * alpha);
-        blended.b = static_cast<uint8_t>(existing.b * (1 - alpha) + color.b * alpha);
-        blended.a = 255;
-        putPixel(p, blended);
-    };
-    
-    auto drawSymmetricPixels = [this, radius, putPixelAlpha, center, color](Vector2D point) {
-        auto x = point.x;
-        auto y = point.y;
-        auto cx = center.x;
-        auto cy = center.y;
-
-        float dist = std::abs(std::sqrt(x * x + y * y) - radius);
-        float alpha = std::max(0.0f, 1.0f - dist);
-
-        putPixelAlpha({ cx + x, cy + y }, color, alpha);
-        putPixelAlpha({ cx - x, cy + y }, color, alpha);
-        putPixelAlpha({ cx + x, cy - y }, color, alpha);
-        putPixelAlpha({ cx - x, cy - y }, color, alpha);
-        putPixelAlpha({ cx + y, cy + x }, color, alpha);
-        putPixelAlpha({ cx - y, cy + x }, color, alpha);
-        putPixelAlpha({ cx + y, cy - x }, color, alpha);
-        putPixelAlpha({ cx - y, cy - x }, color, alpha);
-    };
-
-    if (filled) {
-        // just the equation for a circle lmao
-        // x^2 + y^2 = r^2
-        for (int dy = -radius; dy <= radius; dy++) {
-            float fy = static_cast<float>(dy);
-            float dxF = std::sqrt(static_cast<float>(radius * radius) - fy * fy);
-            int dx = static_cast<int>(dxF);
-
-            drawLine({ center.x - dx, center.y + dy }, { center.x + dx, center.y + dy }, color);
-        }
-    } else {
-        // midpoint circle algorithm
-        // https://en.wikipedia.org/wiki/Midpoint_circle_algorithm
-        int t1 = radius / 16;
-        int x = radius;
-        int y = 0;
-        while (x > y) {
-            drawSymmetricPixels({ x, y });
-            y = y + 1;
-            t1 = t1 + y;
-            int t2 = t1 - x;
-            if (t2 >= 0) {
-                t1 = t2;
-                x = x - 1;
-            }
-        }
-    }
+    // TODO: deal with filled
+    primitiveDraw({ center.x - radius, center.y - radius }, { radius * 2, radius * 2 }, color, ShapeType::Circle);
 }
