@@ -141,32 +141,22 @@ Vector2DF normalizeToOpenGL(Vector2D in, Vector2D resolution) {
 }
 
 void Frame::drawRect(Dimensions dimensions, RGBAColor color) {
-    // for (int y = dimensions.pos.y; y < dimensions.size.y + dimensions.pos.y; y++) {
-    //     for (int x = dimensions.pos.x; x < dimensions.size.x + dimensions.pos.x; x++) {
-    //         putPixel({x, y}, color);
-    //     }
-    // }
-
     Vector2D resolution = { width, height };
-    // top left
-    auto normalizedTL = normalizeToOpenGL(dimensions.pos, resolution);
-    // top right
-    auto normalizedTR = normalizeToOpenGL({ dimensions.pos.x + dimensions.size.x, dimensions.pos.y }, resolution);
-    // bottom left
-    auto normalizedBL = normalizeToOpenGL({ dimensions.pos.x, dimensions.pos.y + dimensions.size.y }, resolution);
-    // bottom right
-    auto normalizedBR = normalizeToOpenGL({ dimensions.pos.x + dimensions.size.x, dimensions.pos.y + dimensions.size.y }, resolution);
 
-    // fmt::println("{}, {}", normalizedTL.x, normalizedTL.y);
-    // fmt::println("{}, {}", normalizedTR.x, normalizedTR.y);
-    // fmt::println("{}, {}", normalizedBL.x, normalizedBL.y);
-    // fmt::println("{}, {}", normalizedBR.x, normalizedBR.y);
+    // top left
+    Vector2D tl = dimensions.pos;
+    // top right
+    Vector2D tr = { dimensions.pos.x + dimensions.size.x, dimensions.pos.y };
+    // bottom left
+    Vector2D bl = { dimensions.pos.x, dimensions.pos.y + dimensions.size.y };
+    // bottom right
+    Vector2D br = { dimensions.pos.x + dimensions.size.x, dimensions.pos.y + dimensions.size.y };
 
     float vertices[] = {
-        (float)normalizedTL.x,  (float)normalizedTL.y, 0.0f,   // top left 
-        (float)normalizedTR.x,  (float)normalizedTR.y, 0.0f,  // top right
-        (float)normalizedBL.x, (float)normalizedBL.y, 0.0f,  // bottom left
-        (float)normalizedBR.x, (float)normalizedBR.y, 0.0f,  // bottom right
+        (float)tl.x,  (float)tl.y, 0.0f,   // top left 
+        (float)tr.x,  (float)tr.y, 0.0f,  // top right
+        (float)bl.x, (float)bl.y, 0.0f,  // bottom left
+        (float)br.x, (float)br.y, 0.0f,  // bottom right
     };
     unsigned int indices[] = {  // note that we start from 0!
         0, 1, 3,   // first triangle
@@ -183,6 +173,10 @@ void Frame::drawRect(Dimensions dimensions, RGBAColor color) {
     glUniform4f(
         glGetUniformLocation(shapeShaderProgram, "outColor"),
         color.r / 255.f, color.g / 255.f, color.b / 255.f, color.a / 255.f
+    );
+    glUniform2f(
+        glGetUniformLocation(shapeShaderProgram, "screenSize"),
+        (float)resolution.x, (float)resolution.y
     );
 
     glBindVertexArray(VAO);
