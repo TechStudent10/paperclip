@@ -37,6 +37,7 @@ CPMAddPackage("gh:btzy/nativefiledialog-extended#6db343a")
 CPMAddPackage("gh:lemenkov/libyuv#5b22f31")
 CPMAddPackage("gh:nothings/stb#fede005")
 CPMAddPackage("gh:fmtlib/fmt#12.0.0")
+CPMAddPackage("gh:g-truc/glm#4962d27")
 
 CPMAddPackage(
     NAME imgui
@@ -152,6 +153,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     GeodeResult
     fmt
     glad
+    glm::glm
 )
 
 if (APPLE)

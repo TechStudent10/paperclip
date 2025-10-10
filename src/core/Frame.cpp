@@ -6,6 +6,10 @@
 
 #include <shaders/shader.hpp>
 
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
 Frame::Frame(int width, int height) : width(width), height(height) {
     glGenTextures(1, &textureID);
     glBindTexture(GL_TEXTURE_2D, textureID);
@@ -150,7 +154,7 @@ void Frame::drawRect(Dimensions dimensions, RGBAColor color) {
     primitiveDraw(dimensions.pos, dimensions.size, color);
 }
 
-void Frame::drawTexture(GLuint texture, Vector2D pos, Vector2D size) {
+void Frame::drawTexture(GLuint texture, Vector2D pos, Vector2D size, float rotation) {
     // stolen from the primitive draw lmao
     Vector2D resolution = { width, height };
 
@@ -184,14 +188,23 @@ void Frame::drawTexture(GLuint texture, Vector2D pos, Vector2D size) {
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
 
+    glm::mat4 matrix = glm::ortho(0.f, (float)width, 0.f, (float)height, -1.f, 1.f);
+    glm::mat4 model = glm::mat4(1.0f);
+    auto center = glm::vec2(pos.x + size.x * 0.5f, pos.y + size.y * 0.5f);
+    model = glm::translate(model, glm::vec3(center, 0.0f));
+    model = glm::rotate(model, glm::radians(rotation), glm::vec3(0, 0, 1));
+    model = glm::translate(model, glm::vec3(-center.x, -center.y, 0.f));
+
+    matrix = matrix * model;
+
     glUseProgram(texShaderProgram);
-    glUniform2f(
-        glGetUniformLocation(texShaderProgram, "screenSize"),
-        (float)resolution.x, (float)resolution.y
-    );
     glUniform1i(
         glGetUniformLocation(texShaderProgram, "texture1"),
         0
+    );
+    glUniformMatrix4fv(
+        glGetUniformLocation(texShaderProgram, "matrix"),
+        1, GL_FALSE, glm::value_ptr(matrix)
     );
 
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);

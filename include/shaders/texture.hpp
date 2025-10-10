@@ -5,19 +5,12 @@ inline auto textureVertex = R"(
 layout (location = 0) in vec3 aPos;
 layout (location = 1) in vec2 aTexCoord;
 
-uniform vec2 screenSize;
 out vec2 TexCoord;
 
-vec2 normalize() {
-    return vec2(
-        aPos.x / (screenSize.x / 2.f) - 1,
-        aPos.y / (screenSize.y / 2.f) - 1
-    );
-}
+uniform mat4 matrix;
 
 void main() {
-    vec2 normalized = normalize();
-    gl_Position = vec4(normalized, 0.0, 1.0);
+    gl_Position = matrix * vec4(aPos, 1.0);
     TexCoord = aTexCoord;
 }
 )";
