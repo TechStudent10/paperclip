@@ -23,6 +23,7 @@ public:
     GLuint textureID;
 
     GLuint shapeShaderProgram;
+    GLuint texShaderProgram;
     // GLuint rectVAO, rectVBO;
     GLuint VAO, VBO, EBO;
 
@@ -36,6 +37,8 @@ public:
     void drawRect(Dimensions dimensions, RGBAColor color);
     void drawLine(Vector2D start, Vector2D end, RGBAColor color, int thickness = 1);
     void drawCircle(Vector2D center, int radius, RGBAColor color, bool filled = true);
+
+    void drawTexture(GLuint texture, Vector2D position, Vector2D size);
 
     const std::vector<unsigned char>& getFrameData() const;
 };

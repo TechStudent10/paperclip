@@ -2,6 +2,8 @@
 #include <frame.hpp>
 
 #include <shaders/shape.hpp>
+#include <shaders/texture.hpp>
+
 #include <shaders/shader.hpp>
 
 Frame::Frame(int width, int height) : width(width), height(height) {
@@ -36,6 +38,7 @@ Frame::Frame(int width, int height) : width(width), height(height) {
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
 
     shapeShaderProgram = shader::createProgram(shapeVertex, shapeFragment);
+    texShaderProgram = shader::createProgram(textureVertex, textureFragment);
 
     glGenBuffers(1, &VBO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
@@ -45,28 +48,6 @@ Frame::Frame(int width, int height) : width(width), height(height) {
 
     glGenBuffers(1, &EBO);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-
-    // float rectVerts[] = {
-    //     0, 0,
-    //     1, 0,
-    //     1, 1,
-    //     0, 0,
-    //     1, 1,
-    //     0, 1
-    // };
-
-    // glGenVertexArrays(1, &rectVAO);
-    // glGenBuffers(1, &rectVBO);
-
-    // glBindVertexArray(rectVAO);
-    // glBindBuffer(GL_ARRAY_BUFFER, rectVBO);
-    // glBufferData(GL_ARRAY_BUFFER, sizeof(rectVerts), rectVerts, GL_STATIC_DRAW);
-
-    // glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
-    // glEnableVertexAttribArray(0);
-
-    // glBindVertexArray(0);
-    // glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 void Frame::clearFrame() {
@@ -75,9 +56,6 @@ void Frame::clearFrame() {
     glViewport(0, 0, width, height);
     glClearColor(1, 1, 1, 1);
     glClear(GL_COLOR_BUFFER_BIT);
-
-    // GLenum DrawBuffers[1] = {GL_COLOR_ATTACHMENT0};
-    // glDrawBuffers(1, DrawBuffers);
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
@@ -88,43 +66,10 @@ const std::vector<unsigned char>& Frame::getFrameData() const {
     return res;
 }
 
-void Frame::putPixel(Vector2D position, RGBAColor color) {
-    // fmt::println("putPixel unimplemented");
-//     int x = position.x;
-//     int y = position.y;
-
-//     if (x < 0 || x >= width || y < 0 || y >= height) return;
-
-//     int loc = (y * width + x) * 4;
-//     uint8_t* dst = &imageData[loc];
-
-//     if (color.a == 255) {
-//         dst[0] = color.r;
-//         dst[1] = color.g;
-//         dst[2] = color.b;
-//         dst[3] = 255;
-//         return;
-//     }
-
-//     int alpha = color.a;
-//     int invAlpha = 255 - alpha;
-
-//     dst[0] = (dst[0] * invAlpha + color.r * alpha) >> 8; // R
-//     dst[1] = (dst[1] * invAlpha + color.g * alpha) >> 8; // G
-//     dst[2] = (dst[2] * invAlpha + color.b * alpha) >> 8; // B
-//     dst[3] = 255;
-}
+void Frame::putPixel(Vector2D position, RGBAColor color) {}
 
 RGBAColor Frame::getPixel(Vector2D position) {
     fmt::println("getPixel unimplemented");
-    // int location = (position.y * width + position.x) * 4;
-    // return {
-    //     .r = imageData[location],
-    //     .g = imageData[location + 1],
-    //     .b = imageData[location + 2],
-    //     .a = imageData[location + 3]
-    // };
-
     return {
         0,
         0,
@@ -203,6 +148,63 @@ void Frame::primitiveDraw(Vector2D pos, Vector2D size, RGBAColor color, ShapeTyp
 
 void Frame::drawRect(Dimensions dimensions, RGBAColor color) {
     primitiveDraw(dimensions.pos, dimensions.size, color);
+}
+
+void Frame::drawTexture(GLuint texture, Vector2D pos, Vector2D size) {
+    // stolen from the primitive draw lmao
+    Vector2D resolution = { width, height };
+
+    // top left
+    Vector2D tl = pos;
+    // top right
+    Vector2D tr = { pos.x + size.x, pos.y };
+    // bottom left
+    Vector2D bl = { pos.x, pos.y + size.y };
+    // bottom right
+    Vector2D br = { pos.x + size.x, pos.y + size.y };
+
+    float vertices[] = {
+        (float)tl.x,  (float)tl.y, 0.0f, 0.0f, 1.0f,   // top left 
+        (float)tr.x,  (float)tr.y, 0.0f, 1.0f, 1.0f,  // top right
+        (float)bl.x, (float)bl.y, 0.0f, 0.0f, 0.0f,  // bottom left
+        (float)br.x, (float)br.y, 0.0f, 1.0f, 0.0f  // bottom right
+    };
+
+    unsigned int indices[] = {  // note that we start from 0!
+        0, 1, 3,   // first triangle
+        0, 2, 3    // second triangle
+    };
+
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+
+    glUseProgram(texShaderProgram);
+    glUniform2f(
+        glGetUniformLocation(texShaderProgram, "screenSize"),
+        (float)resolution.x, (float)resolution.y
+    );
+    glUniform1i(
+        glGetUniformLocation(texShaderProgram, "texture1"),
+        0
+    );
+
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, texture);
+
+    glBindVertexArray(VAO);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 void Frame::drawLine(Vector2D start, Vector2D end, RGBAColor color, int thickness) {

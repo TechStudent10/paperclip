@@ -31,6 +31,7 @@ struct Vector2D {
 
     JSON_METHODS(Vector2D)
 
+public:
     void write(qn::HeapByteWriter& writer) {
         writer.writeI16(x);
         writer.writeI16(y);
@@ -39,6 +40,22 @@ struct Vector2D {
     void read(qn::ByteReader& reader) {
         x = reader.readI16().unwrapOr(0);
         y = reader.readI16().unwrapOr(0);
+    }
+
+    Vector2D operator+(const Vector2D& other) {
+        return { x + other.x, y + other.y };
+    }
+
+    Vector2D operator-(const Vector2D& other) {
+        return { x - other.x, y - other.y };
+    }
+
+    Vector2D operator*(const Vector2D& other) {
+        return { x * other.x, y * other.y };
+    }
+
+    Vector2D operator/(const Vector2D& other) {
+        return { x / other.x, y / other.y };
     }
 };
 

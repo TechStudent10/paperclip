@@ -47,11 +47,24 @@ namespace clips {
             return true;
         }
 
+        stbi_set_flip_vertically_on_load(true);
+
         imageData = stbi_load(path.c_str(), &width, &height, NULL, 3);
         if (imageData == NULL) {
             fmt::println("could not load image {}", path);
             return false;
         }
+
+        glGenTextures(1, &texture);
+        glBindTexture(GL_TEXTURE_2D, texture);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	// set texture wrapping to GL_REPEAT (default wrapping method)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        // set texture filtering parameters
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, imageData);
 
         initialized = true;
 
@@ -59,7 +72,7 @@ namespace clips {
     }
 
     Vector2D ImageClip::getSize() {    
-        return { scaledW, scaledH };
+        return { width, height };
     }
 
     Vector2D ImageClip::getPos() {
@@ -67,9 +80,7 @@ namespace clips {
         return position;
     }
 
-    ImageClip::ImageClip(): ImageClip("") {
-        fmt::println("construct: {} ({})", path, sizeof(imageData));
-    }
+    ImageClip::ImageClip(): ImageClip("") {}
 
     void ImageClip::render(Frame* frame) {
         initialize();
@@ -82,24 +93,10 @@ namespace clips {
         }
         auto position = Vector2D::fromString(m_properties.getProperty("position")->data);
 
-        int currentScaledW = static_cast<int>(std::floor(width * scaleX));
-        int currentScaledH = static_cast<int>(std::floor(height * scaleY));
-        
-        if (currentScaledW != scaledW || currentScaledH != scaledH) {
-            // fmt::println("scale change!");
-            scaledW = currentScaledW;
-            scaledH = currentScaledH;
-            
-            resizedData.resize(scaledW * scaledH * 3);
-            auto res = stbir_resize_uint8_linear(
-                imageData, width, height, width * 3,
-                resizedData.data(), scaledW, scaledH, scaledW * 3,
-                stbir_pixel_layout::STBIR_RGB
-            );
-            // fmt::println("{}", res == 0);
-        }
+        scaledW = static_cast<int>(std::floor(width * scaleX));
+        scaledH = static_cast<int>(std::floor(height * scaleY));
 
-        utils::drawImage(frame, resizedData.data(), { scaledW, scaledH }, position, rotation);
+        frame->drawTexture(texture, position, { scaledW, scaledH });
     }
 
     ImageClip::~ImageClip() {
@@ -107,9 +104,6 @@ namespace clips {
     }
 
     void ImageClip::onDelete() {
-        if (imageData) {
-            fmt::println("deletion!");
-            stbi_image_free(imageData);
-        }
+        stbi_image_free(imageData);
     }
 }
