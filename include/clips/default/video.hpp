@@ -23,6 +23,9 @@ namespace clips {
         std::vector<unsigned char> vidFrame;
         std::string path;
         bool initialized = false;
+        bool hasUploaded = false;
+
+        GLuint textureY, textureU, textureV;
     public:
         VideoClip(const std::string& path);
         VideoClip();

@@ -94,13 +94,14 @@ CPMAddPackage(
     GIT_TAG sans-nanosleep
     OPTIONS
         "MLT_DATA_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/out/lib/mlt"
-        "ENABLE_QT OFF"
         "MOD_QT OFF"
+        "MOD_MOVIT ON"
+        "ENABLE_QT OFF"
         "ENABLE_QT6 OFF"
         "ENABLE_QT5 OFF"
         "ENABLE_AVFORMAT ON"
-        "BUILD_TESTING OFF"
         "ENABLE_MLTPLUSPLUS ON"
+        "BUILD_TESTING OFF"
         "RELOCATABLE OFF"
 )
 

@@ -24,6 +24,7 @@ public:
 
     GLuint shapeShaderProgram;
     GLuint texShaderProgram;
+    GLuint texYUVShaderProgram;
     // GLuint rectVAO, rectVBO;
     GLuint VAO, VBO, EBO;
 
@@ -39,6 +40,7 @@ public:
     void drawCircle(Vector2D center, int radius, RGBAColor color, bool filled = true);
 
     void drawTexture(GLuint texture, Vector2D position, Vector2D size, float rotation = 0);
+    void drawTextureYUV(GLuint textureY, GLuint textureU, GLuint textureV, Vector2D position, Vector2D size, float rotation = 0);
 
     const std::vector<unsigned char>& getFrameData() const;
 };

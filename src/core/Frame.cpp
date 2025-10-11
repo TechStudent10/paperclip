@@ -43,6 +43,7 @@ Frame::Frame(int width, int height) : width(width), height(height) {
 
     shapeShaderProgram = shader::createProgram(shapeVertex, shapeFragment);
     texShaderProgram = shader::createProgram(textureVertex, textureFragment);
+    texYUVShaderProgram = shader::createProgram(textureVertex, textureFragmentYUV);
 
     glGenBuffers(1, &VBO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
@@ -211,6 +212,89 @@ void Frame::drawTexture(GLuint texture, Vector2D pos, Vector2D size, float rotat
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, texture);
+
+    glBindVertexArray(VAO);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+void Frame::drawTextureYUV(GLuint textureY, GLuint textureU, GLuint textureV, Vector2D pos, Vector2D size, float rotation) {
+    // stolen from the primitive draw lmao
+    Vector2D resolution = { width, height };
+
+    // top left
+    Vector2D tl = pos;
+    // top right
+    Vector2D tr = { pos.x + size.x, pos.y };
+    // bottom left
+    Vector2D bl = { pos.x, pos.y + size.y };
+    // bottom right
+    Vector2D br = { pos.x + size.x, pos.y + size.y };
+
+    float vertices[] = {
+        (float)tl.x,  (float)tl.y, 0.0f, 0.0f, 1.0f,   // top left 
+        (float)tr.x,  (float)tr.y, 0.0f, 1.0f, 1.0f,  // top right
+        (float)bl.x, (float)bl.y, 0.0f, 0.0f, 0.0f,  // bottom left
+        (float)br.x, (float)br.y, 0.0f, 1.0f, 0.0f  // bottom right
+    };
+
+    unsigned int indices[] = {  // note that we start from 0!
+        0, 1, 3,   // first triangle
+        0, 2, 3    // second triangle
+    };
+
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+
+    glm::mat4 matrix = glm::ortho(0.f, (float)width, 0.f, (float)height, -1.f, 1.f);
+    glm::mat4 model = glm::mat4(1.0f);
+    auto center = glm::vec2(pos.x + size.x * 0.5f, pos.y + size.y * 0.5f);
+    model = glm::translate(model, glm::vec3(center, 0.0f));
+    model = glm::rotate(model, glm::radians(rotation), glm::vec3(0, 0, 1));
+    model = glm::translate(model, glm::vec3(-center.x, -center.y, 0.f));
+
+    glm::mat4 flipY = glm::scale(glm::mat4(1.0f), glm::vec3(1.0f, -1.0f, 1.0f));
+
+    matrix = flipY * matrix * model;
+
+    glUseProgram(texYUVShaderProgram);
+    glUniform1i(
+        glGetUniformLocation(texYUVShaderProgram, "textureY"),
+        0
+    );
+    glUniform1i(
+        glGetUniformLocation(texYUVShaderProgram, "textureU"),
+        1
+    );
+    glUniform1i(
+        glGetUniformLocation(texYUVShaderProgram, "textureV"),
+        2
+    );
+
+    glUniformMatrix4fv(
+        glGetUniformLocation(texYUVShaderProgram, "matrix"),
+        1, GL_FALSE, glm::value_ptr(matrix)
+    );
+
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, textureY);
+
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, textureU);
+
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_2D, textureV);
 
     glBindVertexArray(VAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
