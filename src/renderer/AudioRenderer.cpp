@@ -1,6 +1,7 @@
-#include <video.hpp>
 #include <fmt/base.h>
 #include <fmt/format.h>
+
+#include <renderer/audio.hpp>
 
 #define SAMPLE_RATE 48000
 #define CHANNELS 2

@@ -23,7 +23,7 @@ endif()
 
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.cpp)
 add_executable(${PROJECT_NAME} ${SOURCES})
-target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR}/libs)
 
 include(cmake/CPM.cmake)
 
@@ -37,6 +37,7 @@ CPMAddPackage("gh:btzy/nativefiledialog-extended#6db343a")
 CPMAddPackage("gh:lemenkov/libyuv#5b22f31")
 CPMAddPackage("gh:nothings/stb#fede005")
 CPMAddPackage("gh:fmtlib/fmt#12.0.0")
+CPMAddPackage("gh:g-truc/glm#4962d27")
 
 CPMAddPackage(
     NAME imgui
@@ -57,22 +58,10 @@ add_library(imgui STATIC
 target_include_directories(imgui PUBLIC ${imgui_SOURCE_DIR} ${imgui_SOURCE_DIR}/backends ${imgui_SOURCE_DIR}/misc/cpp ${json_SOURCE_DIR}/include)
 target_link_libraries(imgui PUBLIC SDL3::SDL3 OpenGL::GL)
 
-# CPMAddPackage(
-#     NAME libvips
-#     GITHUB_REPOSITORY libvips/libvips
-#     GIT_TAG v8.17.2
-#     DOWNLOAD_ONLY ON
-# )
-
-# file(GLOB_RECURSE libvipscpp_SOURCES CONFIGURE_DEPENDS ${libvips_SOURCE_DIR}/cplusplus/*.cpp)
-# file(GLOB_RECURSE libvips_SOURCES CONFIGURE_DEPENDS ${libvips_SOURCE_DIR}/libvips/*/*.c)
-
-# add_library(libvips STATIC
-#     ${libvips_SOURCES}
-#     ${libvipscpp_SOURCES}
-# )
-
-# target_include_directories(libvips PUBLIC ${libvips_SOURCE_DIR}/cplusplus/include ${libvips_SOURCE_DIR}/libvips/include)
+add_library(glad STATIC
+    libs/glad/src/gl.c
+)
+target_include_directories(glad PUBLIC libs/glad/include)
 
 if (WIN32)
     file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/out/share/mlt)
@@ -105,13 +94,14 @@ CPMAddPackage(
     GIT_TAG sans-nanosleep
     OPTIONS
         "MLT_DATA_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/out/lib/mlt"
-        "ENABLE_QT OFF"
         "MOD_QT OFF"
+        "MOD_MOVIT ON"
+        "ENABLE_QT OFF"
         "ENABLE_QT6 OFF"
         "ENABLE_QT5 OFF"
         "ENABLE_AVFORMAT ON"
-        "BUILD_TESTING OFF"
         "ENABLE_MLTPLUSPLUS ON"
+        "BUILD_TESTING OFF"
         "RELOCATABLE OFF"
 )
 
@@ -163,6 +153,8 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     # mlt++
     GeodeResult
     fmt
+    glad
+    glm::glm
 )
 
 if (APPLE)
