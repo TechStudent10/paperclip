@@ -1,3 +1,6 @@
+#include <glad/include/glad/gl.h>
+#include <shaders/shader.hpp>
+#include <shaders/quad.hpp>
 #include <Application.hpp>
 #include <fmt/base.h>
 #include <fmt/format.h>
@@ -14,6 +17,11 @@
 #include <filesystem>
 
 #include <fstream>
+
+#include <renderer/audio.hpp>
+
+#include <format/vpf.hpp>
+
 
 bool ButtonCenteredOnLine(const char* label, float alignment = 0.5f) {
     ImGuiStyle& style = ImGui::GetStyle();
@@ -567,15 +575,29 @@ void Application::draw() {
     auto resolution = state.video->getResolution();
     if (state.lastRenderedFrame != state.currentFrame) {
         frame->clearFrame();
+
+        // glBindFramebuffer(GL_FRAMEBUFFER, frame->fbo); 
+        // glViewport(0, 0, frame->width, frame->height);
+
+        // glEnable(GL_BLEND);
+        // glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
         state.video->renderIntoFrame(state.currentFrame, frame);
-        lastRenderedFrameData.resize(frame->width * frame->height * 4);
-        lastRenderedFrameData = frame->getFrameData();
+        // lastRenderedFrameData.resize(frame->width * frame->height * 4);
+        // lastRenderedFrameData = frame->getFrameData();
         state.lastRenderedFrame = state.currentFrame;
 
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        glBindTexture(GL_TEXTURE_2D, imageTexture);
-        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, resolution.x, resolution.y, GL_RGBA, GL_UNSIGNED_BYTE, lastRenderedFrameData.data());
+        // glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        // glViewport(0, 0, resolution.x, resolution.y);
+
+        // glBindTexture(GL_TEXTURE_2D, frame->textureID);
+
+        // glUseProgram(quadShaderProgram);
+        // glBindVertexArray(quadVAO);
+        // glBindTexture(GL_TEXTURE_2D, frame->textureID);
+        // glDrawArrays(GL_TRIANGLES, 0, 6);
+
+        // glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, resolution.x, resolution.y, GL_RGBA, GL_UNSIGNED_BYTE, lastRenderedFrameData.data());
     }
 
     ImGui::SetNextWindowClass(&bareWindowClass);
@@ -585,7 +607,7 @@ void Application::draw() {
     ImVec2 imageSize = ImVec2(resolution.x * scale, resolution.y * scale);
     ImVec2 imagePos = ImVec2((ImGui::GetWindowSize().x - imageSize.x) * 0.5f , ImGui::GetCursorPosY());
     ImGui::SetCursorPos(imagePos);
-    ImGui::Image((ImTextureID)(uintptr_t)imageTexture, imageSize);
+    ImGui::Image((ImTextureID)(uintptr_t)frame->textureID, imageSize);
 
     ImGuiIO& io = ImGui::GetIO();
 
@@ -753,6 +775,7 @@ void Application::exit() {
 
 bool Application::initSDL() {
     if (!SDL_Init(SDL_INIT_VIDEO)) {
+        fmt::println("SDL Init error: {}", SDL_GetError());
         return false;
     }
 
@@ -764,16 +787,45 @@ bool Application::initSDL() {
 
     window = SDL_CreateWindow("Paperclip", 1200, 800, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
     if (!window) {
+        fmt::println("no window?");
         return false;
     }
 
+    
     SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
-    gl_context = SDL_GL_CreateContext(window);
-    SDL_GL_MakeCurrent(window, gl_context);
-    SDL_GL_SetSwapInterval(1); // Enable vsync
-
-    // gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress);
     // SDL_GL_LoadLibrary(nullptr);
+    gl_context = SDL_GL_CreateContext(window);
+    if (!gl_context) {
+        fmt::println("no GL Context");
+        return false;
+    }
+    SDL_GL_MakeCurrent(window, gl_context);
+    
+    SDL_GL_SetSwapInterval(1); // Enable vsync
+    
+    int version = gladLoadGL((GLADloadfunc)&SDL_GL_GetProcAddress);
+    if (version == 0) {
+        fmt::println("could NOT initalize GLAD");
+        return false;
+    }
+    fmt::println("GLAD loaded OpenGL {}.{}", GLAD_VERSION_MAJOR(version), GLAD_VERSION_MINOR(version));
+    fmt::println("GL Version: {}", (const char*)glGetString(GL_VERSION));
+    fmt::println("GLSL Version: {}", (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION));
+
+    int w, h;
+    SDL_GetWindowSize(window, &w, &h);
+    glViewport(0, 0, w, h);
+    glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+    SDL_GL_SwapWindow(window);
+
+    if (!glGenTextures) fmt::println("glGenTextures is null!");
+    if (!glBindTexture) fmt::println("glBindTexture is null!");
+
+    // wireframe mode
+    // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+    fmt::println("SUCCESS!!!!!!!!!!!!!!!!!!!! i think");
 
     return true;
 }
@@ -823,14 +875,22 @@ void Application::run() {
     auto resolution = state.video->getResolution();
     frame = std::make_shared<Frame>(resolution.x, resolution.y);
 
-    glGenTextures(1, &imageTexture);
-    glBindTexture(GL_TEXTURE_2D, imageTexture);
+    // glGenVertexArrays(1, &quadVAO);
+    // glGenBuffers(1, &quadVBO);
 
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    // glBindVertexArray(quadVAO);
+    // glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+    // glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), quadVertices, GL_STATIC_DRAW);
 
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, resolution.x, resolution.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-    glBindTexture(GL_TEXTURE_2D, 0);
+    // // position attribute
+    // glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+    // glEnableVertexAttribArray(0);
+
+    // // texture coordinate attribute
+    // glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+    // glEnableVertexAttribArray(1);
+
+    // quadShaderProgram = shader::createProgram(quadVertex, quadFragment);
 
     while (running) {
         SDL_Event event;
@@ -851,22 +911,23 @@ void Application::run() {
                 }
             }
         }
-
+        
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplSDL3_NewFrame();
         ImGui::NewFrame();
-
-        // actual drawing
-        draw();
-
-        // ImGui::ShowDemoWindow();
 
         int win_w, win_h;
         SDL_GetWindowSize(window, &win_w, &win_h);
 
         glViewport(0, 0, win_w, win_h);
+        // glClearColor(1.f, 0.1f, 1.f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
+        
+        // actual drawing
+        draw();
 
+        // ImGui::ShowDemoWindow();
+        
         /* clear the window to the draw color. */
 
 

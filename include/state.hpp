@@ -1,6 +1,7 @@
 #pragma once
 
 #include <video.hpp>
+#include <renderer/text.hpp>
 
 class State {
 private:
