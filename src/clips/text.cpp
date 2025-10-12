@@ -15,6 +15,7 @@ namespace clips {
         // default text property is fine here
         m_properties.addProperty(
             ClipProperty::text()
+                ->setDefaultKeyframe("Hello\nWorld!")
         );
 
         m_properties.addProperty(
@@ -46,13 +47,20 @@ namespace clips {
                 ->setDefaultKeyframe(Vector1D{ .number = 90 }.toString())
         );
 
+        m_properties.addProperty(
+            ClipProperty::number()
+                ->setId("rotation")
+                ->setName("Rotation")
+                ->setDefaultKeyframe(Vector1D{ .number = 0 }.toString())
+        );
+
         m_metadata.name = "Text";
     }
 
     Vector2D Text::getSize() {
         auto fontSize = Vector1D::fromString(m_properties.getProperty("size")->data).number;
 
-        return { static_cast<int>(width), fontSize };
+        return { (int)std::round(size.x), (int)std::round(size.y) };
     }
 
     Vector2D Text::getPos() {
@@ -65,9 +73,10 @@ namespace clips {
         auto text = m_properties.getProperty("text")->data;
         auto font = fmt::format("resources/fonts/{}.ttf", m_properties.getProperty("font")->data);
         auto fontSize = Vector1D::fromString(m_properties.getProperty("size")->data).number;
+        auto rotation = Vector1D::fromString(m_properties.getProperty("rotation")->data).number;
         auto pos = Vector2D::fromString(m_properties.getProperty("position")->data);
         auto color = RGBAColor::fromString(m_properties.getProperty("color")->data);
 
-        width = state.textRenderer->drawText(frame, text, font, pos, color, fontSize);
+        size = state.textRenderer->drawText(frame, text, font, pos, color, fontSize, rotation);
     }
 }

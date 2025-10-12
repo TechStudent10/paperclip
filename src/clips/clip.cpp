@@ -78,7 +78,7 @@ void ClipProperty::drawProperty() {
 
     auto drawText = [&]() {
         std::string text = data;
-        if (ImGui::InputText(fmt::format("##{}", id).c_str(), &text)) {
+        if (ImGui::InputTextMultiline(fmt::format("##{}", id).c_str(), &text, ImVec2(0, 0), ImGuiInputTextFlags_WordWrap)) {
             setData(text);
         }
     };

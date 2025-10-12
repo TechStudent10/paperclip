@@ -38,11 +38,12 @@ CPMAddPackage("gh:lemenkov/libyuv#5b22f31")
 CPMAddPackage("gh:nothings/stb#fede005")
 CPMAddPackage("gh:fmtlib/fmt#12.0.0")
 CPMAddPackage("gh:g-truc/glm#4962d27")
+CPMAddPackage("gh:freetype/freetype#4334f00")
 
 CPMAddPackage(
     NAME imgui
     GITHUB_REPOSITORY ocornut/imgui
-    GIT_TAG 4d216d4
+    GIT_TAG 8de97d1
     DOWNLOAD_ONLY ON
 )
 add_library(imgui STATIC
@@ -155,6 +156,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     fmt
     glad
     glm::glm
+    freetype
 )
 
 if (APPLE)

@@ -7,7 +7,7 @@
 namespace clips {
     class Text : public Clip {
     public:
-        float width = 0.f;
+        Vector2DF size;
 
         Text();
         void render(Frame* frame) override;
