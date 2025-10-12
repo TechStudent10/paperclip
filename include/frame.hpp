@@ -14,8 +14,8 @@ protected:
     };
 
     void primitiveDraw(Vector2D pos, Vector2D size, RGBAColor color, ShapeType type = ShapeType::Rect);
+    std::vector<unsigned char> imageData;
 public:
-    // std::vector<unsigned char> imageData;
     int width;
     int height;
 
@@ -42,5 +42,5 @@ public:
     void drawTexture(GLuint texture, Vector2D position, Vector2D size, float rotation = 0);
     void drawTextureYUV(GLuint textureY, GLuint textureU, GLuint textureV, Vector2D position, Vector2D size, float rotation = 0);
 
-    const std::vector<unsigned char>& getFrameData() const;
+    std::vector<unsigned char> getFrameData();
 };

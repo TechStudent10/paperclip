@@ -65,10 +65,25 @@ void Frame::clearFrame() {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-const std::vector<unsigned char>& Frame::getFrameData() const {
-    fmt::println("getFrameData unimplemented");
-    std::vector<unsigned char> res;
-    return res;
+std::vector<unsigned char> Frame::getFrameData() {
+    if (imageData.size() <= 0) {
+        imageData.resize(width * height * 4);
+    }
+    
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+    glReadPixels(
+        0, 0,
+        width, height,
+        GL_RGBA,
+        GL_UNSIGNED_BYTE,
+        imageData.data()
+    );
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    
+    return imageData;
 }
 
 void Frame::putPixel(Vector2D position, RGBAColor color) {}

@@ -575,29 +575,8 @@ void Application::draw() {
     auto resolution = state.video->getResolution();
     if (state.lastRenderedFrame != state.currentFrame) {
         frame->clearFrame();
-
-        // glBindFramebuffer(GL_FRAMEBUFFER, frame->fbo); 
-        // glViewport(0, 0, frame->width, frame->height);
-
-        // glEnable(GL_BLEND);
-        // glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
         state.video->renderIntoFrame(state.currentFrame, frame);
-        // lastRenderedFrameData.resize(frame->width * frame->height * 4);
-        // lastRenderedFrameData = frame->getFrameData();
         state.lastRenderedFrame = state.currentFrame;
-
-        // glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        // glViewport(0, 0, resolution.x, resolution.y);
-
-        // glBindTexture(GL_TEXTURE_2D, frame->textureID);
-
-        // glUseProgram(quadShaderProgram);
-        // glBindVertexArray(quadVAO);
-        // glBindTexture(GL_TEXTURE_2D, frame->textureID);
-        // glDrawArrays(GL_TRIANGLES, 0, 6);
-
-        // glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, resolution.x, resolution.y, GL_RGBA, GL_UNSIGNED_BYTE, lastRenderedFrameData.data());
     }
 
     ImGui::SetNextWindowClass(&bareWindowClass);
