@@ -34,7 +34,6 @@ public:
     void exit();
 protected:
     bool running = false;
-    bool showUploadDialog = false;
     float convertProgress = 0.f;
 
     bool firstFrame;

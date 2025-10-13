@@ -4,8 +4,8 @@
 #include <matjson/std.hpp>
 #include <matjson/reflect.hpp>
 
-#include <format/binary/reader.hpp>
-#include <format/binary/writer.hpp>
+#include <binary/reader.hpp>
+#include <binary/writer.hpp>
 
 #define JSON_METHODS(className) public: \
     std::string toString() { \

@@ -20,8 +20,7 @@
 
 #include <renderer/audio.hpp>
 
-#include <format/vpf.hpp>
-
+#include <utils.hpp>
 
 bool ButtonCenteredOnLine(const char* label, float alignment = 0.5f) {
     ImGuiStyle& style = ImGui::GetStyle();
@@ -182,7 +181,7 @@ void Application::draw() {
 
             renderer.finish();
 
-            VPFFile::combineAV(audioFilename, videoFilename, state.exportPath);
+            utils::video::combineAV(audioFilename, videoFilename, state.exportPath);
 
             // ImGui::InsertNotification({
             //     ImGuiToastType::Success,
@@ -261,10 +260,9 @@ void Application::draw() {
                 );
 
                 if (result == NFD_OKAY) {
-                    showUploadDialog = true;
                     std::string outFile = std::move(outPath);
                     convertThread = std::thread([outFile]() {
-                        VPFFile::extractAudio(outFile);
+                        utils::video::extractAudio(outFile);
 
                         ma_decoder decoder;
                         ma_uint64 pcmLength;
@@ -394,15 +392,6 @@ void Application::draw() {
         ImGui::EndTabBar();
     }
     ImGui::End();
-
-    if (showUploadDialog) {
-        ImGuiIO& io = ImGui::GetIO();
-        ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f), ImGuiCond_Always, ImVec2(0.5f,0.5f));
-        ImGui::SetNextWindowFocus();
-        ImGui::Begin("Uploading", &showUploadDialog);
-        ImGui::Text("%s", fmt::format("{}%", convertProgress * 100).c_str());
-        ImGui::End();
-    }
 
     ImGui::SetNextWindowClass(&bareWindowClass);
     ImGui::Begin("Properties");

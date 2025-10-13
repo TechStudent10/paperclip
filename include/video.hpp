@@ -5,8 +5,8 @@
 #include <vector>
 #include <string>
 
-#include <format/binary/reader.hpp>
-#include <format/binary/writer.hpp>
+#include <binary/reader.hpp>
+#include <binary/writer.hpp>
 
 #include <common.hpp>
 #include <track/audio.hpp>
