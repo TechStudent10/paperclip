@@ -35,6 +35,13 @@ namespace clips {
                 ->setDefaultKeyframe(Vector1D{ .number = 0 }.toString())
         );
 
+        m_properties.addProperty(
+            ClipProperty::number()
+                ->setId("start-time")
+                ->setName("Start Time")
+                ->setDefaultKeyframe(Vector1D{ .number = 0 }.toString())
+        );
+
         if (!path.empty()) {
             initialize();
         }
@@ -159,7 +166,9 @@ namespace clips {
         initialize();
 
         auto& state = State::get();
-        int targetFrame = floor((float)(state.currentFrame - startFrame) / ((float)state.video->getFPS() / (float)fps));
+        int startTime = Vector1D::fromString(m_properties.getProperty("start-time")->data).number;
+        int offset = startTime * fps;
+        int targetFrame = floor(state.video->timeForFrame(state.currentFrame - startFrame) * (float)fps) + offset;
         if (targetFrame < 0) return;
 
         if (!decodeFrame(targetFrame)) return;

@@ -11,6 +11,13 @@ AudioClip::AudioClip(const std::string& path): Clip(0, 7680), path(path) {
             ->setDefaultKeyframe(Vector1D{ .number = 100 }.toString())
     );
 
+    m_properties.addProperty(
+        ClipProperty::number()
+            ->setId("start-time")
+            ->setName("Start Time")
+            ->setDefaultKeyframe(Vector1D{ .number = 0 }.toString())
+    );
+
     if (!path.empty()) {
         initalize();
     }
@@ -59,14 +66,18 @@ void AudioClip::stop() {
 
 void AudioClip::seekToSec(float seconds) {
     initalize();
-    ma_sound_seek_to_second(&sound, seconds);
+
+    auto& state = State::get();
+    int startTime = Vector1D::fromString(m_properties.getProperty("start-time")->data).number;
+    ma_sound_seek_to_second(&sound, seconds + startTime);
 }
 
 float AudioClip::getCursor() {
     initalize();
     float cursor = 0;
     ma_sound_get_cursor_in_seconds(&sound, &cursor);
-    return cursor;
+    int startTime = Vector1D::fromString(m_properties.getProperty("start-time")->data).number;
+    return cursor - startTime;
 }
 
 void AudioClip::setVolume(float volume) {
@@ -80,7 +91,7 @@ void AudioTrack::processTime() {
     for (auto clip : clips) {
         if (currentFrame >= clip->startFrame && currentFrame < clip->startFrame + clip->duration && state.isPlaying) {
             float seconds = state.video->timeForFrame(currentFrame - clip->startFrame);
-            if (std::abs(clip->getCursor() - seconds) >= 0.5f) {
+            if (std::abs(clip->getCursor() - seconds) >= 0.25f) {
                 clip->seekToSec(seconds);
             }
             clip->play();

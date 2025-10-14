@@ -354,14 +354,14 @@ void VideoTimeline::handleInteractions(const ImVec2& canvasPos, const ImVec2& ca
     ImGuiIO& io = ImGui::GetIO();
     io.MouseWheelRequestAxisSwap = false;
     auto& state = State::get();
-
+    
     if (isHovered) {
         if (io.MouseWheel != 0.0f && !io.KeyShift) {
             fmt::println("{}", io.KeyShift);
             if (io.KeyCtrl) {
                 float old_zoom = zoomFactor;
                 setZoom(zoomFactor * (1.0f + io.MouseWheel * 0.1f));
-
+                
                 float mouse_time = (io.MousePos.x - canvasPos.x - TRACK_HEADER_WIDTH + scrollX) / old_zoom;
                 scrollX = mouse_time * zoomFactor - (io.MousePos.x - canvasPos.x - TRACK_HEADER_WIDTH);
                 io.MouseWheel = 0.f;
@@ -375,11 +375,13 @@ void VideoTimeline::handleInteractions(const ImVec2& canvasPos, const ImVec2& ca
                 io.MouseWheel = 0.f;
             }
         }
-
+        
         if (isPlacingClip) {
             hoverPos = io.MousePos;
         }
     }
+
+    if (!ImGui::IsWindowFocused()) return;
 
     if (isHovered && ImGui::IsMouseClicked(0)) {
         ImVec2 mouse_pos = io.MousePos;
