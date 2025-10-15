@@ -6,10 +6,12 @@
 // but the timeline works really nice from the initial impl.
 // and all I need to do is modify it to my needs
 // tl;dr this was mostly AI generated but hey it works
+// update: most of this has been updated and is not AI generated
+// so like
+// ¯\_(ツ)_/¯
 // --------------------------------------------------------------
 
 #include "imgui_internal.h"
-#include <format>
 #include <fmt/base.h>
 #include <fmt/format.h>
 #include <widgets.hpp>
@@ -608,7 +610,6 @@ void VideoTimeline::handleInteractions(const ImVec2& canvasPos, const ImVec2& ca
         draggingTrackIdx = -1;
         originalTrackId = -1;
         resizeMode = RESIZE_NONE;
-        // state.draggingClip = nullptr;
     }
 }
 

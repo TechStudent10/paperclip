@@ -709,6 +709,17 @@ void Application::drawClipButton(std::string name, int defaultDuration) {
             clip->duration = defaultDuration;
             state.video->addClip(trackIdx, clip);
 
+            Action action = {
+                .perform = [state, trackIdx, clip] {
+                    state.video->addClip(trackIdx, clip);  
+                },
+                .undo = [state, trackIdx, clip]() {
+                    state.video->getTracks()[trackIdx]->removeClip(clip);
+                },
+            };
+            state.undoStack.push(action);
+            state.redoStack = std::stack<Action>();
+
             state.lastRenderedFrame = -1;
         };
     }
@@ -843,23 +854,6 @@ void Application::run() {
     auto resolution = state.video->getResolution();
     frame = std::make_shared<Frame>(resolution.x, resolution.y);
 
-    // glGenVertexArrays(1, &quadVAO);
-    // glGenBuffers(1, &quadVBO);
-
-    // glBindVertexArray(quadVAO);
-    // glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
-    // glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), quadVertices, GL_STATIC_DRAW);
-
-    // // position attribute
-    // glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
-    // glEnableVertexAttribArray(0);
-
-    // // texture coordinate attribute
-    // glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
-    // glEnableVertexAttribArray(1);
-
-    // quadShaderProgram = shader::createProgram(quadVertex, quadFragment);
-
     while (running) {
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
@@ -875,6 +869,21 @@ void Application::run() {
                 if (!ImGui::IsAnyItemActive() && !ImGui::IsAnyItemFocused()) {
                     if (event.key.key == SDLK_SPACE) {
                         togglePlay();
+                    }
+
+                    if (event.key.mod & SDL_KMOD_CTRL && !(event.key.mod & SDL_KMOD_SHIFT)) {
+                        switch (event.key.key) {
+                            case SDLK_Z:
+                                state.undo();
+                                break;
+                            case SDLK_Y:
+                                state.redo();
+                                break;
+                        }
+                    } else if (event.key.mod & SDL_KMOD_CTRL | SDL_KMOD_SHIFT) {
+                        if (event.key.key == SDLK_Z) {
+                            state.redo();
+                        }
                     }
                 }
             }

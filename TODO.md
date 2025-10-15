@@ -11,6 +11,9 @@
 - [x] project saving
 - [x] scaling
 - [x] dragging clips on the canvas
+- [ ] undo/redo history
+- [ ] mutliselect
+- [ ] clip linking
 
 once all of these are done
 
