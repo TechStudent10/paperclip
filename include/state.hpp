@@ -9,8 +9,8 @@
 
 struct Action {
 public:
-    std::function<void()> perform;
-    std::function<void()> undo;
+    const std::function<void()> perform;
+    const std::function<void()> undo;
 };
 
 class State {
@@ -28,7 +28,7 @@ public:
     std::stack<Action> undoStack;
     std::stack<Action> redoStack;
 
-    std::shared_ptr<Clip> draggingClip = nullptr;
+    std::shared_ptr<Clip> selectedClip = nullptr;
     int currentFrame = 0;
     int lastRenderedFrame = -1;
     bool isPlaying = false;
@@ -53,5 +53,9 @@ public:
         action.perform();
         undoStack.push(action);
         redoStack.pop();
+    }
+
+    void deselect() {
+        selectedClip = nullptr;
     }
 };

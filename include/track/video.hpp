@@ -1,27 +1,35 @@
 #pragma once
 
-#include <vector>
+#include <unordered_map>
 #include <memory>
 
 #include <clips/all.hpp>
 
 class VideoTrack {
 private:
-    std::vector<std::shared_ptr<Clip>> clips;
+    std::unordered_map<std::string, std::shared_ptr<Clip>> clips;
 public:
     VideoTrack() {
         clips = {};
     }
 
     void addClip(std::shared_ptr<Clip> clip) {
-        clips.push_back(clip);
+        clips[clip->uID] = (clip);
     }
 
     void removeClip(std::shared_ptr<Clip> clip) {
-        clips.erase(std::remove(clips.begin(), clips.end(), clip), clips.end());
+        std::erase_if(clips, [clip](const auto& _clip) {
+            return _clip.second == clip;
+        });
     }
 
-    std::vector<std::shared_ptr<Clip>> getClips() {
+    void removeClip(std::string clipID) {
+        std::erase_if(clips, [clipID](const auto& _clip) {
+            return _clip.second->uID == clipID;
+        });
+    }
+
+    std::unordered_map<std::string, std::shared_ptr<Clip>> getClips() {
         return clips;
     }
 
@@ -29,7 +37,7 @@ public:
 
     void write(qn::HeapByteWriter& writer) {
         writer.writeI16(clips.size());
-        for (auto clip : clips) {
+        for (auto [idx, clip] : clips) {
             clip->write(writer);
         }
     }
@@ -70,7 +78,7 @@ public:
 
             clip->read(reader);
             fmt::println("{}", clip->m_metadata.name);
-            clips.push_back(clip);
+            addClip(clip);
         }
     }
 };

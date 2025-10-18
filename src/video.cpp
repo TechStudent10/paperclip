@@ -4,6 +4,7 @@
 
 void Video::addClip(int trackIdx, std::shared_ptr<Clip> clip) {
     getTracks()[trackIdx]->addClip(clip);
+    clipMap[clip->uID] = trackIdx;
     recalculateFrameCount();
 }
 
@@ -35,7 +36,8 @@ void Video::recalculateFrameCount() {
     int currentFrameCount = 0;
     for (auto track : videoTracks) {
         auto clips = track->getClips();
-        for (auto clip : clips) {
+        for (auto _clip : clips) {
+            auto clip = _clip.second;
             auto lastFrame = clip->startFrame + clip->duration;
             if (lastFrame > currentFrameCount) {
                 currentFrameCount = lastFrame;

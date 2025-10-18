@@ -31,15 +31,20 @@ struct ExtClipMetadata {
 
 class Video {
 protected:
+    // map of all clip IDs to their respective track indexes
+    std::unordered_map<std::string, int> clipMap;
 public:
     int framerate;
 
     Vector2D resolution;
+    
     std::vector<std::shared_ptr<VideoTrack>> videoTracks;
     std::vector<std::shared_ptr<AudioTrack>> audioTracks;
+
     std::vector<ExtClipMetadata> clipPool;
     std::vector<ExtClipMetadata> imagePool;
     std::vector<ExtClipMetadata> audioClipPool;
+
     Video(int framerate, Vector2D resolution): framerate(framerate), resolution(resolution) {}
     Video(): Video(30, {1920, 1080}) {}
 
@@ -53,6 +58,7 @@ public:
     void addClip(int trackIdx, std::shared_ptr<Clip> clip);
 
     const std::vector<std::shared_ptr<VideoTrack>>& getTracks() const { return videoTracks; }
+    std::unordered_map<std::string, int> getClipMap() { return clipMap; }
 
     void render(VideoRenderer* renderer);
     Frame* renderAtFrame(int frame);

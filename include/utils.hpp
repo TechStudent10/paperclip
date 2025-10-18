@@ -9,7 +9,7 @@
 static constexpr double PI_DIV_180 = PI / 180.f;
 
 namespace utils {
-    
+    std::string generateUUID();
 } // namespace utils
 
 namespace utils::video {

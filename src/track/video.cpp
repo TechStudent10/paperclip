@@ -2,10 +2,14 @@
 
 #include <functional>
 
-void VideoTrack::render(Frame* frame, int currentFrame) {
-    for (auto clip : clips) {
-        if (currentFrame >= clip->startFrame && currentFrame <= clip->startFrame + clip->duration) {
-            currentFrame = currentFrame - clip->startFrame;
+void VideoTrack::render(Frame* frame, int targetFrame) {
+    for (auto _clip : clips) {
+        auto clip = _clip.second;
+        if (clip->getType() == ClipType::Text) {
+            // fmt::println("current: {}\nstart: {}\nduration: {}\n-----------", currentFrame, clip->startFrame, clip->duration);
+        }
+        if (targetFrame >= clip->startFrame && targetFrame <= clip->startFrame + clip->duration) {
+            int currentFrame = targetFrame - clip->startFrame;
             // process keyframes
             for (auto property : clip->m_properties.getProperties()) {
                 // only one keyframe? use that

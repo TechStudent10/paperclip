@@ -3,6 +3,9 @@
 #include <unordered_map>
 #include <string>
 
+#include <glad/include/glad/gl.h>
+#include <SDL3/SDL_opengl.h>
+
 #include <common.hpp>
 #include <frame.hpp>
 
@@ -32,6 +35,8 @@ protected:
     GLuint textShaderProgram;
 
     static constexpr float LOAD_SIZE = 100.f;
+
+    GLuint VAO, VBO;
 public:
     TextRenderer();
     void loadFont(std::string fontName);

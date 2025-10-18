@@ -128,6 +128,10 @@ void Frame::primitiveDraw(Vector2D pos, Vector2D size, RGBAColor color, ShapeTyp
         0, 2, 3    // second triangle
     };
 
+    glBindVertexArray(VAO);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
@@ -158,11 +162,10 @@ void Frame::primitiveDraw(Vector2D pos, Vector2D size, RGBAColor color, ShapeTyp
         );
     }
 
-    glBindVertexArray(VAO);
-    
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+    glBindVertexArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 

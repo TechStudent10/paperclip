@@ -88,7 +88,8 @@ void AudioClip::setVolume(float volume) {
 void AudioTrack::processTime() {
     auto& state = State::get();
     auto currentFrame = state.currentFrame;
-    for (auto clip : clips) {
+    for (auto _clip : clips) {
+        auto clip = _clip.second;
         if (currentFrame >= clip->startFrame && currentFrame < clip->startFrame + clip->duration && state.isPlaying) {
             float seconds = state.video->timeForFrame(currentFrame - clip->startFrame);
             if (std::abs(clip->getCursor() - seconds) >= 0.25f) {
@@ -156,7 +157,8 @@ void AudioTrack::processTime() {
 void AudioTrack::onPlay() {
     auto& state = State::get();
     // filters clips that should be playing now
-    for (auto clip : clips) {
+    for (auto _clip : clips) {
+        auto clip = _clip.second;
         if (state.currentFrame >= clip->startFrame && state.currentFrame <= clip->startFrame + clip->duration) {
             clip->seekToSec(state.video->timeForFrame(state.currentFrame - clip->startFrame));
         }
@@ -165,6 +167,6 @@ void AudioTrack::onPlay() {
 
 void AudioTrack::onStop() {
     for (auto clip : clips) {
-        clip->stop();
+        clip.second->stop();
     }
 }

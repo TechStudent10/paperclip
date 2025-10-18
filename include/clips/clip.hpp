@@ -6,6 +6,7 @@
 
 #include <common.hpp>
 #include <frame.hpp>
+#include <utils.hpp>
 
 enum class PropertyType {
     Text,
@@ -214,11 +215,18 @@ class Clip {
 protected:
     Clip(int startFrame, int duration): startFrame(startFrame), duration(duration) {};
 public:
-    Clip(): Clip(0, 60) {}
+    Clip(): Clip(0, 60) {
+        uID = utils::generateUUID();
+    }
+
     ClipProperties m_properties;
     ClipMetadata m_metadata;
+
     int startFrame;
     int duration;
+
+    std::string uID; // unique ID
+
     virtual void render(Frame* frame) {}
     virtual void onDelete() {}
 

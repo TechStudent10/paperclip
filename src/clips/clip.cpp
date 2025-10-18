@@ -17,8 +17,8 @@ void ClipProperty::drawProperty() {
             return;
         }
 
-        int keyframe = state.currentFrame - state.draggingClip->startFrame;
-        state.draggingClip->m_properties.setKeyframe(id, keyframe, data);
+        int keyframe = state.currentFrame - state.selectedClip->startFrame;
+        state.selectedClip->m_properties.setKeyframe(id, keyframe, data);
         state.lastRenderedFrame = -1;
         for (auto audTrack : state.video->audioTracks) {
             audTrack->processTime();
@@ -114,7 +114,7 @@ void ClipProperty::drawProperty() {
     };
     drawFuncs[type]();
 
-    int keyframe = state.currentFrame - state.draggingClip->startFrame;
+    int keyframe = state.currentFrame - state.selectedClip->startFrame;
     bool isKeyframed = keyframes.contains(keyframe);
 
     if (ImGui::Button(fmt::format("{}Keyframe {}", isKeyframed ? "Remove " : "", name).c_str())) {
@@ -125,7 +125,7 @@ void ClipProperty::drawProperty() {
                 keyframeInfo.erase(keyframe);
             }
         } else if (!isKeyframed && keyframe >= 0) {
-            state.draggingClip->m_properties.setKeyframe(id, keyframe, data);
+            state.selectedClip->m_properties.setKeyframe(id, keyframe, data);
         }
     }
 
@@ -145,13 +145,13 @@ void ClipProperty::drawProperty() {
         }
 
         if (ImGui::Button(fmt::format("Go to next##{}", id).c_str())) {
-            state.currentFrame = state.draggingClip->startFrame + nextKeyframe;
+            state.currentFrame = state.selectedClip->startFrame + nextKeyframe;
         }
 
         ImGui::SameLine();
 
         if (ImGui::Button(fmt::format("Go to previous##{}", id).c_str())) {
-            state.currentFrame = state.draggingClip->startFrame + previousKeyframe;
+            state.currentFrame = state.selectedClip->startFrame + previousKeyframe;
         }
 
         auto currentEasing = animation::EASING_NAMES[(int)keyframeInfo[nextKeyframe].easing];

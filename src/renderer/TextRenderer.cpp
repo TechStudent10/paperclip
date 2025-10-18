@@ -13,6 +13,19 @@ TextRenderer::TextRenderer() {
     if (FT_Init_FreeType(&ft)) {
         fmt::println("could not init freetype!");
     }
+
+    glGenVertexArrays(1, &VAO);
+    glGenBuffers(1, &VBO);
+
+    glBindVertexArray(VAO);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    
+    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 6 * 4, NULL, GL_DYNAMIC_DRAW);
+    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), 0);
+    glEnableVertexAttribArray(0);
+    
+    glBindVertexArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 void TextRenderer::loadFont(std::string fontName) {
@@ -105,7 +118,11 @@ Vector2DF TextRenderer::drawText(Frame* frame, std::string text, std::string fon
 
     float scale = pixelHeight / LOAD_SIZE;
 
+    glBindVertexArray(VAO);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBindFramebuffer(GL_FRAMEBUFFER, frame->fbo);
+
+    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 6 * 4, NULL, GL_DYNAMIC_DRAW);
 
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -137,19 +154,9 @@ Vector2DF TextRenderer::drawText(Frame* frame, std::string text, std::string fon
         0
     );
 
-    glBindVertexArray(frame->VAO);
-
     float cursorX = pos.x;
     float baseline = pos.y;
     float maxCursorX = cursorX;
-
-    glBindVertexArray(frame->VAO);
-    glBindBuffer(GL_ARRAY_BUFFER, frame->VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 6 * 4, NULL, GL_DYNAMIC_DRAW);
-    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), 0);
-    glEnableVertexAttribArray(0);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindVertexArray(0);
 
     Font font = fonts[fontName];
 
@@ -186,15 +193,9 @@ Vector2DF TextRenderer::drawText(Frame* frame, std::string text, std::string fon
             { xPos + w, yPos + h,   1.0f, 1.0f }           
         };
 
-        glBindBuffer(GL_ARRAY_BUFFER, frame->VBO);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
-
         glActiveTexture(GL_TEXTURE0);
 
-        glBindVertexArray(frame->VAO);
         glBindTexture(GL_TEXTURE_2D, ch.texture);
-
-        glBindBuffer(GL_ARRAY_BUFFER, frame->VBO);
         glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);
         glDrawArrays(GL_TRIANGLES, 0, 6);
 

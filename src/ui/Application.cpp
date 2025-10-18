@@ -166,7 +166,8 @@ void Application::draw() {
 
             AudioRenderer audio(audioFilename, state.video->timeForFrame(state.video->frameCount));
             for (auto track : state.video->audioTracks) {
-                for (auto clip : track->getClips()) {
+                for (auto _clip : track->getClips()) {
+                    auto clip = _clip.second;
                     audio.addClip(
                         clip->m_metadata.name,
                         state.video->timeForFrame(clip->startFrame),
@@ -224,7 +225,7 @@ void Application::draw() {
         ImGui::DockBuilderSetNodeSize(dock_main_id, viewport->WorkSize);
 
         ImGuiID dock_right = ImGui::DockBuilderSplitNode(dock_main_id, ImGuiDir_Right, 0.25f, nullptr, &dock_main_id);
-        ImGuiID dock_bottom = ImGui::DockBuilderSplitNode(dock_main_id, ImGuiDir_Down, 0.35f, nullptr, &dock_main_id);
+        ImGuiID dock_bottom = ImGui::DockBuilderSplitNode(dock_main_id, ImGuiDir_Down, 0.4f, nullptr, &dock_main_id);
         ImGuiID dock_left = ImGui::DockBuilderSplitNode(dock_main_id, ImGuiDir_Left, 0.25f, nullptr, &dock_main_id);
 
         ImGui::DockBuilderDockWindow("Media", dock_left);
@@ -241,11 +242,13 @@ void Application::draw() {
     ImGui::SetNextWindowClass(&bareWindowClass);
     ImGui::Begin("Media");
 
+    static int defaultTime = state.video->frameForTime(5);
+
     if (ImGui::BeginTabBar("MediaTabBar")) {
-        if (ImGui::BeginTabItem("Bultin")) {
-            drawClipButton<clips::Rectangle>("Rectangle", 50);
-            drawClipButton<clips::Circle>("Circle", 50);
-            drawClipButton<clips::Text>("Text", 50);
+        if (ImGui::BeginTabItem("Built-in")) {
+            drawClipButton<clips::Rectangle>("Rectangle", defaultTime);
+            drawClipButton<clips::Circle>("Circle", defaultTime);
+            drawClipButton<clips::Text>("Text", defaultTime);
 
             ImGui::EndTabItem();
         }
@@ -405,14 +408,14 @@ void Application::draw() {
             return;
         }
 
-        int keyframe = state.currentFrame - state.draggingClip->startFrame;
-        state.draggingClip->m_properties.setKeyframe(property->id, keyframe, data);
+        int keyframe = state.currentFrame - state.selectedClip->startFrame;
+        state.selectedClip->m_properties.setKeyframe(property->id, keyframe, data);
         state.lastRenderedFrame = -1;
         for (auto audTrack : state.video->audioTracks) {
             audTrack->processTime();
         }
     };
-    if (state.draggingClip) {
+    if (state.selectedClip) {
         auto drawDimensions = [&](std::shared_ptr<ClipProperty> property) {
             Dimensions dimensions = Dimensions::fromString(property->data);
 
@@ -471,7 +474,7 @@ void Application::draw() {
             }
         };
 
-        TextCentered(state.draggingClip->m_metadata.name);
+        TextCentered(state.selectedClip->m_metadata.name);
 
         ImGui::Separator();
 
@@ -480,7 +483,7 @@ void Application::draw() {
 
         }
         if (ImGui::BeginPopup("Keyframe Editor")) {
-            for (auto prop : state.draggingClip->m_properties.getProperties()) {
+            for (auto prop : state.selectedClip->m_properties.getProperties()) {
                 ImGui::Text("%s", prop.second->name.c_str());
             }
             ImGui::EndPopup();
@@ -488,7 +491,7 @@ void Application::draw() {
 
         ImGui::SeparatorText("Properties");
 
-        for (auto prop : state.draggingClip->m_properties.getProperties()) {
+        for (auto prop : state.selectedClip->m_properties.getProperties()) {
             ImGui::SeparatorText(prop.second->name.c_str());
             prop.second->drawProperty();
         }
@@ -501,12 +504,12 @@ void Application::draw() {
             ImGui::Separator();
             if (ImGui::Button("Yes")) {
                 if (timeline.selectedTrackType == TrackType::Audio) {
-                    state.video->audioTracks[timeline.selectedTrackIdx]->removeClip(std::dynamic_pointer_cast<AudioClip>(state.draggingClip));
+                    state.video->audioTracks[timeline.selectedTrackIdx]->removeClip(std::dynamic_pointer_cast<AudioClip>(state.selectedClip));
                 } else {
-                    state.video->getTracks()[timeline.selectedTrackIdx]->removeClip(state.draggingClip);
-                    state.draggingClip->onDelete();
+                    state.video->getTracks()[timeline.selectedTrackIdx]->removeClip(state.selectedClip);
+                    state.selectedClip->onDelete();
                 }
-                state.draggingClip = nullptr;
+                state.selectedClip = nullptr;
                 ImGui::CloseCurrentPopup();
             }
             ImGui::SameLine();
@@ -605,15 +608,15 @@ void Application::draw() {
             // outside of the clip bounding box
             // if so, deselect
 
-            Vector2D position = state.draggingClip->getPos();
-            Vector2D size = state.draggingClip->getSize();
+            Vector2D position = state.selectedClip->getPos();
+            Vector2D size = state.selectedClip->getSize();
 
             // top 10 laziest developer moments
             if (!(canvasX >= position.x && canvasX <= position.x + size.x &&
                 canvasY >= position.y && canvasY <= position.y + size.y)
             ) {
                 isDraggingClip = false;
-                state.draggingClip = nullptr;    
+                state.selectedClip = nullptr;    
                 deselected = true;   
             }
         }
@@ -625,8 +628,8 @@ void Application::draw() {
 
                 initialPos = { canvasX, canvasY };
 
-                if (state.draggingClip->m_properties.getProperties().contains("position")) {
-                    auto property = state.draggingClip->m_properties.getProperty("position");
+                if (state.selectedClip->m_properties.getProperties().contains("position")) {
+                    auto property = state.selectedClip->m_properties.getProperty("position");
                     auto oldPos = Vector2D::fromString(property->data);
                     Vector2D newPos = {
                         .x = std::clamp(oldPos.x + dx, 0, state.video->resolution.x),
@@ -642,22 +645,23 @@ void Application::draw() {
                 // and initialPos
 
                 for (auto track : state.video->videoTracks) {
-                    for (auto clip : track->getClips()) {
+                    for (auto _clip : track->getClips()) {
+                        auto clip = _clip.second;
                         Vector2D position = clip->getPos();
                         Vector2D size = clip->getSize();
-                        fmt::println("-------------------------");
-                        fmt::println("{}, {}", canvasX >= position.x, canvasX <= position.x + size.x);
-                        fmt::println("{}, {}", canvasY >= position.y, canvasY <= position.y + size.y);
-                        fmt::println("-------------------------");
-                        fmt::println("{}, {}", position.x, position.y);
-                        fmt::println("{}, {}", size.x, size.y);
-                        fmt::println("{}, {}", canvasX, canvasY);
-                        fmt::println("-------------------------");
+                        // fmt::println("-------------------------");
+                        // fmt::println("{}, {}", canvasX >= position.x, canvasX <= position.x + size.x);
+                        // fmt::println("{}, {}", canvasY >= position.y, canvasY <= position.y + size.y);
+                        // fmt::println("-------------------------");
+                        // fmt::println("{}, {}", position.x, position.y);
+                        // fmt::println("{}, {}", size.x, size.y);
+                        // fmt::println("{}, {}", canvasX, canvasY);
+                        // fmt::println("-------------------------");
                         if (canvasX >= position.x && canvasX <= position.x + size.x &&
                             canvasY >= position.y && canvasY <= position.y + size.y
                         ) {
                             fmt::println("found clip!");
-                            state.draggingClip = clip;
+                            state.selectedClip = clip;
                             initialPos = { canvasX, canvasY };
                             isDraggingClip = true;
                             break;
@@ -673,9 +677,9 @@ void Application::draw() {
     }
 
     ImDrawList* drawList = ImGui::GetWindowDrawList();
-    if (state.draggingClip) {
-        Vector2D position = state.draggingClip->getPos();
-        Vector2D size = state.draggingClip->getSize();
+    if (state.selectedClip) {
+        Vector2D position = state.selectedClip->getPos();
+        Vector2D size = state.selectedClip->getSize();
         Vector2D resolution = state.video->getResolution();
         drawList->AddRect({
             imagePos.x + windowPos.x + std::clamp(position.x, 0, resolution.x) * scale,
@@ -704,19 +708,28 @@ void Application::drawClipButton(std::string name, int defaultDuration) {
         timeline.placeType = TrackType::Video;
         timeline.placeCb = [this, defaultDuration](int frame, int trackIdx) {
             auto& state = State::get();
-            auto clip = std::make_shared<T>();
-            clip->startFrame = frame;
-            clip->duration = defaultDuration;
-            state.video->addClip(trackIdx, clip);
+            std::string uID = utils::generateUUID();
 
             Action action = {
-                .perform = [state, trackIdx, clip] {
-                    state.video->addClip(trackIdx, clip);  
+                .perform = [&state, trackIdx, frame, defaultDuration, uID] {
+                    auto clip = std::make_shared<T>();
+                    clip->startFrame = frame;
+                    clip->duration = defaultDuration;
+                    clip->uID = uID;
+                    state.video->addClip(trackIdx, clip);
+                    state.selectedClip = clip;
                 },
-                .undo = [state, trackIdx, clip]() {
-                    state.video->getTracks()[trackIdx]->removeClip(clip);
+                .undo = [&state, trackIdx, uID]() {
+                    int trackIdx = state.video->getClipMap()[uID];
+                    if (state.selectedClip->uID == uID) {
+                        state.deselect();
+                    }
+                    state.video->getTracks()[trackIdx]->removeClip(uID);
                 },
             };
+
+            action.perform();
+
             state.undoStack.push(action);
             state.redoStack = std::stack<Action>();
 
@@ -867,23 +880,27 @@ void Application::run() {
                 break;
             } else if (event.type == SDL_EVENT_KEY_DOWN) {
                 if (!ImGui::IsAnyItemActive() && !ImGui::IsAnyItemFocused()) {
-                    if (event.key.key == SDLK_SPACE) {
-                        togglePlay();
-                    }
-
-                    if (event.key.mod & SDL_KMOD_CTRL && !(event.key.mod & SDL_KMOD_SHIFT)) {
-                        switch (event.key.key) {
-                            case SDLK_Z:
-                                state.undo();
-                                break;
-                            case SDLK_Y:
+                    switch (event.key.key) {
+                        case SDLK_SPACE:
+                            togglePlay();
+                            break;
+                        case SDLK_D:
+                            if (event.key.mod & SDL_KMOD_ALT) {
+                                state.selectedClip = nullptr;
+                            }
+                            break;
+                        case SDLK_Y:
+                            if (event.key.mod & SDL_KMOD_CTRL && !(event.key.mod & SDL_KMOD_SHIFT)) {
                                 state.redo();
-                                break;
-                        }
-                    } else if (event.key.mod & SDL_KMOD_CTRL | SDL_KMOD_SHIFT) {
-                        if (event.key.key == SDLK_Z) {
-                            state.redo();
-                        }
+                            }
+                            break;
+                        case SDLK_Z:
+                            if (event.key.mod & SDL_KMOD_CTRL && !(event.key.mod & SDL_KMOD_SHIFT)) {
+                                state.undo();
+                            } else if (event.key.mod & SDL_KMOD_CTRL | SDL_KMOD_SHIFT) {
+                                state.redo();
+                            }
+                            break;
                     }
                 }
             }
