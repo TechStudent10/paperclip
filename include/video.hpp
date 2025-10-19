@@ -32,6 +32,8 @@ struct ExtClipMetadata {
 class Video {
 protected:
     // map of all clip IDs to their respective track indexes
+    // positive idx = video track
+    // negative idx = audio track
     std::unordered_map<std::string, int> clipMap;
 public:
     int framerate;
@@ -56,6 +58,7 @@ public:
         return videoTracks.size() - 1;
     }
     void addClip(int trackIdx, std::shared_ptr<Clip> clip);
+    void addAudioClip(int trackIdx, std::shared_ptr<AudioClip> clip);
 
     const std::vector<std::shared_ptr<VideoTrack>>& getTracks() const { return videoTracks; }
     std::unordered_map<std::string, int> getClipMap() { return clipMap; }

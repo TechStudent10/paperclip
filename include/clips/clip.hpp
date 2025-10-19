@@ -213,11 +213,9 @@ enum class ClipType {
 
 class Clip {
 protected:
-    Clip(int startFrame, int duration): startFrame(startFrame), duration(duration) {};
+    Clip(int startFrame, int duration): startFrame(startFrame), duration(duration), uID(utils::generateUUID()) {}
 public:
-    Clip(): Clip(0, 60) {
-        uID = utils::generateUUID();
-    }
+    Clip(): Clip(0, 60) {}
 
     ClipProperties m_properties;
     ClipMetadata m_metadata;

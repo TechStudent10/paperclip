@@ -48,6 +48,12 @@ public:
         clips[clip->uID] = (clip);
     }
 
+    std::shared_ptr<AudioClip> getClip(std::string id) {
+        if (!clips.contains(id)) return nullptr;
+
+        return clips[id];
+    }
+
     void removeClip(std::shared_ptr<AudioClip> clip) {
         std::erase_if(clips, [clip](const auto& _clip) {
             return _clip.second == clip;

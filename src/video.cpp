@@ -8,6 +8,12 @@ void Video::addClip(int trackIdx, std::shared_ptr<Clip> clip) {
     recalculateFrameCount();
 }
 
+void Video::addAudioClip(int trackIdx, std::shared_ptr<AudioClip> clip) {
+    audioTracks[trackIdx]->addClip(clip);
+    clipMap[clip->uID] = -trackIdx;
+    recalculateFrameCount();
+}
+
 Frame* Video::renderAtFrame(int frameNum) {
     auto frame = std::make_shared<Frame>(resolution.x, resolution.y);
     renderIntoFrame(frameNum, frame);
