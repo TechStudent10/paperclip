@@ -14,6 +14,18 @@ void Video::addAudioClip(int trackIdx, std::shared_ptr<AudioClip> clip) {
     recalculateFrameCount();
 }
 
+void Video::removeClip(int trackIdx, std::shared_ptr<Clip> clip) {
+    getTracks()[trackIdx]->removeClip(clip);
+    clipMap.erase(clip->uID);
+    recalculateFrameCount();
+}
+
+void Video::removeAudioClip(int trackIdx, std::shared_ptr<AudioClip> clip) {
+    audioTracks[trackIdx]->removeClip(clip);
+    clipMap.erase(clip->uID);
+    recalculateFrameCount();
+}
+
 Frame* Video::renderAtFrame(int frameNum) {
     auto frame = std::make_shared<Frame>(resolution.x, resolution.y);
     renderIntoFrame(frameNum, frame);

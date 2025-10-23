@@ -9,6 +9,9 @@
 #include <miniaudio.h>
 #include <nfd.h>
 
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
+
 int main() {
     if (mlt_factory_init("resources/mlt") == 0) {
         fmt::println("unable to init mlt factory");

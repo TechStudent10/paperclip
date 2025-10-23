@@ -1,6 +1,5 @@
 #include <clips/default/image.hpp>
 
-#define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
 #define STB_IMAGE_RESIZE_IMPLEMENTATION

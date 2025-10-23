@@ -78,6 +78,6 @@ public:
     }
 
     bool isClipSelected() {
-        return !selectedClipId.empty();
+        return !selectedClipId.empty() && getSelectedClip();
     }
 };

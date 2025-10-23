@@ -12,15 +12,13 @@
 #include <SDL3/SDL_opengl.h>
 #include <widgets.hpp>
 
-constexpr float quadVertices[] = {
-    // X, Y, U, V
-    -1.0f, -1.0f,  0.0f, 0.0f,  // bottom-left
-     1.0f, -1.0f,  1.0f, 0.0f,  // bottom-right
-     1.0f,  1.0f,  1.0f, 1.0f,  // top-right
+struct IconInfo {
+    GLuint texture;
+    int w = 0, h = 0;
+};
 
-    -1.0f, -1.0f,  0.0f, 0.0f,  // bottom-left
-     1.0f,  1.0f,  1.0f, 1.0f,  // top-right
-    -1.0f,  1.0f,  0.0f, 1.0f   // top-left
+enum class IconType {
+    PlayPause
 };
 
 class Application {
@@ -33,6 +31,10 @@ public:
     void run();
     void exit();
 protected:
+    // this gets loaded in at init time
+    // (icon ID, icon info)
+    std::unordered_map<IconType, IconInfo> icons;
+
     bool running = false;
     float convertProgress = 0.f;
 
@@ -42,9 +44,6 @@ protected:
 
     SDL_Window* window;
     SDL_GLContext gl_context;
-
-    // GLuint imageTexture;
-    // GLuint quadVAO, quadVBO, quadShaderProgram;
 
     VideoTimeline timeline;
 
@@ -57,6 +56,12 @@ protected:
 
     bool initSDL();
     bool initImGui();
+    bool initIcons();
+
+    bool ButtonCenteredOnLine(const char* label, float alignment = 0.5f);
+    bool ImageButtonCenteredOnLine(const char* label, IconType iconType, float alignment = 0.5f);
+
+    void setCurrentFrame(int frame);
 
     template<class T>
     void drawClipButton(std::string name, int defaultDuration);
@@ -67,4 +72,6 @@ protected:
 
     bool isDraggingClip = false;
     Vector2D initialPos;
+
+    ImFont* progressFont;
 };

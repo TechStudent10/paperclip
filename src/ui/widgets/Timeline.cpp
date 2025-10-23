@@ -329,7 +329,7 @@ void VideoTimeline::drawClip(ImDrawList* drawList, const TimelineClip& clip, con
             
             action.perform(id);
             dragOffset = ImVec2(
-                (((float)state.getSelectedClip()->startFrame / state.video->getFPS()) * pixelsPerSecond) - (mousePos.x - canvasPos.x - TRACK_HEADER_WIDTH + scrollX),
+                (state.video->timeForFrame(clip.clip->startFrame) * pixelsPerSecond) - (mousePos.x - canvasPos.x - TRACK_HEADER_WIDTH + scrollX),
                 0
             );
 
@@ -575,13 +575,15 @@ void VideoTimeline::handleInteractions(const ImVec2& canvasPos, const ImVec2& ca
                 }
                 if (!collision) {
                     if (selectedTrackType == TrackType::Audio) {
-                        state.video->audioTracks[targetTrack]->addClip(std::dynamic_pointer_cast<AudioClip>(selectedClip));
-                        state.video->audioTracks[draggingTrackIdx]->removeClip(std::dynamic_pointer_cast<AudioClip>(selectedClip));
+                        state.video->removeAudioClip(draggingTrackIdx, std::dynamic_pointer_cast<AudioClip>(selectedClip));
+                        state.video->addAudioClip(targetTrack, std::dynamic_pointer_cast<AudioClip>(selectedClip));
                     } else {
-                        state.video->getTracks()[targetTrack]->addClip(selectedClip);
-                        state.video->getTracks()[draggingTrackIdx]->removeClip(selectedClip);
+                        state.video->removeClip(draggingTrackIdx, selectedClip);
+                        state.video->addClip(targetTrack, selectedClip);
                     }
                     draggingTrackIdx = targetTrack;
+                    // make sure the clip is still selected
+                    state.selectClip(selectedClip);
                 }
             }
 
