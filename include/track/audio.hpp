@@ -60,6 +60,12 @@ public:
         });
     }
 
+    void removeClip(std::string clipID) {
+        std::erase_if(clips, [clipID](const auto& _clip) {
+            return _clip.second->uID == clipID;
+        });
+    }
+
     std::unordered_map<std::string, std::shared_ptr<AudioClip>> getClips() {
         return clips;
     }

@@ -224,7 +224,7 @@ void VideoTimeline::drawTrack(ImDrawList* drawList, const ImVec2& canvasPos, con
         hoveredTrackIdx = trackIndex;
         hoveredTrackType = type;
 
-        if (ImGui::IsMouseClicked(0)) {
+        if (ImGui::IsMouseClicked(0) && ImGui::IsWindowFocused()) {
             selectedTrackIdx = trackIndex;
             selectedTrackType = type;
         }

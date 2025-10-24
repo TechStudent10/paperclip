@@ -7,14 +7,18 @@
 
 class VideoTrack {
 private:
-    std::unordered_map<std::string, std::shared_ptr<Clip>> clips;
+    std::unordered_map<std::string, std::shared_ptr<Clip>> clips = {};
+    std::string uID;
 public:
     VideoTrack() {
-        clips = {};
+        uID = utils::generateUUID();
     }
 
+    VideoTrack(VideoTrack const&) = delete;
+    VideoTrack& operator=(VideoTrack const&) = delete;
+
     void addClip(std::shared_ptr<Clip> clip) {
-        clips[clip->uID] = (clip);
+        clips[clip->uID] = clip;
     }
 
     std::shared_ptr<Clip> getClip(std::string id) {
@@ -25,12 +29,12 @@ public:
 
     void removeClip(std::shared_ptr<Clip> clip) {
         std::erase_if(clips, [clip](const auto& _clip) {
-            return _clip.second == clip;
+            return _clip.second->uID == clip->uID;
         });
     }
 
     void removeClip(std::string clipID) {
-        std::erase_if(clips, [clipID](const auto& _clip) {
+        std::erase_if(this->clips, [clipID](const auto& _clip) {
             return _clip.second->uID == clipID;
         });
     }

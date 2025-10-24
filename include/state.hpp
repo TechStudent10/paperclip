@@ -74,6 +74,9 @@ public:
         if (selectedClipId.empty()) return nullptr;
 
         int trackIdx = video->getClipMap()[selectedClipId];
+        if (trackIdx < 0) {
+            return video->audioTracks[-(trackIdx + 1)]->getClip(selectedClipId);
+        }
         return video->videoTracks[trackIdx]->getClip(selectedClipId);
     }
 

@@ -528,11 +528,11 @@ void Application::draw() {
             ImGui::Separator();
             if (ImGui::Button("Yes")) {
                 if (timeline.selectedTrackType == TrackType::Audio) {
-                    state.video->audioTracks[timeline.selectedTrackIdx]->removeClip(std::dynamic_pointer_cast<AudioClip>(selectedClip));
+                    state.video->removeAudioClip(timeline.selectedTrackIdx, std::dynamic_pointer_cast<AudioClip>(selectedClip));
                 } else {
-                    state.video->getTracks()[timeline.selectedTrackIdx]->removeClip(selectedClip);
-                    selectedClip->onDelete();
+                    state.video->removeClip(timeline.selectedTrackIdx, selectedClip);
                 }
+                selectedClip->onDelete();
                 state.deselect();
                 ImGui::CloseCurrentPopup();
             }
@@ -544,6 +544,8 @@ void Application::draw() {
         }
     }
     ImGui::End();
+
+    // fmt::println("number of clips in vid track 0: {}", state.video->videoTracks[0]->getClips().size());
 
     ImGui::SetNextWindowClass(&bareWindowClass);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));

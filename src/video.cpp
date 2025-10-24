@@ -3,25 +3,25 @@
 #include <state.hpp>
 
 void Video::addClip(int trackIdx, std::shared_ptr<Clip> clip) {
-    getTracks()[trackIdx]->addClip(clip);
+    videoTracks.at(trackIdx)->addClip(clip);
     clipMap[clip->uID] = trackIdx;
     recalculateFrameCount();
 }
 
 void Video::addAudioClip(int trackIdx, std::shared_ptr<AudioClip> clip) {
     audioTracks[trackIdx]->addClip(clip);
-    clipMap[clip->uID] = -trackIdx;
+    clipMap[clip->uID] = -(trackIdx + 1);
     recalculateFrameCount();
 }
 
 void Video::removeClip(int trackIdx, std::shared_ptr<Clip> clip) {
-    getTracks()[trackIdx]->removeClip(clip);
+    videoTracks.at(trackIdx)->removeClip(clip->uID);
     clipMap.erase(clip->uID);
     recalculateFrameCount();
 }
 
 void Video::removeAudioClip(int trackIdx, std::shared_ptr<AudioClip> clip) {
-    audioTracks[trackIdx]->removeClip(clip);
+    audioTracks[trackIdx]->removeClip(clip->uID);
     clipMap.erase(clip->uID);
     recalculateFrameCount();
 }
