@@ -69,9 +69,14 @@ public:
     }
 
     void removeClip(std::string clipID) {
-        std::erase_if(clips, [clipID](const auto& _clip) {
-            return _clip.second->uID == clipID;
-        });
+        if (!clips.at(clipID).get()) {
+            fmt::println("invalid pointer!");
+            return;
+        }
+        // std::erase_if(clips, [clipID](const auto& _clip) {
+        //     return _clip.second->uID == clipID;
+        // });
+        clips.erase(clipID);
     }
 
     std::unordered_map<std::string, std::shared_ptr<AudioClip>> getClips() {

@@ -527,10 +527,11 @@ void Application::draw() {
             ImGui::Text("Are you sure you want to delete this clip?");
             ImGui::Separator();
             if (ImGui::Button("Yes")) {
+                int trackIdx = state.video->getClipMap()[selectedClip->uID];
                 if (timeline.selectedTrackType == TrackType::Audio) {
-                    state.video->removeAudioClip(timeline.selectedTrackIdx, std::dynamic_pointer_cast<AudioClip>(selectedClip));
+                    state.video->removeAudioClip(trackIdx, std::dynamic_pointer_cast<AudioClip>(selectedClip));
                 } else {
-                    state.video->removeClip(timeline.selectedTrackIdx, selectedClip);
+                    state.video->removeClip(trackIdx, selectedClip);
                 }
                 selectedClip->onDelete();
                 state.deselect();

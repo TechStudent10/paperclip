@@ -21,7 +21,12 @@ void Video::removeClip(int trackIdx, std::shared_ptr<Clip> clip) {
 }
 
 void Video::removeAudioClip(int trackIdx, std::shared_ptr<AudioClip> clip) {
-    audioTracks[trackIdx]->removeClip(clip->uID);
+    trackIdx = -(trackIdx + 1);
+    if (audioTracks.at(trackIdx).get() == nullptr) {
+        fmt::println("invalid point");
+        return;
+    }
+    audioTracks.at(trackIdx)->removeClip(clip->uID);
     clipMap.erase(clip->uID);
     recalculateFrameCount();
 }
