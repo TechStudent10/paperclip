@@ -34,22 +34,20 @@ TimelineTrack::TimelineTrack(int _id, const std::string& _name, float _height)
 }
 
 VideoTimeline::VideoTimeline()
-    : playheadTime(0.0f), zoomFactor(50.0f), scrollX(0.0f),
+    : zoomFactor(50.0f), scrollX(0.0f),
       timelineLength(300.0f), pixelsPerSecond(50.0f),
       isDragging(false), isScrubbing(false), resizeMode(RESIZE_NONE),
       isMovingBetweenTracks(false), originalTrackId(0) {
 }
 
-void VideoTimeline::setPlayheadTime(float time) {
-    playheadTime = std::max(0.0f, std::min(timelineLength, time));
-
+void VideoTimeline::autoScroll() {
     float viewport_width = canvasSize.x - TRACK_HEADER_WIDTH;
 
     if (viewport_width <= 0) {
         return; // don't auto-scroll if no space
     }
 
-    float playhead_pixel_pos = playheadTime * pixelsPerSecond;
+    float playhead_pixel_pos = getPlayheadTime() * pixelsPerSecond;
     float target_scroll = playhead_pixel_pos - (viewport_width * 0.5f);
 
     if (target_scroll < 0) {
@@ -61,7 +59,8 @@ void VideoTimeline::setPlayheadTime(float time) {
 }
 
 float VideoTimeline::getPlayheadTime() const {
-    return playheadTime;
+    auto& state = State::get();
+    return state.video->timeForFrame(state.currentFrame);
 }
 
 int VideoTimeline::getTrackIndexAtPosition(float yPos, const ImVec2& canvasPos) const {
@@ -93,6 +92,8 @@ void VideoTimeline::render() {
     ImGui::InvisibleButton("timeline", canvasSize);
     bool isHovered = ImGui::IsItemHovered();
     bool isActive = ImGui::IsItemActive();
+
+    autoScroll();
 
     if (isHovered) {
         if (io.MouseWheel != 0.0f && !io.KeyShift) {
@@ -178,7 +179,9 @@ void VideoTimeline::drawRuler(ImDrawList* drawList, const ImVec2& canvasPos, con
 void VideoTimeline::drawTrack(ImDrawList* drawList, const ImVec2& canvasPos, const ImVec2& canvasSize, size_t trackIndex, size_t trackListSize, TrackType type) {
     auto& state = State::get();
 
-    float track_y = canvasPos.y + RULER_HEIGHT + (type == TrackType::Video ? trackListSize - 1 - trackIndex : trackIndex) * 60.0f + (type == TrackType::Audio ? state.video->getTracks().size() * 60 : 0);
+    float track_y = canvasPos.y + RULER_HEIGHT +
+        (type == TrackType::Video ? trackListSize - 1 - trackIndex : trackIndex) * 61.0f +
+        (type == TrackType::Video ? 0 : state.video->getTracks().size() * 61);
 
     ImVec2 header_pos = ImVec2(canvasPos.x, track_y);
     ImVec2 header_size = ImVec2(TRACK_HEADER_WIDTH, 60.0f);
@@ -186,12 +189,15 @@ void VideoTimeline::drawTrack(ImDrawList* drawList, const ImVec2& canvasPos, con
     ImVec2 content_pos = ImVec2(canvasPos.x + TRACK_HEADER_WIDTH, track_y);
     ImVec2 content_size = ImVec2(canvasSize.x - TRACK_HEADER_WIDTH, 60.0f);
 
-    drawList->AddRectFilled(header_pos, ImVec2(header_pos.x + header_size.x, header_pos.y + header_size.y), IM_COL32(55, 55, 58, 255));
-    drawList->AddRect(header_pos, ImVec2(header_pos.x + header_size.x, header_pos.y + header_size.y), IM_COL32(70, 70, 73, 255));
+    bool trackSelected = trackIndex == selectedTrackIdx && type == selectedTrackType;
+    int rg = trackSelected ? 70 : 55;
+
+    drawList->AddRectFilled(header_pos, ImVec2(header_pos.x + header_size.x, header_pos.y + header_size.y), IM_COL32(rg, rg, rg + 3, 255));
+    drawList->AddRect(header_pos, ImVec2(header_pos.x + header_size.x, header_pos.y + header_size.y), IM_COL32(rg + 15, rg + 15, rg + 18, 255));
 
     drawList->AddText(ImVec2(header_pos.x + 10, header_pos.y + 10), IM_COL32(200, 200, 200, 255), fmt::format("{} {}", type == TrackType::Audio ? "Audio" : "Video", trackIndex + 1).c_str());
 
-    ImU32 track_bg_color = (trackIndex % 2 == 0) ? IM_COL32(50, 50, 53, 255) : IM_COL32(45, 45, 48, 255);
+    ImU32 track_bg_color = trackSelected ? IM_COL32(50, 50, 53, 255) : IM_COL32(45, 45, 48, 255);
     drawList->AddRectFilled(content_pos, ImVec2(content_pos.x + content_size.x, content_pos.y + content_size.y), track_bg_color);
 
     switch (type) {
@@ -364,7 +370,7 @@ VideoTimeline::ResizeMode VideoTimeline::GetResizeMode(const ImVec2& mouse_pos, 
 }
 
 void VideoTimeline::drawPlayhead(ImDrawList* drawList, const ImVec2& canvasPos, const ImVec2& canvasSize) {
-    float playhead_x = canvasPos.x + TRACK_HEADER_WIDTH + (playheadTime * pixelsPerSecond - scrollX);
+    float playhead_x = canvasPos.x + TRACK_HEADER_WIDTH + (getPlayheadTime() * pixelsPerSecond - scrollX);
 
     if (playhead_x >= canvasPos.x + TRACK_HEADER_WIDTH && playhead_x <= canvasPos.x + canvasSize.x) {
         drawList->AddLine(ImVec2(playhead_x, canvasPos.y + RULER_HEIGHT - (RULER_HEIGHT + TRACK_HEADER_WIDTH + (60.f * std::min(trackScrollY, -2.2f)))), ImVec2(playhead_x, canvasPos.y + canvasSize.y - (RULER_HEIGHT + TRACK_HEADER_WIDTH + (60.f * std::min(trackScrollY, -2.2f)))), IM_COL32(255, 100, 100, 255), 2.0f);
@@ -413,7 +419,7 @@ void VideoTimeline::handleInteractions(const ImVec2& canvasPos, const ImVec2& ca
         dragStartPos = mouse_pos;
 
         // playhead
-        float playhead_x = canvasPos.x + TRACK_HEADER_WIDTH + (playheadTime * pixelsPerSecond - scrollX);
+        float playhead_x = canvasPos.x + TRACK_HEADER_WIDTH + (getPlayheadTime() * pixelsPerSecond - scrollX);
         if (mouse_pos.y <= canvasPos.y - (TRACK_HEADER_WIDTH + (60.f * std::min(trackScrollY, -2.2f))) &&
             std::abs(mouse_pos.x - playhead_x) < 10) {
             isScrubbing = true;
@@ -421,8 +427,7 @@ void VideoTimeline::handleInteractions(const ImVec2& canvasPos, const ImVec2& ca
         // ruler (scrub to time)
         else if (mouse_pos.y <= canvasPos.y - (TRACK_HEADER_WIDTH + (60.f * std::min(trackScrollY, -2.2f))) && mouse_pos.x >= canvasPos.x + TRACK_HEADER_WIDTH) {
             float new_time = (mouse_pos.x - canvasPos.x - TRACK_HEADER_WIDTH + scrollX) / pixelsPerSecond;
-            setPlayheadTime(new_time);
-            state.currentFrame = new_time * state.video->getFPS();
+            state.currentFrame = std::max(state.video->frameForTime(new_time), 0);
             isScrubbing = true;
         }
         else if (isPlacingClip && placeType == selectedTrackType) {
@@ -628,15 +633,124 @@ void VideoTimeline::handleInteractions(const ImVec2& canvasPos, const ImVec2& ca
         }
     }
 
+    int snapThreshold = 10; // 10 frame threshold to snap
+
     if (isScrubbing && ImGui::IsMouseDragging(0)) {
         float new_time = (io.MousePos.x - canvasPos.x - TRACK_HEADER_WIDTH + scrollX) / pixelsPerSecond;
-        setPlayheadTime(new_time);
-        state.currentFrame = new_time * state.video->getFPS();
+        state.currentFrame = state.video->frameForTime(new_time);
+
+        if (selectedTrackType == TrackType::Video) {
+            auto clips = state.video->videoTracks[selectedTrackIdx]->getClips();
+            for (auto [_, clip] : clips) {
+                if (std::abs(state.currentFrame - clip->startFrame) <= snapThreshold) {
+                    state.currentFrame = clip->startFrame;
+                }
+                
+                if (std::abs(clip->startFrame + clip->duration - state.currentFrame) <= snapThreshold) {
+                    state.currentFrame = clip->startFrame + clip->duration;
+                }
+            }
+        } else if (selectedTrackType == TrackType::Audio) {
+            auto clips = state.video->audioTracks[selectedTrackIdx]->getClips();
+            for (auto [_, clip] : clips) {
+                if (std::abs(state.currentFrame - clip->startFrame) <= snapThreshold) {
+                    state.currentFrame = clip->startFrame;
+                }
+                
+                if (std::abs(state.currentFrame - clip->startFrame + clip->duration) <= snapThreshold) {
+                    state.currentFrame = clip->startFrame + clip->duration;
+                }
+            }
+        }
+    }
+
+    if (state.isClipSelected()) {
+        auto clip = state.getSelectedClip();
+        if (resizeMode != RESIZE_NONE) {
+            auto doTheThingL = [&](std::shared_ptr<Clip> _clip) {
+                if (std::abs(clip->startFrame - (_clip->startFrame + _clip->duration)) <= snapThreshold) {
+                    clip->startFrame = _clip->startFrame + _clip->duration;
+                }
+            };
+
+            auto doTheThingR = [&](std::shared_ptr<Clip> _clip) {
+                if (std::abs(clip->startFrame + clip->duration - _clip->startFrame) <= snapThreshold) {
+                    clip->duration = _clip->startFrame - clip->startFrame;
+                }
+            };
+            switch (resizeMode) {
+                case RESIZE_LEFT:
+                    if (std::abs(clip->startFrame - state.currentFrame) <= snapThreshold) { 
+                        clip->startFrame = state.currentFrame;
+                    }
+
+                    if (selectedTrackType == TrackType::Video) {
+                        for (auto [_, _clip] : state.video->videoTracks[selectedTrackIdx]->getClips()) {
+                            if (clip == _clip) continue;
+                            doTheThingL(_clip);
+                        }
+                    } else {
+                        for (auto [_, _clip] : state.video->audioTracks[selectedTrackIdx]->getClips()) {
+                            if (clip == _clip) continue;
+                            doTheThingL(_clip);
+                        }
+                    }
+                    break;
+                case RESIZE_RIGHT:
+                    if (std::abs(clip->startFrame + clip->duration - state.currentFrame) <= snapThreshold) {
+                        clip->duration = state.currentFrame - clip->startFrame;
+                    }
+
+                    if (selectedTrackType == TrackType::Video) {
+                        for (auto [_, _clip] : state.video->videoTracks[selectedTrackIdx]->getClips()) {
+                            if (clip == _clip) continue;
+                            doTheThingR(_clip);
+                        }
+                    } else {
+                        for (auto [_, _clip] : state.video->audioTracks[selectedTrackIdx]->getClips()) {
+                            if (clip == _clip) continue;
+                            doTheThingR(_clip);
+                        }
+                    }
+                    break;
+                default: // go away compiler this is unreachable anyways...
+                    fmt::println("this should be unreachable what");
+                    break;
+            }
+        } else if (isDragging) {
+            if (std::abs(clip->startFrame - state.currentFrame) <= snapThreshold) { 
+                clip->startFrame = state.currentFrame;
+            }
+
+            if (std::abs(clip->startFrame + clip->duration - state.currentFrame) <= snapThreshold) {
+                clip->startFrame = state.currentFrame - clip->duration;
+            }
+
+            auto doTheThingDrag = [&](std::shared_ptr<Clip> _clip) {
+                if (std::abs(_clip->startFrame + _clip->duration - clip->startFrame) <= snapThreshold) {
+                    clip->startFrame = _clip->startFrame + _clip->duration;
+                }
+                
+                if (std::abs(clip->startFrame + clip->duration - _clip->startFrame) <= snapThreshold) {
+                    clip->startFrame = _clip->startFrame - clip->duration;
+                }
+            };
+
+            if (selectedTrackType == TrackType::Video) {
+                for (auto [_, _clip] : state.video->videoTracks[selectedTrackIdx]->getClips()) {
+                    if (clip == _clip) continue;
+                    doTheThingDrag(_clip);
+                }
+            } else {
+                for (auto [_, _clip] : state.video->audioTracks[selectedTrackIdx]->getClips()) {
+                    if (clip == _clip) continue;
+                    doTheThingDrag(_clip);
+                }
+            }
+        }
     }
 
     state.video->recalculateFrameCount();
-    state.currentFrame = std::max(0, state.currentFrame);
-    state.currentFrame = std::min(state.currentFrame, state.video->frameCount);
 
     if (ImGui::IsMouseReleased(0)) {
         isDragging = false;

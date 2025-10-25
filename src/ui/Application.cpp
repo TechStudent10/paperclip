@@ -724,6 +724,8 @@ void Application::draw() {
         1.f / 30.f
     );
 
+    progress = std::clamp(progress, 0.f, 1.f);
+
     ImGui::SetCursorPosX((ImGui::GetWindowWidth() - mediaControlW) / 2.f);
     ImVec2 mediaControlPos = ImGui::GetCursorScreenPos();
 
@@ -828,8 +830,8 @@ void Application::draw() {
 
     ImGui::SameLine();
 
-    int currentTime = state.video->timeForFrame(state.currentFrame);
     int duration = state.video->timeForFrame(state.video->frameCount);
+    int currentTime = std::clamp(state.video->timeForFrame(state.currentFrame), 0.f, duration * 1.f);
 
     ImGui::PushFont(progressFont, 22.f);
 
@@ -868,7 +870,7 @@ void Application::setCurrentFrame(int frame) {
     auto& state = State::get();
     frame = std::clamp(frame, 0, state.video->frameCount);
     state.currentFrame = frame;
-    timeline.setPlayheadTime(state.video->timeForFrame(frame));
+    // timeline.setPlayheadTime(state.video->timeForFrame(frame));
 }
 
 template<class T>

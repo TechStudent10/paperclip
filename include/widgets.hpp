@@ -43,7 +43,7 @@ enum class TrackType {
 class VideoTimeline {
 private:
     // std::vector<TimelineTrack> tracks;
-    float playheadTime;
+    // float playheadTime;
     float zoomFactor;
     float scrollX;
     float timelineLength;  // total timeline duration in seconds
@@ -102,7 +102,7 @@ public:
     float trackScrollY = 0.f;
     int selectedTrackIdx = 0;
     int hoveredTrackIdx = 0;
-    TrackType selectedTrackType;
+    TrackType selectedTrackType = TrackType::Video;
     TrackType hoveredTrackType;
     TrackType ogTrackType;
     TrackType placeType;
@@ -116,9 +116,11 @@ public:
     void addClip(int track_id, const std::string& name, float start_time, float duration, ImU32 color = IM_COL32(100, 150, 200, 255));
     
     // Playhead control
-    void setPlayheadTime(float time);
+    // void setPlayheadTime(float time);
     float getPlayheadTime() const;
     
+    void autoScroll();
+
     // Zoom control
     void setZoom(float zoom);
     
