@@ -344,7 +344,8 @@ void VideoTimeline::drawClip(ImDrawList* drawList, const TimelineClip& clip, con
         }
     }
 
-    if (clipSize.x > 30) {
+    auto textSize = ImGui::CalcTextSize(clip.clip->m_metadata.name.c_str());
+    if (clipSize.x > textSize.x + 30) {
         drawList->AddText(ImVec2(clipPos.x + 5 + RESIZE_HANDLE_WIDTH, clipPos.y + 5), clip.selected ? IM_COL32(230, 245, 65, 255) : IM_COL32(255, 255, 255, 255), clip.clip->m_metadata.name.c_str());
     }
 }
