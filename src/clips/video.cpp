@@ -1,5 +1,6 @@
 #include <clips/default/video.hpp>
 
+#include <filesystem>
 #include <state.hpp>
 #include <utils.hpp>
 
@@ -8,7 +9,7 @@
 
 namespace clips {
     VideoClip::VideoClip(const std::string& path): Clip(10, 60), path(path) {
-        m_metadata.name = path;
+        m_metadata.name = std::filesystem::path(path).filename();
 
         m_properties.addProperty(
             ClipProperty::position()

@@ -21,7 +21,7 @@ void Video::removeClip(int trackIdx, std::shared_ptr<Clip> clip) {
 }
 
 void Video::removeAudioClip(int trackIdx, std::shared_ptr<AudioClip> clip) {
-    trackIdx = -(trackIdx + 1);
+    if (trackIdx < 0) trackIdx = -(trackIdx + 1);
     if (audioTracks.at(trackIdx).get() == nullptr) {
         fmt::println("invalid point");
         return;

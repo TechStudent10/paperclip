@@ -41,6 +41,8 @@ VideoTimeline::VideoTimeline()
 }
 
 void VideoTimeline::autoScroll() {
+    if (!State::get().isPlaying) return;
+
     float viewport_width = canvasSize.x - TRACK_HEADER_WIDTH;
 
     if (viewport_width <= 0) {
@@ -345,9 +347,21 @@ void VideoTimeline::drawClip(ImDrawList* drawList, const TimelineClip& clip, con
     }
 
     auto textSize = ImGui::CalcTextSize(clip.clip->m_metadata.name.c_str());
-    if (clipSize.x > textSize.x + 30) {
-        drawList->AddText(ImVec2(clipPos.x + 5 + RESIZE_HANDLE_WIDTH, clipPos.y + 5), clip.selected ? IM_COL32(230, 245, 65, 255) : IM_COL32(255, 255, 255, 255), clip.clip->m_metadata.name.c_str());
+    auto font = io.FontDefault;
+    auto size = ImGui::GetFontSize();
+    if (clipSize.x < textSize.x + 30) {
+        size = size * (clipSize.x / (textSize.x + 30));
     }
+
+    drawList->AddText(
+        font,
+        size,
+        ImVec2(clipPos.x + 5 + RESIZE_HANDLE_WIDTH, clipPos.y + 5),
+        clip.selected ?
+            IM_COL32(230, 245, 65, 255) :
+            IM_COL32(255, 255, 255, 255),
+        clip.clip->m_metadata.name.c_str()
+    );
 }
 
 VideoTimeline::ResizeMode VideoTimeline::GetResizeMode(const ImVec2& mouse_pos, std::shared_ptr<Clip> clip, const ImVec2& track_pos, const ImVec2& track_size, float clickTime) {
@@ -670,19 +684,19 @@ void VideoTimeline::handleInteractions(const ImVec2& canvasPos, const ImVec2& ca
         if (resizeMode != RESIZE_NONE) {
             auto doTheThingL = [&](std::shared_ptr<Clip> _clip) {
                 if (std::abs(clip->startFrame - (_clip->startFrame + _clip->duration)) <= snapThreshold) {
-                    clip->startFrame = _clip->startFrame + _clip->duration;
+                    clip->startFrame = _clip->startFrame + _clip->duration + 1;
                 }
             };
 
             auto doTheThingR = [&](std::shared_ptr<Clip> _clip) {
                 if (std::abs(clip->startFrame + clip->duration - _clip->startFrame) <= snapThreshold) {
-                    clip->duration = _clip->startFrame - clip->startFrame;
+                    clip->duration = _clip->startFrame - clip->startFrame - 1;
                 }
             };
             switch (resizeMode) {
                 case RESIZE_LEFT:
                     if (std::abs(clip->startFrame - state.currentFrame) <= snapThreshold) { 
-                        clip->startFrame = state.currentFrame;
+                        clip->startFrame = state.currentFrame + 1;
                     }
 
                     if (selectedTrackType == TrackType::Video) {
@@ -699,7 +713,7 @@ void VideoTimeline::handleInteractions(const ImVec2& canvasPos, const ImVec2& ca
                     break;
                 case RESIZE_RIGHT:
                     if (std::abs(clip->startFrame + clip->duration - state.currentFrame) <= snapThreshold) {
-                        clip->duration = state.currentFrame - clip->startFrame;
+                        clip->duration = state.currentFrame - clip->startFrame - 1;
                     }
 
                     if (selectedTrackType == TrackType::Video) {
@@ -720,20 +734,20 @@ void VideoTimeline::handleInteractions(const ImVec2& canvasPos, const ImVec2& ca
             }
         } else if (isDragging) {
             if (std::abs(clip->startFrame - state.currentFrame) <= snapThreshold) { 
-                clip->startFrame = state.currentFrame;
+                clip->startFrame = state.currentFrame + 1;
             }
 
             if (std::abs(clip->startFrame + clip->duration - state.currentFrame) <= snapThreshold) {
-                clip->startFrame = state.currentFrame - clip->duration;
+                clip->startFrame = state.currentFrame - clip->duration + 1;
             }
 
             auto doTheThingDrag = [&](std::shared_ptr<Clip> _clip) {
                 if (std::abs(_clip->startFrame + _clip->duration - clip->startFrame) <= snapThreshold) {
-                    clip->startFrame = _clip->startFrame + _clip->duration;
+                    clip->startFrame = _clip->startFrame + _clip->duration + 1;
                 }
                 
                 if (std::abs(clip->startFrame + clip->duration - _clip->startFrame) <= snapThreshold) {
-                    clip->startFrame = _clip->startFrame - clip->duration;
+                    clip->startFrame = _clip->startFrame - clip->duration + 1;
                 }
             };
 

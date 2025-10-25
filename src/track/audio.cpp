@@ -1,9 +1,10 @@
+#include <filesystem>
 #include <track/audio.hpp>
 
 #include <state.hpp>
 
 AudioClip::AudioClip(const std::string& path): Clip(0, 7680), path(path) {
-    m_metadata.name = path;
+    m_metadata.name = std::filesystem::path(path).filename();
     m_properties.addProperty(
         ClipProperty::number()
             ->setId("volume")
