@@ -776,14 +776,17 @@ void Application::draw() {
     );
 
     float spacing = ImGui::GetStyle().ItemSpacing.x;
-    float totalBtnWidth = buttonSize.x * 3 + spacing * 2;
-
     float windowWidth = ImGui::GetContentRegionAvail().x;
 
-    float offset = (windowWidth - totalBtnWidth) * 0.5f;
-    float btnStart = ImGui::GetCursorPosX() + offset;
-    if (offset > 0.0f) {
-        ImGui::SetCursorPosX(btnStart);
+    float totalPlaybackBtnWidth = buttonSize.x * 3 + spacing * 2;
+    // UR = undo/redo
+    float totalURBtnWidth = buttonSize.x * 2 + spacing;
+
+    float playbackOffset = (windowWidth - totalPlaybackBtnWidth) * 0.5f;
+    auto btnStart = ImGui::GetCursorPosX();
+    float playbackBtnStart = btnStart + playbackOffset;
+    if (playbackOffset > 0.0f) {
+        ImGui::SetCursorPosX(playbackBtnStart);
     }
 
     ImGui::PushStyleColor(ImGuiCol_Button, IM_COL32(0, 0, 0, 0));
@@ -791,21 +794,28 @@ void Application::draw() {
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, IM_COL32(0, 0, 0, 0));
     ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 255, 255, 150));
 
-    auto playbackBtn = [&](const char* label, std::function<void()> cb) {
+    auto playbackBtn = [&](const char* label, std::function<void()> cb, bool disabled = false) {
         auto min = ImGui::GetCursorScreenPos();
         bool hovered = ImGui::IsMouseHoveringRect(min, ImVec2(min.x + buttonSize.x, min.y + buttonSize.y));
-        if (hovered) {
+        if (disabled) {
+            ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 255, 255, 75));
+        }
+        if (hovered && !disabled) {
             ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 255, 255, 255));
         }
         
         if (ImGui::Button(
             label,
             buttonSize
-        )) {
+        ) && !disabled) {
             cb();
         }
 
-        if (hovered) {
+        if (hovered && !disabled) {
+            ImGui::PopStyleColor();
+        }
+
+        if (disabled) {
             ImGui::PopStyleColor();
         }
     };
@@ -825,6 +835,21 @@ void Application::draw() {
     playbackBtn(ICON_FA_FORWARD, [&]() {
         setCurrentFrame(state.currentFrame + state.video->frameForTime(5));
     });
+
+    ImGui::SameLine();
+
+    ImGui::SetCursorPosX((ImGui::GetWindowWidth() - mediaControlW) / 2.f + mediaControlW - totalURBtnWidth);
+        
+    playbackBtn(ICON_FA_ROTATE_LEFT, [&]() {
+        state.undo();
+    });
+
+    ImGui::SameLine();
+
+    playbackBtn(ICON_FA_ROTATE_RIGHT, [&]() {
+        state.redo();
+    }, state.redoStack.size() <= 0);
+
 
     ImGui::PopStyleColor(4);
 
@@ -847,7 +872,6 @@ void Application::draw() {
     auto currentTimeTextSize = ImGui::CalcTextSize(currentTimeText.c_str()).x;
     auto durationTextSize = ImGui::CalcTextSize(durationText.c_str()).x;
 
-    // ImGui::SetCursorPosX((windowWidth + btnStart + totalBtnWidth - (currentTimeTextSize + durationTextSize)) * 0.5f);
     ImGui::SetCursorPosX((ImGui::GetWindowWidth() - mediaControlW) / 2.f);
     
     ImGui::Text("%s", currentTimeText.c_str());
