@@ -8,6 +8,7 @@
 #include <string>
 
 #include <frame.hpp>
+#include <utils.hpp>
 
 namespace clips {
     class VideoClip : public Clip {
@@ -37,7 +38,7 @@ namespace clips {
         
         void write(qn::HeapByteWriter& writer) override {
             Clip::write(writer);
-            writer.writeStringU32(path);
+            UNWRAP_WITH_ERR(writer.writeStringU32(path));
         }
 
         void read(qn::ByteReader& reader) override {

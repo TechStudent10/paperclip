@@ -1,6 +1,5 @@
 #pragma once
 #include <memory>
-#include <map>
 #include <unordered_map>
 #include <vector>
 #include <string>
@@ -14,12 +13,15 @@
 
 #include <renderer/video.hpp>
 
+#include <utils.hpp>
+
 struct ExtClipMetadata {
     std::string filePath;
     int frameCount;
 
     void write(qn::HeapByteWriter& writer) {
-        writer.writeStringU32(filePath);
+        auto b = writer.writeStringU32(filePath);
+        UNWRAP_WITH_ERR(writer.writeStringU32(filePath));
         writer.writeI16(frameCount);
     }
 

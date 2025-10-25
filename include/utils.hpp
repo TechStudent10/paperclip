@@ -6,6 +6,24 @@
 // i roll my OWN pi
 #define PI 3.14159265358927
 
+// use this to log errors from geode results
+#define UNWRAP_WITH_ERR_DEFAULT(expr, default) ([&]() { \
+    auto b = expr; \
+    if (b.isErr()) { \
+        fmt::println("##expr failed to unwrap: {}", b.unwrapErr().message()); \
+        return default; \
+    } \
+    return b.unwrap(); \
+})()
+
+#define UNWRAP_WITH_ERR(expr) ([&]() { \
+    auto b = expr; \
+    if (b.isErr()) { \
+        fmt::println("{} failed to unwrap: {}", #expr, b.unwrapErr().message()); \
+        return; \
+    } \
+})()
+
 static constexpr double PI_DIV_180 = PI / 180.f;
 
 namespace utils {

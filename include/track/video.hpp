@@ -80,6 +80,8 @@ public:
                     fmt::println("making vide");
                     clip = std::make_shared<clips::VideoClip>();
                     break;
+                case ClipType::Audio:
+                    break;
                 default:
                     fmt::println("making god knows what");
                     clip = std::make_shared<Clip>();

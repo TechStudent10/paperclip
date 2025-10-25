@@ -63,6 +63,8 @@ namespace clips {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, imageData);
+        
+        stbi_image_free(imageData);
 
         initialized = true;
 
@@ -102,6 +104,5 @@ namespace clips {
     }
 
     void ImageClip::onDelete() {
-        stbi_image_free(imageData);
     }
 }

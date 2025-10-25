@@ -45,16 +45,16 @@ public:
     std::map<int, PropertyKeyframeMeta> keyframeInfo;
 
     void write(qn::HeapByteWriter& writer) {
-        writer.writeStringU32(id);
-        writer.writeStringU32(name);
+        UNWRAP_WITH_ERR(writer.writeStringU32(id));
+        UNWRAP_WITH_ERR(writer.writeStringU32(name));
         writer.writeI16((int)type);
-        writer.writeStringU32(data);
-        writer.writeStringU32(options);
+        UNWRAP_WITH_ERR(writer.writeStringU32(data));
+        UNWRAP_WITH_ERR(writer.writeStringU32(options));
 
         writer.writeI16(keyframes.size());
         for (auto keyframe : keyframes) {
             writer.writeI16(keyframe.first);
-            writer.writeStringU32(keyframe.second);
+            UNWRAP_WITH_ERR(writer.writeStringU32(keyframe.second));
         }
 
         writer.writeI16(keyframeInfo.size());
@@ -173,7 +173,7 @@ public:
     void write(qn::HeapByteWriter& writer) {
         writer.writeI16(properties.size());
         for (auto prop : properties) {
-            writer.writeStringU32(prop.first);
+            UNWRAP_WITH_ERR(writer.writeStringU32(prop.first));
             prop.second->write(writer);
         }
     }
@@ -193,7 +193,7 @@ struct ClipMetadata {
     std::string name;
     
     void write(qn::HeapByteWriter& writer) {
-        writer.writeStringU32(name);
+        UNWRAP_WITH_ERR(writer.writeStringU32(name));
     }
     void read(qn::ByteReader& reader) {
         name = reader.readStringU32().unwrapOr("");
@@ -208,6 +208,7 @@ enum class ClipType {
     Text,
     Image,
     Video,
+    Audio,
     None
 };
 
@@ -240,8 +241,7 @@ public:
     virtual void read(qn::ByteReader& reader) {
         m_properties.read(reader);
         m_metadata.read(reader);
-        auto res = reader.readI16();
-        startFrame = res.unwrapOr(0);
+        startFrame = reader.readI16().unwrapOr(0);
         duration = reader.readI16().unwrapOr(0);
     }
 

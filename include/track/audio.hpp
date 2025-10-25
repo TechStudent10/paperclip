@@ -4,6 +4,7 @@
 #include <string>
 
 #include <miniaudio.h>
+#include <utils.hpp>
 
 class AudioClip : public Clip {
 private:
@@ -12,6 +13,8 @@ private:
     bool initialized = false;
 
     bool initalize();
+
+    friend class AudioTrack;
 public:
     bool playing = false;
     AudioClip(const std::string& path);
@@ -27,13 +30,18 @@ public:
     
     void write(qn::HeapByteWriter& writer) override {
         Clip::write(writer);
-        writer.writeStringU32(path);
+        UNWRAP_WITH_ERR(writer.writeStringU32(path));
     }
 
     void read(qn::ByteReader& reader) override {
+        UNWRAP_WITH_ERR(reader.readStringU32());
+        UNWRAP_WITH_ERR(reader.readI16());
         Clip::read(reader);
+        UNWRAP_WITH_ERR(reader.readStringVar());
         path = reader.readStringU32().unwrapOr("");
     }
+
+    ClipType getType() override { return ClipType::Audio; }
 };
 
 class AudioTrack {
