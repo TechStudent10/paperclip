@@ -1,8 +1,11 @@
+#define SDL_MAIN_HANDLED
 #include <Application.hpp>
+#include <cstddef>
 #include <fmt/base.h>
 #include <fmt/format.h>
 
 #include <state.hpp>
+#include <string_view>
 #include <widgets.hpp>
 
 #include <imgui_impl_opengl3.h>
@@ -36,11 +39,46 @@ void TextCentered(std::string text) {
     ImGui::Text("%s", text.c_str());
 }
 
-constexpr nfdnfilteritem_t PROJECT_FILES_FILTER[] = { {"Project Files", "pclp"} };
-constexpr nfdnfilteritem_t MP4_FILES_FILTER[] = { {"MP4 Files", "mp4"} };
-constexpr nfdnfilteritem_t VIDEO_FILES_FILTER [] = { {"Video Files", "mp4,mov"} };
-constexpr nfdnfilteritem_t IMAGE_FILES_FILTER [] = { {"Image Files", "png,jpg,jpeg"} };
-constexpr nfdnfilteritem_t AUDIO_FILES_FILTER [] = { {"Audio Files", "mp3"} };
+// wow i hate windows
+// https://stackoverflow.com/a/8032108
+#ifdef WIN32
+const wchar_t* GetWC(const char* c) {
+    std::string str(c);
+    int count = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), str.length(), NULL, 0);
+    std::wstring wstr(count, 0);
+    MultiByteToWideChar(CP_UTF8, 0, str.c_str(), str.length(), &wstr[0], count);
+    return wstr.c_str();
+}
+
+const char* ensureCStr(const wchar_t* c) {
+    std::wstring wstr(c);
+    int count = WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), wstr.length(), NULL, 0, NULL, NULL);
+    std::string str(count, 0);
+    WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), -1, &str[0], count, NULL, NULL);
+    return str.c_str();
+}
+
+#else
+
+const char* ensureCStr(const char* c) {
+    return c;
+}
+
+#endif
+
+nfdnfilteritem_t createFilter(const char* name, const char* spec) {
+#ifndef WIN32
+    return { name, spec }
+#else
+    return { GetWC(name), GetWC(spec) };
+#endif
+}
+
+const nfdnfilteritem_t PROJECT_FILES_FILTER[] = { createFilter("Project Files", "pclp") };
+const nfdnfilteritem_t MP4_FILES_FILTER[] = { createFilter("MP4 Files", "mp4") };
+const nfdnfilteritem_t VIDEO_FILES_FILTER [] = { createFilter("Video Files", "mp4,mov") };
+const nfdnfilteritem_t IMAGE_FILES_FILTER [] = { createFilter("Image Files", "png,jpg,jpeg") };
+const nfdnfilteritem_t AUDIO_FILES_FILTER [] = { createFilter("Audio Files", "mp3") };
 
 void Application::draw() {
     auto& state = State::get();
@@ -50,7 +88,12 @@ void Application::draw() {
     if (ImGui::BeginMainMenuBar()) {
         if (ImGui::BeginMenu("File")) {
             if (ImGui::MenuItem("Save As")) {
+#ifdef WIN32
+                nfdnchar_t *outPath = NULL;
+#else
                 nfdchar_t *outPath = NULL;
+#endif
+                
                 nfdresult_t result = NFD_SaveDialogN(
                     &outPath,
                     PROJECT_FILES_FILTER,
@@ -71,7 +114,11 @@ void Application::draw() {
             }
 
             if (ImGui::MenuItem("Open")) {
+#ifdef WIN32
+                nfdnchar_t *outPath = NULL;
+#else
                 nfdchar_t *outPath = NULL;
+#endif
                 nfdresult_t result = NFD_OpenDialogN(
                     &outPath,
                     PROJECT_FILES_FILTER,
@@ -127,7 +174,11 @@ void Application::draw() {
         ImGui::InputText("Path", &state.exportPath);
         ImGui::SameLine();
         if (ImGui::Button("File Picker")) {
-            nfdchar_t *outPath = NULL;
+#ifdef WIN32
+                nfdnchar_t *outPath = NULL;
+#else
+                nfdchar_t *outPath = NULL;
+#endif
             nfdresult_t result = NFD_SaveDialogN(
                 &outPath,
                 MP4_FILES_FILTER,
@@ -137,7 +188,7 @@ void Application::draw() {
             );
 
             if (result == NFD_OKAY) {
-                state.exportPath = std::move(outPath);
+                state.exportPath = std::move(ensureCStr(outPath));
                 NFD_FreePathN(outPath);
             }
             else if (result == NFD_CANCEL) {}
@@ -244,7 +295,11 @@ void Application::draw() {
         }
         if (ImGui::BeginTabItem("Pool")) {
             if (ImGui::Button("Import Videos")) {
+#ifdef WIN32
+                nfdnchar_t *outPath = NULL;
+#else
                 nfdchar_t *outPath = NULL;
+#endif
                 nfdresult_t result = NFD_OpenDialogN(
                     &outPath,
                     VIDEO_FILES_FILTER,
@@ -254,7 +309,7 @@ void Application::draw() {
 
                 if (result == NFD_OKAY) {
                     showUploadDialog = true;
-                    std::string outFile = std::move(outPath);
+                    std::string outFile = std::move(ensureCStr(outPath));
                     convertThread = std::thread([outFile]() {
                         VPFFile::extractAudio(outFile);
 
@@ -281,7 +336,11 @@ void Application::draw() {
             }
 
             if (ImGui::Button("Import Audio")) {
+#ifdef WIN32
+                nfdnchar_t *outPath = NULL;
+#else
                 nfdchar_t *outPath = NULL;
+#endif
                 nfdresult_t result = NFD_OpenDialogN(
                     &outPath,
                     AUDIO_FILES_FILTER,
@@ -290,7 +349,7 @@ void Application::draw() {
                 );
 
                 if (result == NFD_OKAY) {
-                    std::string outFile = std::move(outPath);
+                    std::string outFile = std::move(ensureCStr(outPath));
                     free(outPath);
 
                     ma_decoder decoder;
@@ -311,7 +370,11 @@ void Application::draw() {
             }
 
             if (ImGui::Button("Import Image")) {
+#ifdef WIN32
+                nfdnchar_t *outPath = NULL;
+#else
                 nfdchar_t *outPath = NULL;
+#endif
                 nfdresult_t result = NFD_OpenDialogN(
                     &outPath,
                     IMAGE_FILES_FILTER,
@@ -320,7 +383,7 @@ void Application::draw() {
                 );
 
                 if (result == NFD_OKAY) {
-                    std::string outFile = std::move(outPath);
+                    std::string outFile = std::move(ensureCStr(outPath));
                     state.video->imagePool.push_back({
                         .filePath = outFile,
                         .frameCount = 300

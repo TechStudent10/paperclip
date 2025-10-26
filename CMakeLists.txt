@@ -3,6 +3,7 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(BUILD_SHARED_LIBS OFF)
+set(BUILD_STATIC_LIBS ON)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
@@ -117,17 +118,17 @@ CPMAddPackage(
 
 # add_compile_definitions(mlt PUBLIC WIN_PTHREADS_TIME_H=1)
 
-if(WIN32)
-    set_target_properties(mlt PROPERTIES EXCLUDE_FROM_ALL TRUE)
-    add_library(_mlt SHARED IMPORTED)
-    set_target_properties(_mlt PROPERTIES
-        IMPORTED_LOCATION "libs/mlt/libmlt-7.dll"
-        INTERFACE_INCLUDE_DIRECTORIES "${mlt_SOURCE_DIR}/src"
-    )
-    target_link_libraries(${PROJECT_NAME} PRIVATE _mlt)
-else()
+# if(WIN32)
+#     set_target_properties(mlt PROPERTIES EXCLUDE_FROM_ALL TRUE)
+#     add_library(_mlt SHARED IMPORTED)
+#     set_target_properties(_mlt PROPERTIES
+#         IMPORTED_LOCATION "libs/mlt/libmlt-7.dll"
+#         INTERFACE_INCLUDE_DIRECTORIES "${mlt_SOURCE_DIR}/src"
+#     )
+#     target_link_libraries(${PROJECT_NAME} PRIVATE _mlt)
+# else()
     target_link_libraries(${PROJECT_NAME} PRIVATE mlt)
-endif()
+# endif()
 
 set(FFMPEG_ROOT "libs/ffmpeg")
 
@@ -163,6 +164,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     # mlt++
     GeodeResult
     fmt
+    # -static-libstdc++ -static-libgcc
 )
 
 if (APPLE)
@@ -177,7 +179,8 @@ else()
     target_link_libraries(${PROJECT_NAME} PRIVATE avutil avcodec avformat swscale swresample)
 endif()
 
-# add_dependencies(${PROJECT_NAME} mltavformat)
+add_dependencies(${PROJECT_NAME} mlt)
+set_target_properties(melt PROPERTIES EXCLUDE_FROM_ALL True)
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${stb_SOURCE_DIR} ${libyuv_SOURCE_DIR}/include)
 
@@ -192,4 +195,24 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
             ${CMAKE_BINARY_DIR}/out/lib/mlt
             $<TARGET_FILE_DIR:${PROJECT_NAME}>/resources/mlt
 )
+
+if(WIN32)
+    get_filename_component(COMPILER_PATH "${CMAKE_CXX_COMPILER}" DIRECTORY)
+    file(COPY
+        "${COMPILER_PATH}/avcodec-61.dll"
+        "${COMPILER_PATH}/avdevice-61.dll"
+        "${COMPILER_PATH}/avfilter-10.dll"
+        "${COMPILER_PATH}/avformat-61.dll"
+        "${COMPILER_PATH}/avutil-59.dll"
+        "${COMPILER_PATH}/libdl.dll"
+        "${COMPILER_PATH}/libgcc_s_seh-1.dll"
+        "${COMPILER_PATH}/libiconv-2.dll"
+        "${COMPILER_PATH}/libstdc++-6.dll"
+        "${COMPILER_PATH}/libwinpthread-1.dll"
+        "${COMPILER_PATH}/swresample-5.dll"
+        "${COMPILER_PATH}/swscale-8.dll"
+        DESTINATION
+        "${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE}/"
+    )
+endif()
 
