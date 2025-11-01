@@ -3,12 +3,15 @@
 #include <state.hpp>
 
 void Video::addClip(int trackIdx, std::shared_ptr<Clip> clip) {
+    trackIdx = std::clamp(trackIdx, 0, static_cast<int>(videoTracks.size()) - 1);
+    fmt::println("{}", trackIdx);
     videoTracks.at(trackIdx)->addClip(clip);
     clipMap[clip->uID] = trackIdx;
     recalculateFrameCount();
 }
 
 void Video::addAudioClip(int trackIdx, std::shared_ptr<AudioClip> clip) {
+    trackIdx = std::clamp(trackIdx, 0, static_cast<int>(audioTracks.size()) - 1);
     audioTracks[trackIdx]->addClip(clip);
     clipMap[clip->uID] = -(trackIdx + 1);
     recalculateFrameCount();

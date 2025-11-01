@@ -207,7 +207,7 @@ void VideoTimeline::drawTrack(ImDrawList* drawList, const ImVec2& canvasPos, con
             for (const auto& _clip : state.video->audioTracks[trackIndex]->getClips()) {
                 auto clip = _clip.second;
                 TimelineClip timelineClip(0, "Clip", (float)clip->startFrame / state.video->getFPS(), (float)clip->duration / state.video->getFPS(), clip, IM_COL32(100, 150, 200, 255));
-                timelineClip.selected = state.selectedClipId == clip->uID;
+                timelineClip.selected = state.isClipSelected(clip);
                 drawClip(drawList, timelineClip, content_pos, content_size, type);
             }
             break;
@@ -215,7 +215,7 @@ void VideoTimeline::drawTrack(ImDrawList* drawList, const ImVec2& canvasPos, con
             for (const auto& _clip : state.video->getTracks()[trackIndex]->getClips()) {
                 auto clip = _clip.second;
                 TimelineClip timelineClip(0, "Clip", (float)clip->startFrame / state.video->getFPS(), (float)clip->duration / state.video->getFPS(), clip, IM_COL32(100, 150, 200, 255));
-                timelineClip.selected = state.selectedClipId == clip->uID;
+                timelineClip.selected = state.isClipSelected(clip);
                 drawClip(drawList, timelineClip, content_pos, content_size, type);
             };
             break;
@@ -232,7 +232,7 @@ void VideoTimeline::drawTrack(ImDrawList* drawList, const ImVec2& canvasPos, con
         hoveredTrackIdx = trackIndex;
         hoveredTrackType = type;
 
-        if (ImGui::IsMouseClicked(0) && ImGui::IsWindowFocused()) {
+        if (ImGui::IsMouseClicked(0) && ImGui::IsWindowFocused() && !isMovingBetweenTracks) {
             selectedTrackIdx = trackIndex;
             selectedTrackType = type;
         }
@@ -315,34 +315,39 @@ void VideoTimeline::drawClip(ImDrawList* drawList, const TimelineClip& clip, con
         if (ImGui::IsMouseClicked(0) && hovered) {
             auto& state = State::get();
             auto id = clip.clip->uID;
-            Action action = {
-                .perform = [this](std::string info) {
-                    auto& state = State::get();
-                    state.selectClip(info);
-                    draggingTrackIdx = selectedTrackIdx;
-                    originalTrackId = selectedTrackIdx;
-                    isDragging = true;
-                    isMovingBetweenTracks = false;
-                },
-                .undo = [&](std::string info) {
-                    state.deselect();
-                    isDragging = false;
-                    isMovingBetweenTracks = false;
-                    resizingClip = nullptr;
-                    draggingTrackIdx = -1;
-                    originalTrackId = -1;
-                },
-                .info = id
-            };
+            // Action action = {
+            //     .perform = [this](std::string info) {
+                    
+            //     },
+            //     .undo = [&](std::string info) {
+            //         state.deselect();
+            //         isDragging = false;
+            //         isMovingBetweenTracks = false;
+            //         resizingClip = nullptr;
+            //         draggingTrackIdx = -1;
+            //         originalTrackId = -1;
+            //     },
+            //     .info = id
+            // };
+
+            // fmt::println("{}", state.selectedClips.size());
+            if (!io.KeyShift && state.selectedClips.size() == 1) {
+                state.deselect();
+            }
+            state.selectClip(id);
+            originalTrackId = selectedTrackIdx;
+            isDragging = true;
+            isMovingBetweenTracks = false;
+            initialStartFrame = clip.clip->startFrame;
             
-            action.perform(id);
+            // action.perform(id);
             dragOffset = ImVec2(
                 (state.video->timeForFrame(clip.clip->startFrame) * pixelsPerSecond) - (mousePos.x - canvasPos.x - TRACK_HEADER_WIDTH + scrollX),
                 0
             );
 
-            state.undoStack.push(action);
-            state.redoStack = std::stack<Action>();
+            // state.undoStack.push(action);
+            // state.redoStack = std::stack<Action>();
         }
     }
 
@@ -350,18 +355,20 @@ void VideoTimeline::drawClip(ImDrawList* drawList, const TimelineClip& clip, con
     auto font = io.FontDefault;
     auto size = ImGui::GetFontSize();
     if (clipSize.x < textSize.x + 30) {
-        size = size * (clipSize.x / (textSize.x + 30));
+        size = std::max(size * (clipSize.x / (textSize.x + 30)), 0.f);
     }
 
-    drawList->AddText(
-        font,
-        size,
-        ImVec2(clipPos.x + 5 + RESIZE_HANDLE_WIDTH, clipPos.y + 5),
-        clip.selected ?
-            IM_COL32(230, 245, 65, 255) :
-            IM_COL32(255, 255, 255, 255),
-        clip.clip->m_metadata.name.c_str()
-    );
+    if (size > 0) {
+        drawList->AddText(
+            font,
+            size,
+            ImVec2(clipPos.x + 5 + RESIZE_HANDLE_WIDTH, clipPos.y + 5),
+            clip.selected ?
+                IM_COL32(230, 245, 65, 255) :
+                IM_COL32(255, 255, 255, 255),
+            clip.clip->m_metadata.name.c_str()
+        );
+    }
 }
 
 VideoTimeline::ResizeMode VideoTimeline::GetResizeMode(const ImVec2& mouse_pos, std::shared_ptr<Clip> clip, const ImVec2& track_pos, const ImVec2& track_size, float clickTime) {
@@ -542,37 +549,226 @@ void VideoTimeline::handleInteractions(const ImVec2& canvasPos, const ImVec2& ca
     }
 
     if (isDragging && resizeMode == RESIZE_NONE && ImGui::IsMouseDragging(0)) {
-        if (state.isClipSelected()) {
-            auto selectedClip = state.getSelectedClip();
+        if (state.areClipsSelected()) {
+            // auto selectedClip = state.getSelectedClip();
             ImVec2 mouse_pos = io.MousePos;
 
-            float vertical_movement = std::abs(mouse_pos.y - dragStartPos.y);
-            if (vertical_movement > 20.0f) { // 20 pixel threshold
+            // float vertical_movement = std::abs(mouse_pos.y - dragStartPos.y);
+            // vertical_movement > 20.0f
+
+            fmt::println("DELTA: h {}, s {}, h != s {}", hoveredTrackIdx, selectedTrackIdx, hoveredTrackIdx != selectedTrackIdx);
+            if (hoveredTrackIdx != selectedTrackIdx) {
                 isMovingBetweenTracks = true;
                 ogTrackType = selectedTrackType;
             }
+            
+            float newStartTime = (mouse_pos.x - canvasPos.x - TRACK_HEADER_WIDTH + scrollX + dragOffset.x) / pixelsPerSecond;
+            int deltaFrame = state.video->frameForTime(newStartTime) - initialStartFrame;
+            int trackQuantity = selectedTrackType == TrackType::Video ? state.video->videoTracks.size() : state.video->audioTracks.size();
+            int deltaTrack = std::clamp(
+                hoveredTrackIdx - selectedTrackIdx,
+                -trackQuantity + 1,
+                trackQuantity - 1
+            );
 
-            int targetTrack = hoveredTrackIdx;
+            fmt::println("delta-t: {}", deltaTrack);
 
-            float new_start_time = (mouse_pos.x - canvasPos.x - TRACK_HEADER_WIDTH + scrollX + dragOffset.x) / pixelsPerSecond;
-            int newStartFrame = state.video->frameForTime(std::max(0.0f, new_start_time));
-            int newEndFrame = selectedClip->duration + newStartFrame;
+            bool trackCollision = false;
 
-            if (isMovingBetweenTracks && targetTrack != draggingTrackIdx && selectedClip && selectedTrackType == ogTrackType && hoveredTrackType == ogTrackType) {
-                bool collision = false;
-                if (selectedTrackType == TrackType::Video) {
+            int maxVideoTrackIdx = 0;
+            int minVideoTrackIdx = state.video->videoTracks.size() - 1;
+
+            int maxAudioTrackIdx = 0;
+            int minAudioTrackIdx = state.video->audioTracks.size() - 1;
+
+            bool videoClipSelected = false;
+            bool audioClipSelected = false;
+            
+            for (auto [clipID, selectedClip] : state.getSelectedClips()) {
+                if (trackCollision) break;
+                int newStartFrame = selectedClip->startFrame + deltaFrame;
+                int newEndFrame = selectedClip->duration + newStartFrame;
+
+                int trackIdx = state.video->getClipMap()[clipID];
+
+                TrackType clipType = TrackType::Video;
+                int targetTrack = std::clamp(trackIdx + deltaTrack, 0, static_cast<int>(state.video->videoTracks.size()) - 1);
+                if (trackIdx < 0) {
+                    targetTrack = std::clamp(-(trackIdx + 1) + deltaTrack, 0, static_cast<int>(state.video->audioTracks.size()) - 1);
+
+                    clipType = TrackType::Audio;
+
+                    maxAudioTrackIdx = debug(std::max(maxAudioTrackIdx, -(trackIdx + 1)));
+                    minAudioTrackIdx = std::min(minAudioTrackIdx, -(trackIdx + 1));
+
+                    audioClipSelected = true;
+                } else {
+                    maxVideoTrackIdx = std::max(maxVideoTrackIdx, trackIdx);
+                    minVideoTrackIdx = std::min(minVideoTrackIdx, trackIdx);
+
+                    videoClipSelected = true;
+                }
+
+                if (isMovingBetweenTracks && targetTrack != selectedTrackIdx && selectedClip) {
+                    if (clipType == TrackType::Video) {
+                        for (auto _clip : state.video->getTracks()[targetTrack]->getClips()) {
+                            auto clip = _clip.second;
+                            if (clip == selectedClip) continue;
+
+                            int clipStart = clip->startFrame;
+                            int clipEnd = clip->startFrame + clip->duration; // exclusive
+
+                            if (!(newEndFrame <= clipStart || newStartFrame >= clipEnd)) {
+                                trackCollision = true;
+                                break;
+                            }
+
+                            if (trackCollision) {
+                                break;
+                            }
+                        }
+                    } else {
+                        for (auto _clip : state.video->audioTracks[targetTrack]->getClips()) {
+                            auto clip = _clip.second;
+                            if (clip == selectedClip) continue;
+                            int clipStart = clip->startFrame;
+                            int clipEnd = clip->startFrame + clip->duration; // exclusive
+
+                            if (!(newEndFrame <= clipStart || newStartFrame >= clipEnd)) {
+                                trackCollision = true;
+                                break;
+                            }
+
+                            if (trackCollision) {
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // fair warning to anyone reading this code:
+            // it is currently 9:45pm on halloween (friday) 2025,
+            // and i have spent the past WEEK working on this code
+            // to try to get clip multi-select working.
+            // it SUCKS and i know that
+            // however i am too tired
+            // to figure out a better solution.
+            // apologies to those who try to understand this code;
+            // i have left comments to hopefully aid you
+            // (they won't.)
+
+            // to account for
+            // a weird edge case for where there are two tracks
+            // one audio and one video
+            bool isOnSameTracks = videoClipSelected && audioClipSelected &&
+                        maxAudioTrackIdx == minAudioTrackIdx &&
+                        maxVideoTrackIdx == minVideoTrackIdx &&
+                        maxAudioTrackIdx == maxVideoTrackIdx;
+
+            // i welcome you to
+            // TERNARY OPERATOR ABUSE!!!!!!!!!!!!!
+            if (
+                !trackCollision && isMovingBetweenTracks &&
+                ((
+                    // if we're on the same tracks, set it to false
+                    // so that this conditional gets skipped
+                    // and we go to the one that evaluates clips
+                    // on the same tracks
+                    isOnSameTracks ? false : (
+                        (
+                            // if there is no video clip selected, set this conditonal to true regardless of anything else
+                            videoClipSelected ?
+                                debug(maxVideoTrackIdx + (selectedTrackType == TrackType::Video ? deltaTrack : -deltaTrack)) < state.video->videoTracks.size() &&
+                                debug(minVideoTrackIdx + (selectedTrackType == TrackType::Video ? deltaTrack : -deltaTrack)) >= 0
+                            : true
+                        ) &&
+                        (
+                            // if there is no audio clip selected, set this conditonal to true regardless of anything else
+                            audioClipSelected ?
+                                debug(maxAudioTrackIdx + (selectedTrackType == TrackType::Audio ? deltaTrack : -deltaTrack)) < state.video->audioTracks.size() &&
+                                debug(minAudioTrackIdx + (selectedTrackType == TrackType::Audio ? deltaTrack : -deltaTrack)) >= 0
+                            : true
+                        )
+                    )
+                ) || (
+                    // this is most likely to be used for video clips
+                    // this code sux regardless though
+
+                    // if we're not on the same tracks, set this conditonal to true regardless of anything else
+                    debug(isOnSameTracks) ?
+                        debug(maxVideoTrackIdx + deltaTrack) < state.video->videoTracks.size() &&
+                        debug(minVideoTrackIdx + deltaTrack) >= 0 &&
+                        debug(maxAudioTrackIdx + deltaTrack) < state.video->audioTracks.size() &&
+                        debug(minAudioTrackIdx + deltaTrack) >= 0
+                    : true
+                ))
+            ) {
+                for (auto [clipID, selectedClip] : state.getSelectedClips()) {
+                    int trackIdx = state.video->getClipMap()[clipID];
+
+                    TrackType clipType = TrackType::Video;
+                    int targetTrack = trackIdx + (isOnSameTracks ? deltaTrack : (selectedTrackType == TrackType::Video ? deltaTrack : -deltaTrack));
+                    if (trackIdx < 0) {
+                        targetTrack = -(trackIdx + 1) + (isOnSameTracks ? deltaTrack : (selectedTrackType == TrackType::Audio ? deltaTrack : -deltaTrack));
+                        clipType = TrackType::Audio;
+                    }
+                    targetTrack = std::max(targetTrack, 0);
+                    fmt::println("t: {}, d: {}", targetTrack, deltaTrack);
+                    if (targetTrack < 0) continue;
+                    if (clipType == TrackType::Audio) {
+                        state.video->removeAudioClip(trackIdx, std::static_pointer_cast<AudioClip>(selectedClip));
+                        state.video->addAudioClip(targetTrack, std::static_pointer_cast<AudioClip>(selectedClip));
+                    } else {
+                        state.video->removeClip(trackIdx, selectedClip);
+                        state.video->addClip(targetTrack, selectedClip);
+                    }
+                    if (trackIdx < 0) trackIdx = -(trackIdx + 1);
+                    if (trackIdx == selectedTrackIdx && clipType == selectedTrackType) {
+                        if (clipType == TrackType::Audio) {
+                            fmt::println("EQUALITY!");
+                            fmt::println("hgks; track idx: {}, selected: {}", trackIdx, selectedTrackIdx);
+                        }
+                        selectedTrackIdx = std::clamp(targetTrack, 0, trackQuantity - 1);
+                    }
+                    // make sure the clip is still selected
+                    state.selectClip(selectedClip);
+                }
+            }
+
+            // check if it collides with another clip
+            bool clipCollision = false;
+            for (auto [clipID, selectedClip] : state.getSelectedClips()) {
+                if (clipCollision) break;
+                TrackType clipType = TrackType::Video;
+                int trackIdx = state.video->getClipMap()[clipID];
+                int targetTrack = trackIdx;
+                if (trackIdx < 0) {
+                    targetTrack = -(trackIdx + 1);
+                    clipType = TrackType::Audio;
+                }
+
+                int newStartFrame = selectedClip->startFrame + deltaFrame;
+                int newEndFrame = selectedClip->duration + newStartFrame;
+
+                if (clipType == TrackType::Video) {
                     for (auto _clip : state.video->getTracks()[targetTrack]->getClips()) {
                         auto clip = _clip.second;
-                        if (clip == selectedClip) continue;
+                        if (selectedClip == clip) continue;
                         int clipStart = clip->startFrame;
                         int clipEnd = clip->startFrame + clip->duration; // exclusive
 
-                        if (!(newEndFrame <= clipStart || newStartFrame >= clipEnd)) {
-                            collision = true;
+                        if (newStartFrame <= 0) {
+                            clipCollision = true;
                             break;
                         }
 
-                        if (collision) {
+                        if (!(newEndFrame <= clipStart || newStartFrame >= clipEnd)) {
+                            clipCollision = true;
+                            break;
+                        }
+
+                        if (clipCollision) {
                             break;
                         }
                     }
@@ -583,68 +779,32 @@ void VideoTimeline::handleInteractions(const ImVec2& canvasPos, const ImVec2& ca
                         int clipStart = clip->startFrame;
                         int clipEnd = clip->startFrame + clip->duration; // exclusive
 
+                        if (newStartFrame <= 0) {
+                            clipCollision = true;
+                            break;
+                        }
+
                         if (!(newEndFrame <= clipStart || newStartFrame >= clipEnd)) {
-                            collision = true;
+                            clipCollision = true;
                             break;
                         }
 
-                        if (collision) {
+                        if (clipCollision) {
                             break;
                         }
                     }
                 }
-                if (!collision) {
-                    if (selectedTrackType == TrackType::Audio) {
-                        state.video->removeAudioClip(draggingTrackIdx, std::dynamic_pointer_cast<AudioClip>(selectedClip));
-                        state.video->addAudioClip(targetTrack, std::dynamic_pointer_cast<AudioClip>(selectedClip));
-                    } else {
-                        state.video->removeClip(draggingTrackIdx, selectedClip);
-                        state.video->addClip(targetTrack, selectedClip);
-                    }
-                    draggingTrackIdx = targetTrack;
-                    // make sure the clip is still selected
-                    state.selectClip(selectedClip);
+            }
+
+            if (!clipCollision) {
+                for (auto [trackIdx, selectedClip] : state.getSelectedClips()) {
+                    int newStartFrame = selectedClip->startFrame + deltaFrame;
+                    selectedClip->startFrame = std::max(newStartFrame, 0);
+                    // fmt::println("({}) set clip {} start frame to {}", state.selectedClips.size(), selectedClip->m_metadata.name, selectedClip->startFrame);
                 }
             }
 
-            // check if it collides with another clip
-            bool collision = false;
-            if (selectedTrackType == TrackType::Video) {
-                for (auto _clip : state.video->getTracks()[draggingTrackIdx]->getClips()) {
-                    auto clip = _clip.second;
-                    if (clip->uID == state.selectedClipId) continue;
-                    int clipStart = clip->startFrame;
-                    int clipEnd = clip->startFrame + clip->duration; // exclusive
-
-                    if (!(newEndFrame <= clipStart || newStartFrame >= clipEnd)) {
-                        collision = true;
-                        break;
-                    }
-
-                    if (collision) {
-                        break;
-                    }
-                }
-            } else {
-                for (auto _clip : state.video->audioTracks[draggingTrackIdx]->getClips()) {
-                    auto clip = _clip.second;
-                    if (clip == selectedClip) continue;
-                    int clipStart = clip->startFrame;
-                    int clipEnd = clip->startFrame + clip->duration; // exclusive
-
-                    if (!(newEndFrame <= clipStart || newStartFrame >= clipEnd)) {
-                        collision = true;
-                        break;
-                    }
-
-                    if (collision) {
-                        break;
-                    }
-                }
-            }
-            if (!collision) {
-                selectedClip->startFrame = newStartFrame;
-            }
+            initialStartFrame = initialStartFrame + deltaFrame;
         }
     }
 
@@ -679,87 +839,99 @@ void VideoTimeline::handleInteractions(const ImVec2& canvasPos, const ImVec2& ca
         }
     }
 
-    if (state.isClipSelected()) {
-        auto clip = state.getSelectedClip();
-        if (resizeMode != RESIZE_NONE) {
-            auto doTheThingL = [&](std::shared_ptr<Clip> _clip) {
-                if (std::abs(clip->startFrame - (_clip->startFrame + _clip->duration)) <= snapThreshold) {
-                    clip->startFrame = _clip->startFrame + _clip->duration + 1;
-                }
-            };
-
-            auto doTheThingR = [&](std::shared_ptr<Clip> _clip) {
-                if (std::abs(clip->startFrame + clip->duration - _clip->startFrame) <= snapThreshold) {
-                    clip->duration = _clip->startFrame - clip->startFrame - 1;
-                }
-            };
-            switch (resizeMode) {
-                case RESIZE_LEFT:
-                    if (std::abs(clip->startFrame - state.currentFrame) <= snapThreshold) { 
-                        clip->startFrame = state.currentFrame + 1;
-                    }
-
-                    if (selectedTrackType == TrackType::Video) {
-                        for (auto [_, _clip] : state.video->videoTracks[selectedTrackIdx]->getClips()) {
-                            if (clip == _clip) continue;
-                            doTheThingL(_clip);
-                        }
-                    } else {
-                        for (auto [_, _clip] : state.video->audioTracks[selectedTrackIdx]->getClips()) {
-                            if (clip == _clip) continue;
-                            doTheThingL(_clip);
-                        }
-                    }
-                    break;
-                case RESIZE_RIGHT:
-                    if (std::abs(clip->startFrame + clip->duration - state.currentFrame) <= snapThreshold) {
-                        clip->duration = state.currentFrame - clip->startFrame - 1;
-                    }
-
-                    if (selectedTrackType == TrackType::Video) {
-                        for (auto [_, _clip] : state.video->videoTracks[selectedTrackIdx]->getClips()) {
-                            if (clip == _clip) continue;
-                            doTheThingR(_clip);
-                        }
-                    } else {
-                        for (auto [_, _clip] : state.video->audioTracks[selectedTrackIdx]->getClips()) {
-                            if (clip == _clip) continue;
-                            doTheThingR(_clip);
-                        }
-                    }
-                    break;
-                default: // go away compiler this is unreachable anyways...
-                    fmt::println("this should be unreachable what");
-                    break;
-            }
-        } else if (isDragging) {
-            if (std::abs(clip->startFrame - state.currentFrame) <= snapThreshold) { 
-                clip->startFrame = state.currentFrame + 1;
+    if (state.areClipsSelected()) {
+        for (auto [clipID, clip] : state.getSelectedClips()) {
+            TrackType clipType = TrackType::Video;
+            int trackIdx = state.video->getClipMap()[clipID];
+            int targetTrack = trackIdx;
+            if (trackIdx < 0) {
+                targetTrack = -(trackIdx + 1);
+                clipType = TrackType::Audio;
             }
 
-            if (std::abs(clip->startFrame + clip->duration - state.currentFrame) <= snapThreshold) {
-                clip->startFrame = state.currentFrame - clip->duration + 1;
-            }
+            if (resizeMode != RESIZE_NONE) {
+                auto doTheThingL = [&](std::shared_ptr<Clip> _clip) {
+                    if (std::abs(clip->startFrame - (_clip->startFrame + _clip->duration)) <= snapThreshold) {
+                        clip->startFrame = _clip->startFrame + _clip->duration + 1;
+                    }
+                };
 
-            auto doTheThingDrag = [&](std::shared_ptr<Clip> _clip) {
-                if (std::abs(_clip->startFrame + _clip->duration - clip->startFrame) <= snapThreshold) {
-                    clip->startFrame = _clip->startFrame + _clip->duration + 1;
-                }
-                
-                if (std::abs(clip->startFrame + clip->duration - _clip->startFrame) <= snapThreshold) {
-                    clip->startFrame = _clip->startFrame - clip->duration + 1;
-                }
-            };
+                auto doTheThingR = [&](std::shared_ptr<Clip> _clip) {
+                    if (std::abs(clip->startFrame + clip->duration - _clip->startFrame) <= snapThreshold) {
+                        clip->duration = _clip->startFrame - clip->startFrame - 1;
+                    }
+                };
+                switch (resizeMode) {
+                    case RESIZE_LEFT:
+                        if (std::abs(clip->startFrame - state.currentFrame) <= snapThreshold) { 
+                            clip->startFrame = state.currentFrame + 1;
+                        }
 
-            if (selectedTrackType == TrackType::Video) {
-                for (auto [_, _clip] : state.video->videoTracks[selectedTrackIdx]->getClips()) {
-                    if (clip == _clip) continue;
-                    doTheThingDrag(_clip);
+                        if (clipType == TrackType::Video) {
+                            for (auto [_, _clip] : state.video->videoTracks[targetTrack]->getClips()) {
+                                if (clip == _clip) continue;
+                                doTheThingL(_clip);
+                            }
+                        } else {
+                            for (auto [_, _clip] : state.video->audioTracks[targetTrack]->getClips()) {
+                                if (clip == _clip) continue;
+                                doTheThingL(_clip);
+                            }
+                        }
+                        break;
+                    case RESIZE_RIGHT:
+                        if (std::abs(clip->startFrame + clip->duration - state.currentFrame) <= snapThreshold) {
+                            clip->duration = state.currentFrame - clip->startFrame - 1;
+                        }
+
+                        if (clipType == TrackType::Video) {
+                            for (auto [_, _clip] : state.video->videoTracks[targetTrack]->getClips()) {
+                                if (clip == _clip) continue;
+                                doTheThingR(_clip);
+                            }
+                        } else {
+                            for (auto [_, _clip] : state.video->audioTracks[targetTrack]->getClips()) {
+                                if (clip == _clip) continue;
+                                doTheThingR(_clip);
+                            }
+                        }
+                        break;
+                    default: // go away compiler this is unreachable anyways...
+                        fmt::println("this should be unreachable what");
+                        break;
                 }
-            } else {
-                for (auto [_, _clip] : state.video->audioTracks[selectedTrackIdx]->getClips()) {
-                    if (clip == _clip) continue;
-                    doTheThingDrag(_clip);
+            } else if (isDragging) {
+                // TODO: apply to all selected clips
+                // by applying the delta-start-frame 
+                // to all selected clips
+                if (std::abs(clip->startFrame - state.currentFrame) <= snapThreshold) { 
+                    clip->startFrame = state.currentFrame + 1;
+                }
+
+                if (std::abs(clip->startFrame + clip->duration - state.currentFrame) <= snapThreshold) {
+                    clip->startFrame = state.currentFrame - clip->duration + 1;
+                }
+
+                auto doTheThingDrag = [&](std::shared_ptr<Clip> _clip) {
+                    if (std::abs(_clip->startFrame + _clip->duration - clip->startFrame) <= snapThreshold) {
+                        clip->startFrame = _clip->startFrame + _clip->duration + 1;
+                    }
+                    
+                    if (std::abs(clip->startFrame + clip->duration - _clip->startFrame) <= snapThreshold) {
+                        clip->startFrame = _clip->startFrame - clip->duration + 1;
+                    }
+                };
+
+                if (clipType == TrackType::Video) {
+                    for (auto [_, _clip] : state.video->videoTracks[targetTrack]->getClips()) {
+                        if (clip == _clip) continue;
+                        doTheThingDrag(_clip);
+                    }
+                } else {
+                    for (auto [_, _clip] : state.video->audioTracks[targetTrack]->getClips()) {
+                        if (clip == _clip) continue;
+                        doTheThingDrag(_clip);
+                    }
                 }
             }
         }
@@ -772,8 +944,9 @@ void VideoTimeline::handleInteractions(const ImVec2& canvasPos, const ImVec2& ca
         isScrubbing = false;
         isMovingBetweenTracks = false;
         resizingClip = nullptr;
-        draggingTrackIdx = -1;
+        // draggingTrackIdx = -1;
         originalTrackId = -1;
+        initialStartFrame = -1;
         resizeMode = RESIZE_NONE;
     }
 }

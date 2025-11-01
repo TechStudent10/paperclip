@@ -1,3 +1,4 @@
+#include "widgets.hpp"
 #include <clips/clip.hpp>
 #include <state.hpp>
 #include <functional>
@@ -7,6 +8,11 @@
 
 void ClipProperty::drawProperty() {
     auto& state = State::get();
+    if (!clip) {
+        fmt::println("no clip!");
+        return;
+    }
+
     auto setData = [&](std::string data) {
         if (keyframes.size() == 1) {
             keyframes[0] = data;
@@ -17,9 +23,8 @@ void ClipProperty::drawProperty() {
             return;
         }
 
-        auto selectedClip = state.getSelectedClip();
-        int keyframe = state.currentFrame - selectedClip->startFrame;
-        selectedClip->m_properties.setKeyframe(id, keyframe, data);
+        int keyframe = state.currentFrame - clip->startFrame;
+        clip->m_properties.setKeyframe(id, keyframe, data);
         state.lastRenderedFrame = -1;
         for (auto audTrack : state.video->audioTracks) {
             audTrack->processTime();
@@ -115,9 +120,7 @@ void ClipProperty::drawProperty() {
     };
     drawFuncs[type]();
 
-    auto selectedClip = state.getSelectedClip();
-
-    int keyframe = state.currentFrame - selectedClip->startFrame;
+    int keyframe = state.currentFrame - clip->startFrame;
     bool isKeyframed = keyframes.contains(keyframe);
 
     if (ImGui::Button(fmt::format("{}Keyframe {}", isKeyframed ? "Remove " : "", name).c_str())) {
@@ -128,7 +131,7 @@ void ClipProperty::drawProperty() {
                 keyframeInfo.erase(keyframe);
             }
         } else if (!isKeyframed && keyframe >= 0) {
-            selectedClip->m_properties.setKeyframe(id, keyframe, data);
+            clip->m_properties.setKeyframe(id, keyframe, data);
         }
     }
 
@@ -148,13 +151,13 @@ void ClipProperty::drawProperty() {
         }
 
         if (ImGui::Button(fmt::format("Go to next##{}", id).c_str())) {
-            state.currentFrame = selectedClip->startFrame + nextKeyframe;
+            state.currentFrame = clip->startFrame + nextKeyframe;
         }
 
         ImGui::SameLine();
 
         if (ImGui::Button(fmt::format("Go to previous##{}", id).c_str())) {
-            state.currentFrame = selectedClip->startFrame + previousKeyframe;
+            state.currentFrame = clip->startFrame + previousKeyframe;
         }
 
         auto currentEasing = animation::EASING_NAMES[(int)keyframeInfo[nextKeyframe].easing];
@@ -196,6 +199,7 @@ void ClipProperty::drawProperty() {
 }
 
 void ClipProperties::addProperty(ClipProperty* property) {
+    property->clip = clip;
     properties[property->id] = std::make_shared<ClipProperty>(*property);
 }
 

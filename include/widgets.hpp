@@ -54,11 +54,13 @@ private:
     bool isDragging;
     bool isScrubbing;
     
-    int draggingTrackIdx;
+    // int draggingTrackIdx;
 
     bool isMovingBetweenTracks;
     int originalTrackId;
     ImVec2 dragStartPos;
+
+    int initialStartFrame = 0;
 
     // Constants
     static constexpr float TRACK_HEADER_WIDTH = 100.0f;

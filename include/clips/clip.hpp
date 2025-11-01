@@ -33,9 +33,12 @@ struct PropertyKeyframeMeta {
     }
 };
 
+class Clip;
+
 class ClipProperty {
 public:
     ClipProperty() {}
+    Clip* clip;
     std::string id;
     std::string name;
     PropertyType type;
@@ -162,7 +165,9 @@ public:
 struct ClipProperties {
 private:
     std::map<std::string, std::shared_ptr<ClipProperty>> properties;
+    Clip* clip;
 
+    friend class Clip;
 public:
     void addProperty(ClipProperty* property);
     std::map<std::string, std::shared_ptr<ClipProperty>> getProperties() { return properties; }
@@ -214,9 +219,14 @@ enum class ClipType {
 
 class Clip {
 protected:
-    Clip(int startFrame, int duration): startFrame(startFrame), duration(duration), uID(utils::generateUUID()) {}
+    Clip(int startFrame, int duration): Clip(startFrame, duration, utils::generateUUID()) {}
 public:
     Clip(): Clip(0, 60) {}
+    Clip(std::string uID): Clip(0, 60, uID) {}
+
+    Clip(int startFrame, int duration, std::string uID): uID(uID), startFrame(startFrame), duration(duration) {
+        m_properties.clip = this;
+    }
 
     ClipProperties m_properties;
     ClipMetadata m_metadata;

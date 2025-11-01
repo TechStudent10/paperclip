@@ -12,8 +12,9 @@
 - [x] scaling
 - [x] dragging clips on the canvas
 - [ ] undo/redo history
-- [ ] mutliselect
+- [x] mutliselect
 - [ ] clip linking
+- [ ] previews in the timeline
 
 once all of these are done
 

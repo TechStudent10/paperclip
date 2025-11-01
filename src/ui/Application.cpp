@@ -419,129 +419,57 @@ void Application::draw() {
 
     ImGui::SetNextWindowClass(&bareWindowClass);
     ImGui::Begin("Properties");
-    auto setData = [&](std::shared_ptr<ClipProperty> property, std::string data) {
-        if (property->keyframes.size() == 1) {
-            property->keyframes[0] = data;
-            state.lastRenderedFrame = -1;
-            for (auto audTrack : state.video->audioTracks) {
-                audTrack->processTime();
-            }
-            return;
-        }
+    if (state.areClipsSelected()) {
+        for (auto [clipID, selectedClip] : state.getSelectedClips()) {
 
-        auto selectedClip = state.getSelectedClip();
-        int keyframe = state.currentFrame - selectedClip->startFrame;
-        selectedClip->m_properties.setKeyframe(property->id, keyframe, data);
-        state.lastRenderedFrame = -1;
-        for (auto audTrack : state.video->audioTracks) {
-            audTrack->processTime();
-        }
-    };
-    if (state.isClipSelected()) {
-        auto drawDimensions = [&](std::shared_ptr<ClipProperty> property) {
-            Dimensions dimensions = Dimensions::fromString(property->data);
+            ImGui::SeparatorText(selectedClip->m_metadata.name.c_str());
+            
+            // TextCentered(selectedClip->m_metadata.name);
 
-            bool x = ImGui::DragInt("X", &dimensions.pos.x);
-            bool y = ImGui::DragInt("Y", &dimensions.pos.y);
-            bool w = ImGui::DragInt("Width", &dimensions.size.x);
-            bool h = ImGui::DragInt("Height", &dimensions.size.y);
-
-            if (x || y || w || h) {
-                setData(property, dimensions.toString());
-            }
-        };
-
-        auto drawPosition = [&](std::shared_ptr<ClipProperty> property) {
-            Vector2D position = Vector2D::fromString(property->data);
-
-            bool x = ImGui::DragInt("X", &position.x);
-            bool y = ImGui::DragInt("Y", &position.y);
-
-            if (x || y) {
-                setData(property, position.toString());
-            }
-        };
-
-        auto drawInt = [&](std::shared_ptr<ClipProperty> property) {
-            Vector1D number = Vector1D::fromString(property->data);
-            if (ImGui::DragInt(
-                fmt::format("##{}", property->name).c_str(),
-                &number.number,
-                1.0f,
-                0,
-                property->type == PropertyType::Percent ? 100 : 0
-            )) {
-                setData(property, number.toString());
-            }
-        };
-
-        auto drawColorPicker = [&](std::shared_ptr<ClipProperty> property) {
-            RGBAColor color = RGBAColor::fromString(property->data);
-
-            float colorBuf[4] = { (float)color.r / 255, (float)color.g / 255, (float)color.b / 255, (float)color.a / 255 };
-            if (ImGui::ColorPicker4("Color", colorBuf)) {
-                color.r = std::round(colorBuf[0] * 255);
-                color.g = std::round(colorBuf[1] * 255);
-                color.b = std::round(colorBuf[2] * 255);
-                color.a = std::round(colorBuf[3] * 255);
-
-                setData(property, color.toString());
-            }
-        };
-
-        auto drawText = [&](std::shared_ptr<ClipProperty> property) {
-            std::string text = property->data;
-            if (ImGui::InputText(fmt::format("##{}", property->id).c_str(), &text)) {
-                setData(property, text);
-            }
-        };
-
-        auto selectedClip = state.getSelectedClip();
-
-        TextCentered(selectedClip->m_metadata.name);
-
-        ImGui::Separator();
-
-        if (ImGui::Button("Open Keyframe Editor", ImVec2(-1.0f, 0.0f))) {
-            ImGui::OpenPopup("Keyframe Editor");
-
-        }
-        if (ImGui::BeginPopup("Keyframe Editor")) {
-            for (auto prop : selectedClip->m_properties.getProperties()) {
-                ImGui::Text("%s", prop.second->name.c_str());
-            }
-            ImGui::EndPopup();
-        }
-
-        ImGui::SeparatorText("Properties");
-
-        for (auto prop : selectedClip->m_properties.getProperties()) {
-            ImGui::SeparatorText(prop.second->name.c_str());
-            prop.second->drawProperty();
-        }
-
-        if (ImGui::Button("Delete")) {
-            ImGui::OpenPopup("Delete confirmation");
-        }
-        if (ImGui::BeginPopupModal("Delete confirmation")) {
-            ImGui::Text("Are you sure you want to delete this clip?");
             ImGui::Separator();
-            if (ImGui::Button("Yes")) {
-                int trackIdx = state.video->getClipMap()[selectedClip->uID];
-                if (timeline.selectedTrackType == TrackType::Audio) {
-                    state.video->removeAudioClip(trackIdx, std::dynamic_pointer_cast<AudioClip>(selectedClip));
-                } else {
-                    state.video->removeClip(trackIdx, selectedClip);
+
+            if (ImGui::Button("Open Keyframe Editor", ImVec2(-1.0f, 0.0f))) {
+                ImGui::OpenPopup("Keyframe Editor");
+
+            }
+            if (ImGui::BeginPopup("Keyframe Editor")) {
+                for (auto prop : selectedClip->m_properties.getProperties()) {
+                    ImGui::Text("%s", prop.second->name.c_str());
                 }
-                selectedClip->onDelete();
-                state.deselect();
-                ImGui::CloseCurrentPopup();
+                ImGui::EndPopup();
             }
-            ImGui::SameLine();
-            if (ImGui::Button("No")) {
-                ImGui::CloseCurrentPopup();
+
+            ImGui::SeparatorText("Properties");
+
+            for (auto prop : selectedClip->m_properties.getProperties()) {
+                if (!prop.second) continue;
+                ImGui::SeparatorText(prop.second->name.c_str());
+                prop.second->drawProperty();
             }
-            ImGui::EndPopup();
+
+            if (ImGui::Button("Delete")) {
+                ImGui::OpenPopup("Delete confirmation");
+            }
+            if (ImGui::BeginPopupModal("Delete confirmation")) {
+                ImGui::Text("Are you sure you want to delete this clip?");
+                ImGui::Separator();
+                if (ImGui::Button("Yes")) {
+                    int trackIdx = state.video->getClipMap()[selectedClip->uID];
+                    if (timeline.selectedTrackType == TrackType::Audio) {
+                        state.video->removeAudioClip(trackIdx, std::static_pointer_cast<AudioClip>(selectedClip));
+                    } else {
+                        state.video->removeClip(trackIdx, selectedClip);
+                    }
+                    selectedClip->onDelete();
+                    state.deselect();
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::SameLine();
+                if (ImGui::Button("No")) {
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::EndPopup();
+            }
         }
     }
     ImGui::End();
@@ -618,91 +546,99 @@ void Application::draw() {
         // fmt::println("btn");
     }
 
-    auto selectedClip = state.getSelectedClip();
+    ImDrawList* drawList = ImGui::GetWindowDrawList();
+    for (auto [clipID, selectedClip] : state.getSelectedClips()) {
+        if (ImGui::IsItemHovered() && ImGui::IsMouseDown(0)) {
+            // mouse position in the canvas
+            // in terms of the video resolution
+            auto canvasX = static_cast<int>(std::round(mousePos.x / scale));
+            auto canvasY = static_cast<int>(std::round(mousePos.y / scale));
+            
+            bool deselected = false;
 
-    if (ImGui::IsItemHovered() && ImGui::IsMouseDown(0)) {
-        // mouse position in the canvas
-        // in terms of the video resolution
-        auto canvasX = static_cast<int>(std::round(mousePos.x / scale));
-        auto canvasY = static_cast<int>(std::round(mousePos.y / scale));
-        
-        bool deselected = false;
+            if (isDraggingClip && io.MouseDownDuration[0] == 0) {
+                // check if canvasX, canvasY are
+                // outside of the clip bounding box
+                // if so, deselect
 
-        if (isDraggingClip && io.MouseDownDuration[0] == 0 && state.isClipSelected()) {
-            // check if canvasX, canvasY are
-            // outside of the clip bounding box
-            // if so, deselect
+                Vector2D position = selectedClip->getPos();
+                Vector2D size = selectedClip->getSize();
 
-            Vector2D position = selectedClip->getPos();
-            Vector2D size = selectedClip->getSize();
-
-            // top 10 laziest developer moments
-            if (!(canvasX >= position.x && canvasX <= position.x + size.x &&
-                canvasY >= position.y && canvasY <= position.y + size.y)
-            ) {
-                isDraggingClip = false;
-                state.deselect();    
-                deselected = true;   
-            }
-        }
-
-        if (!deselected) {
-            if (isDraggingClip && state.isClipSelected()) {
-                int dx = canvasX - initialPos.x;
-                int dy = canvasY - initialPos.y;
-
-                initialPos = { canvasX, canvasY };
-
-                if (selectedClip->m_properties.getProperties().contains("position")) {
-                    auto property = selectedClip->m_properties.getProperty("position");
-                    auto oldPos = Vector2D::fromString(property->data);
-                    Vector2D newPos = {
-                        .x = std::clamp(oldPos.x + dx, 0, state.video->resolution.x),
-                        .y = std::clamp(oldPos.y + dy, 0, state.video->resolution.y)
-                    };
-                    setData(property, newPos.toString());
+                // top 10 laziest developer moments
+                if (!(canvasX >= position.x && canvasX <= position.x + size.x &&
+                    canvasY >= position.y && canvasY <= position.y + size.y)
+                ) {
+                    isDraggingClip = false;
+                    state.deselect();    
+                    deselected = true;   
                 }
             }
 
-            if (!isDraggingClip) {
-                // find the clip currently being clicked on
-                // set state.draggingClip
-                // and initialPos
+            if (!deselected) {
+                if (isDraggingClip) {
+                    int dx = canvasX - initialPos.x;
+                    int dy = canvasY - initialPos.y;
 
-                for (auto track : state.video->videoTracks) {
-                    for (auto _clip : track->getClips()) {
-                        auto clip = _clip.second;
-                        Vector2D position = clip->getPos();
-                        Vector2D size = clip->getSize();
-                        // fmt::println("-------------------------");
-                        // fmt::println("{}, {}", canvasX >= position.x, canvasX <= position.x + size.x);
-                        // fmt::println("{}, {}", canvasY >= position.y, canvasY <= position.y + size.y);
-                        // fmt::println("-------------------------");
-                        // fmt::println("{}, {}", position.x, position.y);
-                        // fmt::println("{}, {}", size.x, size.y);
-                        // fmt::println("{}, {}", canvasX, canvasY);
-                        // fmt::println("-------------------------");
-                        if (canvasX >= position.x && canvasX <= position.x + size.x &&
-                            canvasY >= position.y && canvasY <= position.y + size.y
-                        ) {
-                            fmt::println("found clip!");
-                            selectedClip = clip;
-                            initialPos = { canvasX, canvasY };
-                            isDraggingClip = true;
+                    initialPos = { canvasX, canvasY };
+
+                    if (selectedClip->m_properties.getProperties().contains("position")) {
+                        auto property = selectedClip->m_properties.getProperty("position");
+                        auto oldPos = Vector2D::fromString(property->data);
+                        Vector2D newPos = {
+                            .x = std::clamp(oldPos.x + dx, 0, state.video->resolution.x),
+                            .y = std::clamp(oldPos.y + dy, 0, state.video->resolution.y)
+                        };
+
+                        auto data = newPos.toString();
+                        if (property->keyframes.size() == 1) {
+                            property->keyframes[0] = data;
+                            state.lastRenderedFrame = -1;
+                            return;
+                        }
+
+                        int keyframe = state.currentFrame - selectedClip->startFrame;
+                        selectedClip->m_properties.setKeyframe(property->id, keyframe, data);
+                        state.lastRenderedFrame = -1;
+                    }
+                }
+
+                if (!isDraggingClip) {
+                    // find the clip currently being clicked on
+                    // set state.draggingClip
+                    // and initialPos
+
+                    for (auto track : state.video->videoTracks) {
+                        for (auto _clip : track->getClips()) {
+                            auto clip = _clip.second;
+                            Vector2D position = clip->getPos();
+                            Vector2D size = clip->getSize();
+                            // fmt::println("-------------------------");
+                            // fmt::println("{}, {}", canvasX >= position.x, canvasX <= position.x + size.x);
+                            // fmt::println("{}, {}", canvasY >= position.y, canvasY <= position.y + size.y);
+                            // fmt::println("-------------------------");
+                            // fmt::println("{}, {}", position.x, position.y);
+                            // fmt::println("{}, {}", size.x, size.y);
+                            // fmt::println("{}, {}", canvasX, canvasY);
+                            // fmt::println("-------------------------");
+                            if (canvasX >= position.x && canvasX <= position.x + size.x &&
+                                canvasY >= position.y && canvasY <= position.y + size.y
+                            ) {
+                                fmt::println("found clip!");
+                                selectedClip = clip;
+                                initialPos = { canvasX, canvasY };
+                                isDraggingClip = true;
+                                break;
+                            }
+                        }
+
+                        if (isDraggingClip) {
                             break;
                         }
                     }
-
-                    if (isDraggingClip) {
-                        break;
-                    }
                 }
             }
         }
-    }
 
-    ImDrawList* drawList = ImGui::GetWindowDrawList();
-    if (state.isClipSelected() && state.getSelectedClip()) {
         Vector2D position = selectedClip->getPos();
         Vector2D size = selectedClip->getSize();
         Vector2D resolution = state.video->getResolution();
@@ -913,11 +849,11 @@ void Application::drawClipButton(std::string name, int defaultDuration) {
                     clip->duration = defaultDuration;
                     clip->uID = info;
                     state.video->addClip(trackIdx, clip);
-                    state.selectClip(clip);
+                    // state.selectClip(clip);
                 },
                 .undo = [&state, trackIdx, uID](std::string) {
                     int trackIdx = state.video->getClipMap()[uID];
-                    if (state.selectedClipId == uID) {
+                    if (state.isClipSelected(uID)) {
                         state.deselect();
                     }
                     state.video->getTracks()[trackIdx]->removeClip(uID);

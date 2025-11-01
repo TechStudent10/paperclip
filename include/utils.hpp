@@ -24,6 +24,9 @@
     } \
 })()
 
+// cool little debug macro
+#define debug(statement) ([&]() { auto res = statement; fmt::println("{}: {}", #statement, res); return res; })()
+
 static constexpr double PI_DIV_180 = PI / 180.f;
 
 namespace utils {

@@ -31,7 +31,8 @@ public:
     std::stack<Action> redoStack;
 
     // std::shared_ptr<Clip> selectedClip = nullptr;
-    std::string selectedClipId = "";
+    // std::string selectedClipId = "";
+    std::vector<std::string> selectedClips;
     int currentFrame = 0;
     int lastRenderedFrame = -1;
     bool isPlaying = false;
@@ -58,29 +59,56 @@ public:
         redoStack.pop();
     }
 
+    // deselects all
     void deselect() {
-        selectedClipId = "";
+        selectedClips.clear();
+    }
+
+    // deselects a specific ID
+    void deselect(std::string id) {
+        selectedClips.erase(
+            std::remove(selectedClips.begin(), selectedClips.end(), id),
+            selectedClips.end()
+        );
     }
 
     void selectClip(std::shared_ptr<Clip> clip) {
-        selectedClipId = clip->uID;
+        selectClip(clip->uID);
     }
-
+    
     void selectClip(std::string id) {
-        selectedClipId = id;
+        if (isClipSelected(id)) return;
+        selectedClips.push_back(id);
     }
 
-    std::shared_ptr<Clip> getSelectedClip() {
-        if (selectedClipId.empty()) return nullptr;
+    std::unordered_map<std::string, std::shared_ptr<Clip>> getSelectedClips() {
+        if (selectedClips.empty()) return {};
 
-        int trackIdx = video->getClipMap()[selectedClipId];
-        if (trackIdx < 0) {
-            return video->audioTracks[-(trackIdx + 1)]->getClip(selectedClipId);
+        std::unordered_map<std::string, std::shared_ptr<Clip>> result;
+        for (auto clipID : selectedClips) {
+            int trackIdx = video->getClipMap()[clipID];
+            std::shared_ptr<Clip> clip;
+            if (trackIdx < 0) {
+                clip = video->audioTracks[-(trackIdx + 1)]->getClip(clipID);
+            } else {
+                clip = video->videoTracks[trackIdx]->getClip(clipID);
+            }
+            result[clip->uID] = clip;
+
+            // fmt::println("clip {} is selected", clip->m_metadata.name);
         }
-        return video->videoTracks[trackIdx]->getClip(selectedClipId);
+        return result;
     }
 
-    bool isClipSelected() {
-        return !selectedClipId.empty() && getSelectedClip();
+    bool areClipsSelected() {
+        return !selectedClips.empty() && !getSelectedClips().empty();
+    }
+
+    bool isClipSelected(std::string id) {
+        return std::find(selectedClips.begin(), selectedClips.end(), id) != selectedClips.end();
+    }
+
+    bool isClipSelected(std::shared_ptr<Clip> clip) {
+        return isClipSelected(clip->uID);
     }
 };

@@ -19,6 +19,7 @@ public:
 
     void addClip(std::shared_ptr<Clip> clip) {
         clips[clip->uID] = clip;
+        fmt::println("added clip with id {}", clip->uID);
     }
 
     std::shared_ptr<Clip> getClip(std::string id) {
