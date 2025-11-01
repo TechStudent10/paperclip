@@ -79,6 +79,9 @@ public:
     void selectClip(std::string id) {
         if (isClipSelected(id)) return;
         selectedClips.push_back(id);
+        for (auto selectedClipId : getSelectedClips()[id]->linkedClips) {
+            selectedClips.push_back(selectedClipId);
+        }
     }
 
     std::unordered_map<std::string, std::shared_ptr<Clip>> getSelectedClips() {

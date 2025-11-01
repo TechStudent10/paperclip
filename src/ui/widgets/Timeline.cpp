@@ -335,9 +335,6 @@ void Timeline::drawClip(ImDrawList* drawList, const TimelineClip& clip, const Im
                 state.deselect();
             }
             state.selectClip(id);
-            for (auto selectedClipId : clip.clip->linkedClips) {
-                state.selectClip(selectedClipId);
-            }
             originalTrackId = selectedTrackIdx;
             isDragging = true;
             isMovingBetweenTracks = false;

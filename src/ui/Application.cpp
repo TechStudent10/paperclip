@@ -300,10 +300,10 @@ void Application::draw() {
                             .filePath = outFile,
                             .frameCount = frameCount
                         });
-                        state.video->audioClipPool.push_back({
-                            .filePath = fmt::format("{}.mp3", outFile),
-                            .frameCount = frameCount
-                        });
+                        // state.video->audioClipPool.push_back({
+                        //     .filePath = fmt::format("{}.mp3", outFile),
+                        //     .frameCount = frameCount
+                        // });
                     });
                     convertThread.detach();
                 }
@@ -367,12 +367,32 @@ void Application::draw() {
                     timeline.placeType = TrackType::Video;
                     timeline.placeDuration = clipMeta.frameCount;
                     timeline.placeCb = [this, clipMeta](int frame, int trackIdx) {
+                        // it is guaranteed that the video clip can be place
+                        // but not the audio clip
+                        // so check that before adding both
+                        if (timeline.willClipCollide(frame, clipMeta.frameCount, trackIdx, TrackType::Audio)) return;
+
                         auto& state = State::get();
-                        auto clip = std::make_shared<clips::VideoClip>(clipMeta.filePath);
-                        clip->startFrame = frame;
-                        clip->duration = clipMeta.frameCount;
+                        auto videoClip = std::make_shared<clips::VideoClip>(clipMeta.filePath);
+                        
+                        videoClip->startFrame = frame;
+                        videoClip->duration = clipMeta.frameCount;
+
+                        auto audioClip = std::make_shared<AudioClip>(fmt::format("{}.mp3", clipMeta.filePath));
+
+                        audioClip->startFrame = frame;
+                        audioClip->duration = clipMeta.frameCount;
+                        audioClip->m_properties.getProperties()["volume"]->data = Vector1D{ .number = 100 }.toString();
+
+                        videoClip->linkedClips = { videoClip->uID, audioClip->uID };
+                        audioClip->linkedClips = { videoClip->uID, audioClip->uID };
+
+                        state.video->addClip(trackIdx, videoClip);
+                        state.video->addAudioClip(trackIdx, audioClip);
+
+                        state.selectClip(videoClip);
+
                         state.lastRenderedFrame = -1;
-                        state.video->addClip(trackIdx, clip);
                     };
                 }
             }
@@ -872,7 +892,7 @@ void Application::drawClipButton(std::string name, int defaultDuration) {
                     clip->duration = defaultDuration;
                     clip->uID = info;
                     state.video->addClip(trackIdx, clip);
-                    // state.selectClip(clip);
+                    state.selectClip(clip);
                 },
                 .undo = [&state, trackIdx, uID](std::string) {
                     int trackIdx = state.video->getClipMap()[uID];
