@@ -13,7 +13,7 @@
 - [x] dragging clips on the canvas
 - [ ] undo/redo history
 - [x] mutliselect
-- [ ] clip linking
+- [x] clip linking
 - [ ] previews in the timeline
 
 once all of these are done

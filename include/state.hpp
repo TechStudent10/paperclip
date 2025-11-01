@@ -94,14 +94,31 @@ public:
                 clip = video->videoTracks[trackIdx]->getClip(clipID);
             }
             result[clip->uID] = clip;
-
-            // fmt::println("clip {} is selected", clip->m_metadata.name);
         }
         return result;
     }
 
     bool areClipsSelected() {
         return !selectedClips.empty() && !getSelectedClips().empty();
+    }
+
+    bool areClipsLinked() {
+        if (!areClipsSelected()) return false;
+        if (selectedClips.size() <= 1) return false;
+
+        bool res = true;
+        auto clips = getSelectedClips();
+        auto firstClip = clips.begin()->second;
+        if (firstClip->linkedClips.size() == 0) return false;
+        for (auto [_, clip] : clips) {
+            if (firstClip == clip) continue;
+
+            if (firstClip->linkedClips != clip->linkedClips) {
+                res = false;
+                break;
+            }
+        }
+        return res;
     }
 
     bool isClipSelected(std::string id) {

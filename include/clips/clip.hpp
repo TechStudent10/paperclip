@@ -235,6 +235,7 @@ public:
     int duration;
 
     std::string uID; // unique ID
+    std::vector<std::string> linkedClips; // linked clip IDs
 
     virtual void render(Frame* frame) {}
     virtual void onDelete() {}

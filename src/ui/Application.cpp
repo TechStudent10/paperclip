@@ -716,7 +716,7 @@ void Application::draw() {
 
     float totalPlaybackBtnWidth = buttonSize.x * 3 + spacing * 2;
     // UR = undo/redo
-    float totalURBtnWidth = buttonSize.x * 2 + spacing;
+    float totalURBtnWidth = buttonSize.x * 3 + spacing * 2;
 
     float playbackOffset = (windowWidth - totalPlaybackBtnWidth) * 0.5f;
     auto btnStart = ImGui::GetCursorPosX();
@@ -730,62 +730,81 @@ void Application::draw() {
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, IM_COL32(0, 0, 0, 0));
     ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 255, 255, 150));
 
-    auto playbackBtn = [&](const char* label, std::function<void()> cb, bool disabled = false) {
+    // ok so these param names are a bit misleading (aside from label thats obvious)
+    // disabled = button does absolutely nothing; gets greyed out
+    // enabled = on state, used for a toggle; button gets slightly more illuminated
+    auto playbackBtn = [&](const char* label, bool disabled = false, bool enabled = false) {
         auto min = ImGui::GetCursorScreenPos();
         bool hovered = ImGui::IsMouseHoveringRect(min, ImVec2(min.x + buttonSize.x, min.y + buttonSize.y));
+        int popCount = 0;
+        
         if (disabled) {
             ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 255, 255, 75));
+            popCount++;
         }
+
+        if (enabled) {
+            ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 255, 255, 225));
+            popCount++;
+        }
+
         if (hovered && !disabled) {
             ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 255, 255, 255));
+            popCount++;
         }
         
-        if (ImGui::Button(
+        auto clicked = ImGui::Button(
             label,
             buttonSize
-        ) && !disabled) {
-            cb();
-        }
+        ) && !disabled;
 
-        if (hovered && !disabled) {
-            ImGui::PopStyleColor();
-        }
+        ImGui::PopStyleColor(popCount);
 
-        if (disabled) {
-            ImGui::PopStyleColor();
-        }
+        return clicked;
     };
 
-    playbackBtn(ICON_FA_BACKWARD, [&]() {
+    if (playbackBtn(ICON_FA_BACKWARD)) {
         setCurrentFrame(state.currentFrame - state.video->frameForTime(5));
-    });
+    }
     
     ImGui::SameLine();
 
-    playbackBtn(state.isPlaying ? ICON_FA_PAUSE : ICON_FA_PLAY, [&]() {
+    if (playbackBtn(state.isPlaying ? ICON_FA_PAUSE : ICON_FA_PLAY)) {
         togglePlay();
-    });
+    }
 
     ImGui::SameLine();
 
-    playbackBtn(ICON_FA_FORWARD, [&]() {
+    if (playbackBtn(ICON_FA_FORWARD)) {
         setCurrentFrame(state.currentFrame + state.video->frameForTime(5));
-    });
+    }
 
     ImGui::SameLine();
 
     ImGui::SetCursorPosX((ImGui::GetWindowWidth() - mediaControlW) / 2.f + mediaControlW - totalURBtnWidth);
         
-    playbackBtn(ICON_FA_ROTATE_LEFT, [&]() {
+    if (playbackBtn(ICON_FA_ROTATE_LEFT, state.undoStack.size() <= 0)) {
         state.undo();
-    });
+    }
 
     ImGui::SameLine();
 
-    playbackBtn(ICON_FA_ROTATE_RIGHT, [&]() {
+    if (playbackBtn(ICON_FA_ROTATE_RIGHT, state.redoStack.size() <= 0)) {
         state.redo();
-    }, state.redoStack.size() <= 0);
+    }
 
+    ImGui::SameLine();
+
+    bool areClipsLinked = state.areClipsLinked();
+    if (playbackBtn(ICON_FA_LINK, state.selectedClips.size() <= 1, areClipsLinked)) {
+        for (auto selectedClip : state.getSelectedClips()) {
+            if (areClipsLinked) {
+                selectedClip.second->linkedClips = {};
+            } else {
+                selectedClip.second->linkedClips = state.selectedClips;
+            }
+        }
+    }
 
     ImGui::PopStyleColor(4);
 
