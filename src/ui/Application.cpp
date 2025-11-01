@@ -365,6 +365,7 @@ void Application::draw() {
                 if (ImGui::Button(clipMeta.filePath.c_str(), ImVec2(-1.0f, 0.0f))) {
                     timeline.isPlacingClip = true;
                     timeline.placeType = TrackType::Video;
+                    timeline.placeDuration = clipMeta.frameCount;
                     timeline.placeCb = [this, clipMeta](int frame, int trackIdx) {
                         auto& state = State::get();
                         auto clip = std::make_shared<clips::VideoClip>(clipMeta.filePath);
@@ -382,6 +383,7 @@ void Application::draw() {
                 if (ImGui::Button(soundFile.filePath.c_str(), ImVec2(-1.0f, 0.0f))) {
                     timeline.isPlacingClip = true;
                     timeline.placeType = TrackType::Audio;
+                    timeline.placeDuration = soundFile.frameCount;
                     timeline.placeCb = [this, soundFile](int frame, int trackIdx) {
                         auto& state = State::get();
                         auto clip = std::make_shared<AudioClip>(soundFile.filePath);
@@ -400,6 +402,7 @@ void Application::draw() {
                 if (ImGui::Button(imageFile.filePath.c_str(), ImVec2(-1.0f, 0.0f))) {
                     timeline.isPlacingClip = true;
                     timeline.placeType = TrackType::Video;
+                    timeline.placeDuration = imageFile.frameCount;
                     timeline.placeCb = [this, imageFile](int frame, int trackIdx) {
                         auto& state = State::get();
                         auto clip = std::make_shared<clips::ImageClip>(imageFile.filePath);
@@ -857,6 +860,7 @@ void Application::drawClipButton(std::string name, int defaultDuration) {
     if (ImGui::Button(name.c_str(), ImVec2(-1.0f, 0.0f))) {
         timeline.isPlacingClip = true;
         timeline.placeType = TrackType::Video;
+        timeline.placeDuration = defaultDuration;
         timeline.placeCb = [this, defaultDuration](int frame, int trackIdx) {
             auto& state = State::get();
             std::string uID = utils::generateUUID();

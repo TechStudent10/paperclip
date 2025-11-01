@@ -31,6 +31,11 @@ static constexpr double PI_DIV_180 = PI / 180.f;
 
 namespace utils {
     std::string generateUUID();
+
+    template <typename T>
+    bool vectorContains(std::vector<T> vec, T elem) {
+        return std::find(vec.begin(), vec.end(), elem) != vec.end();
+    }
 } // namespace utils
 
 namespace utils::video {

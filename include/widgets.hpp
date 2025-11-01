@@ -40,7 +40,7 @@ enum class TrackType {
     // Disco
 };
 
-class VideoTimeline {
+class Timeline {
 private:
     // std::vector<TimelineTrack> tracks;
     // float playheadTime;
@@ -96,7 +96,7 @@ private:
     ResizeMode GetResizeMode(const ImVec2& mouse_pos, std::shared_ptr<Clip> clip, const ImVec2& track_pos, const ImVec2& track_size, float clickTime);
 
 public:
-    VideoTimeline();
+    Timeline();
 
     float isPlacingClip = false;
     ImVec2 hoverPos;
@@ -110,26 +110,21 @@ public:
     TrackType placeType;
 
     std::function<void(int frame, int trackIdx)> placeCb = nullptr;
+    int placeDuration = -1;
     
-    // Track management
-    void addTrack(const std::string& name);
-    
-    // Clip management
-    void addClip(int track_id, const std::string& name, float start_time, float duration, ImU32 color = IM_COL32(100, 150, 200, 255));
-    
-    // Playhead control
-    // void setPlayheadTime(float time);
     float getPlayheadTime() const;
-    
-    void autoScroll();
 
-    // Zoom control
+    void addTrack(const std::string& name);
+    void addClip(int track_id, const std::string& name, float start_time, float duration, ImU32 color = IM_COL32(100, 150, 200, 255));
     void setZoom(float zoom);
-    
-    // Main rendering function
+
+    void autoScroll();
+    void scrollToTime(float time, bool center = true);
+
     void render();
 
-    void scrollToTime(float time, bool center = true);
+    bool willClipCollide(int frame, int duration, int trackIdx, TrackType type, std::vector<std::string> exclusionList = {});
+    bool willClipCollide(float seconds, float duration, int trackIdx, TrackType type, std::vector<std::string> exclusionList = {});
 };
 
 // https://github.com/ocornut/imgui/issues/1901

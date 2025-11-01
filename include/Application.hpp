@@ -45,7 +45,7 @@ protected:
     SDL_Window* window;
     SDL_GLContext gl_context;
 
-    VideoTimeline timeline;
+    Timeline timeline;
 
     std::shared_ptr<Frame> frame;
 
