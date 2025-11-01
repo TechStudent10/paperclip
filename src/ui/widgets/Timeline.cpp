@@ -331,7 +331,7 @@ void VideoTimeline::drawClip(ImDrawList* drawList, const TimelineClip& clip, con
             // };
 
             // fmt::println("{}", state.selectedClips.size());
-            if (!io.KeyShift && state.selectedClips.size() == 1) {
+            if (!io.KeyShift && !state.isClipSelected(clip.clip)) {
                 state.deselect();
             }
             state.selectClip(id);
@@ -361,7 +361,7 @@ void VideoTimeline::drawClip(ImDrawList* drawList, const TimelineClip& clip, con
     if (size > 0) {
         drawList->AddText(
             font,
-            size,
+            std::max(size, 0.1f),
             ImVec2(clipPos.x + 5 + RESIZE_HANDLE_WIDTH, clipPos.y + 5),
             clip.selected ?
                 IM_COL32(230, 245, 65, 255) :
@@ -666,6 +666,18 @@ void VideoTimeline::handleInteractions(const ImVec2& canvasPos, const ImVec2& ca
                         maxVideoTrackIdx == minVideoTrackIdx &&
                         maxAudioTrackIdx == maxVideoTrackIdx;
 
+            // if there is no video clip selected, set this conditonal to true regardless of anything else
+            bool videoCanMove = videoClipSelected ?
+                debug(maxVideoTrackIdx + (selectedTrackType == TrackType::Video ? deltaTrack : -deltaTrack)) < state.video->videoTracks.size() &&
+                debug(minVideoTrackIdx + (selectedTrackType == TrackType::Video ? deltaTrack : -deltaTrack)) >= 0
+            : true;
+
+            // if there is no audio clip selected, set this conditonal to true regardless of anything else
+            bool audioCanMove = audioClipSelected ?
+                debug(maxAudioTrackIdx + (selectedTrackType == TrackType::Audio ? deltaTrack : -deltaTrack)) < state.video->audioTracks.size() &&
+                debug(minAudioTrackIdx + (selectedTrackType == TrackType::Audio ? deltaTrack : -deltaTrack)) >= 0
+            : true;
+
             // i welcome you to
             // TERNARY OPERATOR ABUSE!!!!!!!!!!!!!
             if (
@@ -675,22 +687,7 @@ void VideoTimeline::handleInteractions(const ImVec2& canvasPos, const ImVec2& ca
                     // so that this conditional gets skipped
                     // and we go to the one that evaluates clips
                     // on the same tracks
-                    isOnSameTracks ? false : (
-                        (
-                            // if there is no video clip selected, set this conditonal to true regardless of anything else
-                            videoClipSelected ?
-                                debug(maxVideoTrackIdx + (selectedTrackType == TrackType::Video ? deltaTrack : -deltaTrack)) < state.video->videoTracks.size() &&
-                                debug(minVideoTrackIdx + (selectedTrackType == TrackType::Video ? deltaTrack : -deltaTrack)) >= 0
-                            : true
-                        ) &&
-                        (
-                            // if there is no audio clip selected, set this conditonal to true regardless of anything else
-                            audioClipSelected ?
-                                debug(maxAudioTrackIdx + (selectedTrackType == TrackType::Audio ? deltaTrack : -deltaTrack)) < state.video->audioTracks.size() &&
-                                debug(minAudioTrackIdx + (selectedTrackType == TrackType::Audio ? deltaTrack : -deltaTrack)) >= 0
-                            : true
-                        )
-                    )
+                    isOnSameTracks ? false : videoCanMove && audioCanMove
                 ) || (
                     // this is most likely to be used for video clips
                     // this code sux regardless though
