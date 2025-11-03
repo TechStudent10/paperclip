@@ -3,17 +3,10 @@
 #include <video.hpp>
 #include <renderer/text.hpp>
 
-#include <functional>
 #include <memory>
 #include <stack>
 
-struct Action {
-public:
-    std::function<void(std::string info)> perform;
-    std::function<void(std::string info)> undo;
-
-    std::string info; // any additional info that may be needed
-};
+#include <action/action.hpp>
 
 class State {
 private:
@@ -27,8 +20,8 @@ public:
     std::shared_ptr<Video> video;
     std::shared_ptr<TextRenderer> textRenderer;
 
-    std::stack<Action> undoStack;
-    std::stack<Action> redoStack;
+    std::stack<std::shared_ptr<Action>> undoStack;
+    std::stack<std::shared_ptr<Action>> redoStack;
 
     // std::shared_ptr<Clip> selectedClip = nullptr;
     // std::string selectedClipId = "";
@@ -45,7 +38,7 @@ public:
         if (undoStack.empty()) return;
 
         auto action = undoStack.top();
-        action.undo(action.info);
+        action->undo();
         redoStack.push(action);
         undoStack.pop();
     }
@@ -54,9 +47,14 @@ public:
         if (redoStack.empty()) return;
 
         auto action = redoStack.top();
-        action.perform(action.info);
+        action->perform();
         undoStack.push(action);
         redoStack.pop();
+    }
+
+    void addAction(std::shared_ptr<Action> action) {
+        undoStack.push(action);
+        redoStack = std::stack<std::shared_ptr<Action>>();
     }
 
     // deselects all

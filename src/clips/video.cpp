@@ -43,6 +43,10 @@ namespace clips {
                 ->setDefaultKeyframe(Vector1D{ .number = 0 }.toString())
         );
 
+        glGenBuffers(1, &VBO);
+        glGenVertexArrays(1, &VAO);
+        glGenBuffers(1, &EBO);
+
         if (!path.empty()) {
             initialize();
         }
@@ -187,6 +191,6 @@ namespace clips {
         int scaledW = static_cast<int>(std::floor(width * scaleX));
         int scaledH = static_cast<int>(std::floor(height * scaleY));
 
-        frame->drawTextureYUV(textureY, textureU, textureV, position, { scaledW, scaledH }, rotation);
+        frame->drawTextureYUV(textureY, textureU, textureV, position, { scaledW, scaledH }, VAO, VBO, EBO, rotation);
     }
 }

@@ -27,6 +27,9 @@
 
 #include <icons/IconsFontAwesome6.h>
 
+#include <action/actions/CreateClip.hpp>
+#include <action/actions/CreateVideoClip.hpp>
+
 bool Application::ButtonCenteredOnLine(const char* label, float alignment) {
     ImGuiStyle& style = ImGui::GetStyle();
 
@@ -367,32 +370,15 @@ void Application::draw() {
                     timeline.placeType = TrackType::Video;
                     timeline.placeDuration = clipMeta.frameCount;
                     timeline.placeCb = [this, clipMeta](int frame, int trackIdx) {
-                        // it is guaranteed that the video clip can be place
+                        // it is guaranteed that the video clip can be placed
                         // but not the audio clip
                         // so check that before adding both
                         if (timeline.willClipCollide(frame, clipMeta.frameCount, trackIdx, TrackType::Audio)) return;
 
                         auto& state = State::get();
-                        auto videoClip = std::make_shared<clips::VideoClip>(clipMeta.filePath);
-                        
-                        videoClip->startFrame = frame;
-                        videoClip->duration = clipMeta.frameCount;
-
-                        auto audioClip = std::make_shared<AudioClip>(fmt::format("{}.mp3", clipMeta.filePath));
-
-                        audioClip->startFrame = frame;
-                        audioClip->duration = clipMeta.frameCount;
-                        audioClip->m_properties.getProperties()["volume"]->data = Vector1D{ .number = 100 }.toString();
-
-                        videoClip->linkedClips = { videoClip->uID, audioClip->uID };
-                        audioClip->linkedClips = { videoClip->uID, audioClip->uID };
-
-                        state.video->addClip(trackIdx, videoClip);
-                        state.video->addAudioClip(trackIdx, audioClip);
-
-                        state.selectClip(videoClip);
-
-                        state.lastRenderedFrame = -1;
+                        auto action = std::make_shared<CreateVideoClip>(clipMeta, frame, trackIdx);
+                        state.addAction(action);
+                        action->perform();
                     };
                 }
             }
@@ -410,8 +396,11 @@ void Application::draw() {
                         clip->startFrame = frame;
                         clip->duration = soundFile.frameCount;
                         clip->m_properties.getProperties()["volume"]->data = Vector1D{ .number = 100 }.toString();
+                        
+                        auto action = std::make_shared<CreateClip>(clip, clip->getType(), trackIdx);
+                        action->perform();
+                        state.addAction(action);                        
                         state.lastRenderedFrame = -1;
-                        state.video->addAudioClip(trackIdx, clip);
                     };
                 }
             }
@@ -428,8 +417,10 @@ void Application::draw() {
                         auto clip = std::make_shared<clips::ImageClip>(imageFile.filePath);
                         clip->startFrame = frame;
                         clip->duration = imageFile.frameCount;
+                        auto action = std::make_shared<CreateClip>(clip, clip->getType(), trackIdx);
+                        action->perform();
+                        state.addAction(action);
                         state.lastRenderedFrame = -1;
-                        state.video->getTracks()[trackIdx]->addClip(clip);
                     };
                 }
             }
@@ -447,8 +438,6 @@ void Application::draw() {
 
             ImGui::SeparatorText(selectedClip->m_metadata.name.c_str());
             
-            // TextCentered(selectedClip->m_metadata.name);
-
             ImGui::Separator();
 
             if (ImGui::Button("Open Keyframe Editor", ImVec2(-1.0f, 0.0f))) {
@@ -496,8 +485,6 @@ void Application::draw() {
         }
     }
     ImGui::End();
-
-    // fmt::println("number of clips in vid track 0: {}", state.video->videoTracks[0]->getClips().size());
 
     ImGui::SetNextWindowClass(&bareWindowClass);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
@@ -616,12 +603,11 @@ void Application::draw() {
                         if (property->keyframes.size() == 1) {
                             property->keyframes[0] = data;
                             state.lastRenderedFrame = -1;
-                            return;
+                        } else {
+                            int keyframe = state.currentFrame - selectedClip->startFrame;
+                            selectedClip->m_properties.setKeyframe(property->id, keyframe, data);
+                            state.lastRenderedFrame = -1;
                         }
-
-                        int keyframe = state.currentFrame - selectedClip->startFrame;
-                        selectedClip->m_properties.setKeyframe(property->id, keyframe, data);
-                        state.lastRenderedFrame = -1;
                     }
                 }
 
@@ -819,7 +805,7 @@ void Application::draw() {
     ImGui::SameLine();
 
     bool areClipsLinked = state.areClipsLinked();
-    if (playbackBtn(ICON_FA_LINK, state.selectedClips.size() <= 1, areClipsLinked)) {
+    if (playbackBtn(areClipsLinked ? ICON_FA_LINK_SLASH : ICON_FA_LINK, state.selectedClips.size() <= 1, areClipsLinked)) {
         for (auto selectedClip : state.getSelectedClips()) {
             if (areClipsLinked) {
                 selectedClip.second->linkedClips = {};
@@ -872,7 +858,6 @@ void Application::setCurrentFrame(int frame) {
     auto& state = State::get();
     frame = std::clamp(frame, 0, state.video->frameCount);
     state.currentFrame = frame;
-    // timeline.setPlayheadTime(state.video->timeForFrame(frame));
 }
 
 template<class T>
@@ -883,31 +868,15 @@ void Application::drawClipButton(std::string name, int defaultDuration) {
         timeline.placeDuration = defaultDuration;
         timeline.placeCb = [this, defaultDuration](int frame, int trackIdx) {
             auto& state = State::get();
-            std::string uID = utils::generateUUID();
 
-            Action action = {
-                .perform = [&state, trackIdx, frame, defaultDuration](std::string info) {
-                    auto clip = std::make_shared<T>();
-                    clip->startFrame = frame;
-                    clip->duration = defaultDuration;
-                    clip->uID = info;
-                    state.video->addClip(trackIdx, clip);
-                    state.selectClip(clip);
-                },
-                .undo = [&state, trackIdx, uID](std::string) {
-                    int trackIdx = state.video->getClipMap()[uID];
-                    if (state.isClipSelected(uID)) {
-                        state.deselect();
-                    }
-                    state.video->getTracks()[trackIdx]->removeClip(uID);
-                },
-                .info = uID
-            };
-
-            action.perform(uID);
-
-            state.undoStack.push(action);
-            state.redoStack = std::stack<Action>();
+            auto clip = std::make_shared<T>();
+            clip->startFrame = frame;
+            clip->duration = defaultDuration;
+            auto action = std::make_shared<CreateClip>(clip, clip->getType(), trackIdx);
+            
+            action->perform();
+            state.selectClip(clip);
+            state.addAction(action);
 
             state.lastRenderedFrame = -1;
         };

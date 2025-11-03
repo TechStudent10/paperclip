@@ -27,6 +27,9 @@ namespace clips {
         bool hasUploaded = false;
 
         GLuint textureY, textureU, textureV;
+        GLuint VAO;
+        GLuint VBO;
+        GLuint EBO;
     public:
         VideoClip(const std::string& path);
         VideoClip();

@@ -11,6 +11,9 @@ namespace clips {
     class ImageClip : public Clip {
     private:
         GLuint texture;
+        GLuint VAO;
+        GLuint VBO;
+        GLuint EBO;
         unsigned char* imageData;
 
         int width, height;

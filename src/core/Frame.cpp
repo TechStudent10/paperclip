@@ -33,14 +33,6 @@ Frame::Frame(int width, int height) : width(width), height(height) {
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureID, 0);
 
-    // Set the list of draw buffers.
-    GLenum DrawBuffers[1] = {GL_COLOR_ATTACHMENT0};
-    glDrawBuffers(1, DrawBuffers); // "1" is the size of DrawBuffers
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-    glGenBuffers(1, &VBO);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-
     shapeShaderProgram = shader::createProgram(shapeVertex, shapeFragment);
     texShaderProgram = shader::createProgram(textureVertex, textureFragment);
     texYUVShaderProgram = shader::createProgram(textureVertex, textureFragmentYUV);
@@ -130,6 +122,7 @@ void Frame::primitiveDraw(Vector2D pos, Vector2D size, RGBAColor color, ShapeTyp
 
     glBindVertexArray(VAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
@@ -164,16 +157,17 @@ void Frame::primitiveDraw(Vector2D pos, Vector2D size, RGBAColor color, ShapeTyp
 
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glBindVertexArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
 
 void Frame::drawRect(Dimensions dimensions, RGBAColor color) {
     primitiveDraw(dimensions.pos, dimensions.size, color);
 }
 
-void Frame::drawTexture(GLuint texture, Vector2D pos, Vector2D size, float rotation) {
+void Frame::drawTexture(GLuint texture, Vector2D pos, Vector2D size, GLuint VAO, GLuint VBO, GLuint EBO, float rotation) {
     // stolen from the primitive draw lmao
     Vector2D resolution = { width, height };
 
@@ -185,6 +179,10 @@ void Frame::drawTexture(GLuint texture, Vector2D pos, Vector2D size, float rotat
     Vector2D bl = { pos.x, pos.y + size.y };
     // bottom right
     Vector2D br = { pos.x + size.x, pos.y + size.y };
+
+    glBindVertexArray(VAO);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
 
     float vertices[] = {
         (float)tl.x,  (float)tl.y, 0.0f, 0.0f, 1.0f,   // top left 
@@ -231,15 +229,15 @@ void Frame::drawTexture(GLuint texture, Vector2D pos, Vector2D size, float rotat
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, texture);
 
-    glBindVertexArray(VAO);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindVertexArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
 
-void Frame::drawTextureYUV(GLuint textureY, GLuint textureU, GLuint textureV, Vector2D pos, Vector2D size, float rotation) {
+void Frame::drawTextureYUV(GLuint textureY, GLuint textureU, GLuint textureV, Vector2D pos, Vector2D size, GLuint VAO, GLuint VBO, GLuint EBO, float rotation) {
     // stolen from the primitive draw lmao
     Vector2D resolution = { width, height };
 
@@ -263,6 +261,10 @@ void Frame::drawTextureYUV(GLuint textureY, GLuint textureU, GLuint textureV, Ve
         0, 1, 3,   // first triangle
         0, 2, 3    // second triangle
     };
+
+    glBindVertexArray(VAO);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
 
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
@@ -314,12 +316,12 @@ void Frame::drawTextureYUV(GLuint textureY, GLuint textureU, GLuint textureV, Ve
     glActiveTexture(GL_TEXTURE2);
     glBindTexture(GL_TEXTURE_2D, textureV);
 
-    glBindVertexArray(VAO);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindVertexArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
 
 void Frame::drawLine(Vector2D start, Vector2D end, RGBAColor color, int thickness) {

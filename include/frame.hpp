@@ -39,8 +39,8 @@ public:
     void drawLine(Vector2D start, Vector2D end, RGBAColor color, int thickness = 1);
     void drawCircle(Vector2D center, int radius, RGBAColor color, bool filled = true);
 
-    void drawTexture(GLuint texture, Vector2D position, Vector2D size, float rotation = 0);
-    void drawTextureYUV(GLuint textureY, GLuint textureU, GLuint textureV, Vector2D position, Vector2D size, float rotation = 0);
+    void drawTexture(GLuint texture, Vector2D position, Vector2D size, GLuint VAO, GLuint VBO, GLuint EBO, float rotation = 0);
+    void drawTextureYUV(GLuint textureY, GLuint textureU, GLuint textureV, Vector2D position, Vector2D size, GLuint VAO, GLuint VBO, GLuint EBO, float rotation = 0);
 
     std::vector<unsigned char> getFrameData();
 };

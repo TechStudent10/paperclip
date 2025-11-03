@@ -37,6 +37,10 @@ namespace clips {
 
         m_metadata.name = std::filesystem::path(path).filename();
 
+        glGenBuffers(1, &VBO);
+        glGenVertexArrays(1, &VAO);
+        glGenBuffers(1, &EBO);
+
         if (path.empty()) return;
 
         initialize();
@@ -97,7 +101,7 @@ namespace clips {
         scaledW = static_cast<int>(std::floor(width * scaleX));
         scaledH = static_cast<int>(std::floor(height * scaleY));
 
-        frame->drawTexture(texture, position, { scaledW, scaledH }, rotation);
+        frame->drawTexture(texture, position, { scaledW, scaledH }, VAO, VBO, EBO, rotation);
     }
 
     ImageClip::~ImageClip() {

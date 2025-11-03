@@ -11,7 +11,7 @@
 // ¯\_(ツ)_/¯
 // --------------------------------------------------------------
 
-#include "imgui_internal.h"
+#include <imgui_internal.h>
 #include <fmt/base.h>
 #include <fmt/format.h>
 #include <widgets.hpp>
@@ -20,6 +20,10 @@
 #include <cmath>
 
 #include <state.hpp>
+
+#include <action/actions/MoveClip.hpp>
+#include <action/actions/ResizeClip.hpp>
+#include <action/actions/ChangeClipTrack.hpp>
 
 TimelineClip::TimelineClip(int _id, const std::string& _name, float _start, float _duration, std::shared_ptr<Clip> _clip, ImU32 _color)
     : id(_id), name(_name), startTime(_start), duration(_duration), color(_color), clip(_clip), selected(false) {
@@ -358,7 +362,7 @@ void Timeline::drawClip(ImDrawList* drawList, const TimelineClip& clip, const Im
         size = std::max(size * (clipSize.x / (textSize.x + 30)), 0.f);
     }
 
-    if (size > 0) {
+    if (size > 0 && clipSize.x > size + 10) {
         drawList->AddText(
             font,
             std::max(size, 0.1f),
@@ -585,6 +589,7 @@ void Timeline::handleInteractions(const ImVec2& canvasPos, const ImVec2& canvasS
             
             float newStartTime = (mouse_pos.x - canvasPos.x - TRACK_HEADER_WIDTH + scrollX + dragOffset.x) / pixelsPerSecond;
             int deltaFrame = state.video->frameForTime(newStartTime) - initialStartFrame;
+            totalDeltaFrame += deltaFrame;
             int trackQuantity = selectedTrackType == TrackType::Video ? state.video->videoTracks.size() : state.video->audioTracks.size();
             int deltaTrack = std::clamp(
                 hoveredTrackIdx - selectedTrackIdx,
@@ -707,14 +712,13 @@ void Timeline::handleInteractions(const ImVec2& canvasPos, const ImVec2& canvasS
                     }
                     if (trackIdx < 0) trackIdx = -(trackIdx + 1);
                     if (trackIdx == selectedTrackIdx && clipType == selectedTrackType) {
-                        if (clipType == TrackType::Audio) {
-                            fmt::println("EQUALITY!");
-                            fmt::println("hgks; track idx: {}, selected: {}", trackIdx, selectedTrackIdx);
-                        }
                         selectedTrackIdx = std::clamp(targetTrack, 0, trackQuantity - 1);
                     }
                     // make sure the clip is still selected
                     state.selectClip(selectedClip);
+                }
+                if (deltaTrack != 0) {
+                    state.addAction(std::make_shared<ChangeClipTrack>(state.selectedClips, deltaTrack, selectedTrackType, isOnSameTracks));
                 }
             }
 
@@ -879,6 +883,15 @@ void Timeline::handleInteractions(const ImVec2& canvasPos, const ImVec2& canvasS
     state.video->recalculateFrameCount();
 
     if (ImGui::IsMouseReleased(0)) {
+        if (isDragging) {
+            if (resizeMode == RESIZE_NONE) {
+                state.addAction(std::make_shared<MoveClip>(state.selectedClips, totalDeltaFrame));
+            }
+        }
+        if (resizeMode != RESIZE_NONE) {
+            state.addAction(std::make_shared<ResizeClip>(resizingClip, resizeOriginalStart, resizeOriginalDuration));
+        }
+        totalDeltaFrame = 0;
         isDragging = false;
         isScrubbing = false;
         isMovingBetweenTracks = false;

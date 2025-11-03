@@ -61,6 +61,7 @@ private:
     ImVec2 dragStartPos;
 
     int initialStartFrame = 0;
+    int initialDuration = 0;
 
     // Constants
     static constexpr float TRACK_HEADER_WIDTH = 100.0f;
@@ -81,6 +82,8 @@ private:
     float resizeOriginalStart;
     float resizeOriginalDuration;
     int resizingTrackIdx;
+
+    int totalDeltaFrame = 0;
 
     ImVec2 canvasSize;
     ImVec2 canvasPos;
