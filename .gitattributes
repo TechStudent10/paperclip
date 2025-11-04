@@ -1,2 +1,2 @@
 libs/** linguist-vendored
-include/icons/IconsFontAwesome6.h -linguist-vendored
+include/icons/** linguist-vendored
