@@ -5,6 +5,7 @@
 #include <fmt/base.h>
 #include <fmt/format.h>
 #include <fmt/chrono.h>
+#include <fmt/color.h>
 
 #include <state.hpp>
 #include <widgets.hpp>
@@ -910,6 +911,55 @@ void Application::exit() {
     SDL_Quit();
 }
 
+// shoutout chatgpt
+void GLDebugCallback(GLenum source,
+                              GLenum type,
+                              GLuint id,
+                              GLenum severity,
+                              GLsizei length,
+                              const GLchar* message,
+                              const void* userParam)
+{
+    // Ignore known non-critical messages (optional)
+    if (id == 131169 || id == 131185 || id == 131218 || id == 131204)
+        return;
+
+    fmt::print("---------------\nOpenGL Debug Message ({}): {}\n", id, message);
+
+    const char* srcStr = "Unknown";
+    switch (source) {
+        case GL_DEBUG_SOURCE_API:             srcStr = "API"; break;
+        case GL_DEBUG_SOURCE_WINDOW_SYSTEM:   srcStr = "Window System"; break;
+        case GL_DEBUG_SOURCE_SHADER_COMPILER: srcStr = "Shader Compiler"; break;
+        case GL_DEBUG_SOURCE_THIRD_PARTY:     srcStr = "Third Party"; break;
+        case GL_DEBUG_SOURCE_APPLICATION:     srcStr = "Application"; break;
+        case GL_DEBUG_SOURCE_OTHER:           srcStr = "Other"; break;
+    }
+
+    const char* typeStr = "Other";
+    switch (type) {
+        case GL_DEBUG_TYPE_ERROR:               typeStr = "Error"; break;
+        case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR: typeStr = "Deprecated Behaviour"; break;
+        case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:  typeStr = "Undefined Behaviour"; break;
+        case GL_DEBUG_TYPE_PORTABILITY:         typeStr = "Portability"; break;
+        case GL_DEBUG_TYPE_PERFORMANCE:         typeStr = "Performance"; break;
+        case GL_DEBUG_TYPE_MARKER:              typeStr = "Marker"; break;
+        case GL_DEBUG_TYPE_PUSH_GROUP:          typeStr = "Push Group"; break;
+        case GL_DEBUG_TYPE_POP_GROUP:           typeStr = "Pop Group"; break;
+    }
+
+    const char* sevStr = "Unknown";
+    switch (severity) {
+        case GL_DEBUG_SEVERITY_HIGH:         sevStr = "HIGH"; break;
+        case GL_DEBUG_SEVERITY_MEDIUM:       sevStr = "MEDIUM"; break;
+        case GL_DEBUG_SEVERITY_LOW:          sevStr = "LOW"; break;
+        case GL_DEBUG_SEVERITY_NOTIFICATION: sevStr = "NOTIFICATION"; break;
+    }
+
+    fmt::print("Source: {}\nType: {}\n", srcStr, typeStr);
+    fmt::print("Severity: {}\n\n", sevStr);
+}
+
 bool Application::initSDL() {
     if (!SDL_Init(SDL_INIT_VIDEO)) {
         fmt::println("SDL Init error: {}", SDL_GetError());
@@ -918,9 +968,10 @@ bool Application::initSDL() {
 
     SDL_SetAppMetadata("paperclip", "1.0", "com.underscored.paperclip");
 
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 6);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
 
     window = SDL_CreateWindow("Paperclip", 1200, 800, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
     if (!window) {
@@ -948,6 +999,11 @@ bool Application::initSDL() {
     fmt::println("GLAD loaded OpenGL {}.{}", GLAD_VERSION_MAJOR(version), GLAD_VERSION_MINOR(version));
     fmt::println("GL Version: {}", (const char*)glGetString(GL_VERSION));
     fmt::println("GLSL Version: {}", (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION));
+
+    // glEnable(GL_DEBUG_OUTPUT);
+    // glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS); // Ensures callback is called immediately
+    // glDebugMessageCallback(GLDebugCallback, nullptr);
+    // glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_TRUE);
 
     int w, h;
     SDL_GetWindowSize(window, &w, &h);

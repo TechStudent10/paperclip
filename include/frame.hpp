@@ -30,7 +30,7 @@ public:
 
     Frame(int width, int height);
 
-    void clearFrame();
+    void clearFrame(RGBAColor color = { 255, 255, 255, 255 });
 
     void putPixel(Vector2D position, RGBAColor color);
     RGBAColor getPixel(Vector2D position);

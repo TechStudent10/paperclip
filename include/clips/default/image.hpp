@@ -19,6 +19,8 @@ namespace clips {
         int width, height;
         int scaledW = 0, scaledH = 0;
 
+        std::shared_ptr<Frame> previewFrame;
+
         bool initialize();
     public:
         bool initialized = false;
@@ -46,5 +48,8 @@ namespace clips {
 
         Vector2D getSize() override;
         Vector2D getPos() override;
+
+        GLuint getPreviewTexture(int frame) override;
+        Vector2D getPreviewSize() override;
     };
 } // namespace clips

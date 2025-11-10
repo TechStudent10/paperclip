@@ -17,6 +17,10 @@ private:
     friend class AudioTrack;
 public:
     bool playing = false;
+
+    // RMS values (chunks of 5ms)
+    std::vector<double> waveform;
+
     AudioClip(const std::string& path);
     AudioClip();
     ~AudioClip();

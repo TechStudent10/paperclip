@@ -41,7 +41,7 @@ enum class TrackType {
 };
 
 class Timeline {
-private:
+protected:
     // std::vector<TimelineTrack> tracks;
     // float playheadTime;
     float zoomFactor;
@@ -63,12 +63,18 @@ private:
     int initialStartFrame = 0;
     int initialDuration = 0;
 
+    std::unordered_map<std::string, GLuint> previewTextures;
+    std::vector<unsigned char> pixelData;
+    GLuint btex = 0;
+
     // Constants
     static constexpr float TRACK_HEADER_WIDTH = 100.0f;
     static constexpr float RULER_HEIGHT = 30.0f;
     static constexpr float MIN_ZOOM = 10.0f;   // pixels per second
     static constexpr float MAX_ZOOM = 200.0f;
     static constexpr float RESIZE_HANDLE_WIDTH = 10.0f;
+
+    static constexpr float CLIP_HEIGHT = 80.f;
 
     enum ResizeMode {
         RESIZE_NONE,

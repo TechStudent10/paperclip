@@ -2,8 +2,10 @@
 
 #include "../clip.hpp"
 #include <common.hpp>
+#include <condition_variable>
 #include <framework/mlt.h>
 
+#include <thread>
 #include <vector>
 #include <string>
 
@@ -12,8 +14,9 @@
 
 namespace clips {
     class VideoClip : public Clip {
-    private:
+    protected:
         bool decodeFrame(int frameNumber);
+        std::array<uint8_t*, 3> decodeFrameRaw(int frameNumber);
 
         bool initialize();
 
@@ -21,7 +24,6 @@ namespace clips {
         mlt_producer producer;
 
         int width = 0, height = 0, fps = 0;
-        std::vector<unsigned char> vidFrame;
         std::string path;
         bool initialized = false;
         bool hasUploaded = false;
@@ -30,6 +32,16 @@ namespace clips {
         GLuint VAO;
         GLuint VBO;
         GLuint EBO;
+
+        std::thread previewGenThread;
+        std::mutex framesMutex;
+        std::mutex producerMutex;
+        std::condition_variable previewCv;
+        std::atomic<bool> stopGen = false;
+        
+        std::vector<int> pendingFrames;
+        std::unordered_map<int, std::array<uint8_t*, 3>> finishedFrames;
+        std::unordered_map<int, std::shared_ptr<Frame>> previewFrames;
     public:
         VideoClip(const std::string& path);
         VideoClip();
@@ -51,5 +63,8 @@ namespace clips {
 
         Vector2D getSize() override;
         Vector2D getPos() override;
+
+        GLuint getPreviewTexture(int frame) override;
+        Vector2D getPreviewSize() override;
     };
 } // namespace clips

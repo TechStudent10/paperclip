@@ -26,11 +26,14 @@ int main() {
     int height = 1080;
     int fps = 60;
 
+    auto& state = State::get();
+    
     auto video = std::make_shared<Video>();
     video->framerate = 60;
     video->resolution = {width, height};
     video->addTrack(std::make_shared<VideoTrack>());
     video->addTrack(std::make_shared<VideoTrack>());
+    state.video = video;
 
     auto rectClip = std::make_shared<clips::Circle>();
     rectClip->m_properties.setKeyframe("position", 120, Vector2D{ .x = 500, .y = 1000}.toString());
@@ -97,12 +100,10 @@ int main() {
     video->audioTracks.push_back(std::make_shared<AudioTrack>());
     video->audioTracks.push_back(std::make_shared<AudioTrack>());
 
-    auto& state = State::get();
     if (ma_engine_init(NULL, &state.soundEngine) != MA_SUCCESS) {
         fmt::println("could not init engine");
     }
     
-    state.video = video;
     state.textRenderer = std::make_shared<TextRenderer>();
 
     app.run();

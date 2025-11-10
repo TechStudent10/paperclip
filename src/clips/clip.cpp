@@ -200,6 +200,7 @@ void ClipProperty::drawProperty() {
 
 void ClipProperties::addProperty(ClipProperty* property) {
     property->clip = clip;
+    property->data = property->keyframes[0];
     properties[property->id] = std::make_shared<ClipProperty>(*property);
 }
 

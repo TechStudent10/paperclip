@@ -71,6 +71,13 @@ namespace clips {
 
         stbi_image_free(imageData);
 
+        previewFrame = std::make_shared<Frame>(
+            width,
+            height
+        );
+        previewFrame->clearFrame();
+        previewFrame->drawTexture(texture, { 0, 0 }, { width, height }, VAO, VBO, EBO);
+
         initialized = true;
 
         return true;
@@ -103,6 +110,12 @@ namespace clips {
 
         frame->drawTexture(texture, position, { scaledW, scaledH }, VAO, VBO, EBO, rotation);
     }
+
+    GLuint ImageClip::getPreviewTexture(int) {
+        return previewFrame->textureID;
+    }
+
+    Vector2D ImageClip::getPreviewSize() { return { width, height }; }
 
     ImageClip::~ImageClip() {
         onDelete();

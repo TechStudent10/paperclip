@@ -55,6 +55,13 @@ namespace clips {
         );
 
         m_metadata.name = "Text";
+
+        previewFrame = std::make_shared<Frame>(
+            500,
+            500
+        );
+        previewFrame->clearFrame();
+        State::get().textRenderer->drawText(previewFrame.get(), "A", "resources/fonts/Inter.ttf", { 0, 0 }, { 0, 0, 0, 255 }, 500);
     }
 
     Vector2D Text::getSize() {
@@ -79,4 +86,10 @@ namespace clips {
 
         size = state.textRenderer->drawText(frame, text, font, pos, color, fontSize, rotation);
     }
+
+    GLuint Text::getPreviewTexture(int) {
+        return previewFrame->textureID;
+    }
+
+    Vector2D Text::getPreviewSize() { return { 500, 500 }; }
 }

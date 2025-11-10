@@ -259,4 +259,10 @@ public:
     virtual ClipType getType() { return ClipType::None; }
     virtual Vector2D getSize() { return { 0, 0 }; }
     virtual Vector2D getPos() { return { 0, 0 }; }
+    
+    virtual GLuint getPreviewTexture(int frame) {
+        fmt::println("unimplemented");
+        return 0;
+    }
+    virtual Vector2D getPreviewSize() { return { 0, 0 }; }
 };

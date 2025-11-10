@@ -11,6 +11,23 @@ namespace clips {
         );
 
         m_metadata.name = "Rectangle";
+
+        previewFrame = std::make_shared<Frame>(
+            500,
+            500
+        );
+        previewFrame->clearFrame();
+        int squareSize = 200;
+        previewFrame->drawRect({
+            .pos = {
+                (500 - squareSize) / 2,
+                (500 - squareSize) / 2
+            },
+            .size {
+                squareSize,
+                squareSize
+            }
+        }, { 0, 0, 0, 255 });
     }
 
     Vector2D Rectangle::getPos() {
@@ -28,4 +45,10 @@ namespace clips {
         RGBAColor color = RGBAColor::fromString(m_properties.getProperty("color")->data);
         frame->drawRect(dimensions, color);
     }
+
+    GLuint Rectangle::getPreviewTexture(int) {
+        return previewFrame->textureID;
+    }
+
+    Vector2D Rectangle::getPreviewSize() { return { 500, 500 }; }
 }

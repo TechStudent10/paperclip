@@ -42,6 +42,39 @@ bool AudioClip::initalize() {
         return false;
     }
 
+    ma_decoder decoder;
+    ma_decoder_config config = ma_decoder_config_init(ma_format_f32, 1, 48000);
+
+    auto res = ma_decoder_init_file(path.c_str(), &config, &decoder);
+    if (res != MA_SUCCESS) {
+        fmt::println("could not initialize decoder: {}", (int)res);
+        return false;
+    }
+    int framesPerChunk = decoder.outputSampleRate * 0.001f; // every 1ms
+    float buffer[framesPerChunk];
+    ma_uint64 framesRead;
+
+    // do NOT switch this to a regular while loop
+    // it breaks the res != MA_SUCCESS check up there
+    // because of undefined behavior
+    // i love c++
+    do {
+        ma_decoder_read_pcm_frames(&decoder, buffer, framesPerChunk, &framesRead);
+
+        float sumSq = 0.f;
+        for (ma_uint32 i = 0; i < framesRead; i++) {
+            float s = buffer[i];
+            sumSq += s * s;
+        }
+
+        float rms = sqrt(sumSq / framesRead);
+        waveform.push_back(rms);
+    } while (framesRead > 0);
+
+    fmt::println("decoded audio waveform!");
+
+    ma_decoder_uninit(&decoder);
+
     initialized = true;
 
     return true;
@@ -51,7 +84,7 @@ void AudioClip::play() {
     initalize();
     if (this->playing) return;
     auto volume = Vector1D::fromString(m_properties.getProperty("volume")->data).number;
-    ma_sound_set_volume(&sound, (float)volume / 255);
+    ma_sound_set_volume(&sound, (float)volume / 100.f);
     if (ma_sound_start(&sound) != MA_SUCCESS) {
         fmt::println("no success :(");
     }
@@ -93,7 +126,9 @@ void AudioTrack::processTime() {
         auto clip = _clip.second;
         if (currentFrame >= clip->startFrame && currentFrame < clip->startFrame + clip->duration && state.isPlaying) {
             float seconds = state.video->timeForFrame(currentFrame - clip->startFrame);
-            if (std::abs(clip->getCursor() - seconds) >= 0.25f) {
+            // the threshold is how far off the playback audio can be before we re-align it
+            float threshold = 0.05f;
+            if (std::abs(clip->getCursor() - seconds) >= threshold) {
                 clip->seekToSec(seconds);
             }
             clip->play();

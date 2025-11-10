@@ -25,7 +25,8 @@
 })()
 
 // cool little debug macro
-#define debug(statement) ([&]() { auto res = statement; fmt::println("{}: {}", #statement, res); return res; })()
+// TODO: add __FILE__ and line
+#define debug(statement) ([&]() { auto res = statement; fmt::println("{}:{} {}: {}", __FILE__, __LINE__, #statement, res); return res; })()
 
 static constexpr double PI_DIV_180 = PI / 180.f;
 
@@ -35,6 +36,14 @@ namespace utils {
     template <typename T>
     bool vectorContains(std::vector<T> vec, T elem) {
         return std::find(vec.begin(), vec.end(), elem) != vec.end();
+    }
+
+    template <typename T>
+    void removeFromVector(std::vector<T> vec, T elem) {
+        vec.erase(
+            std::remove(vec.begin(), vec.end(), elem),
+            vec.end()
+        );
     }
 } // namespace utils
 

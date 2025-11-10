@@ -47,11 +47,11 @@ Frame::Frame(int width, int height) : width(width), height(height) {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
 }
 
-void Frame::clearFrame() {
+void Frame::clearFrame(RGBAColor color) {
     glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 
     glViewport(0, 0, width, height);
-    glClearColor(1, 1, 1, 1);
+    glClearColor(color.r / 255.f, color.g / 255.f, color.b / 255.f, color.a / 255.f);
     glClear(GL_COLOR_BUFFER_BIT);
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);

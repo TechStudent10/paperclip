@@ -11,6 +11,8 @@
 // ¯\_(ツ)_/¯
 // --------------------------------------------------------------
 
+#include <glad/include/glad/gl.h>
+
 #include <imgui_internal.h>
 #include <fmt/base.h>
 #include <fmt/format.h>
@@ -186,22 +188,17 @@ void Timeline::drawTrack(ImDrawList* drawList, const ImVec2& canvasPos, const Im
     auto& state = State::get();
 
     float track_y = canvasPos.y + RULER_HEIGHT +
-        (type == TrackType::Video ? trackListSize - 1 - trackIndex : trackIndex) * 61.0f +
-        (type == TrackType::Video ? 0 : state.video->getTracks().size() * 61);
+        (type == TrackType::Video ? trackListSize - 1 - trackIndex : trackIndex) * (CLIP_HEIGHT + 1) +
+        (type == TrackType::Video ? 0 : state.video->getTracks().size() * (CLIP_HEIGHT + 1));
 
     ImVec2 header_pos = ImVec2(canvasPos.x, track_y);
-    ImVec2 header_size = ImVec2(TRACK_HEADER_WIDTH, 60.0f);
+    ImVec2 header_size = ImVec2(TRACK_HEADER_WIDTH, CLIP_HEIGHT);
 
     ImVec2 content_pos = ImVec2(canvasPos.x + TRACK_HEADER_WIDTH, track_y);
-    ImVec2 content_size = ImVec2(canvasSize.x - TRACK_HEADER_WIDTH, 60.0f);
+    ImVec2 content_size = ImVec2(canvasSize.x - TRACK_HEADER_WIDTH, CLIP_HEIGHT);
 
     bool trackSelected = trackIndex == selectedTrackIdx && type == selectedTrackType;
     int rg = trackSelected ? 70 : 55;
-
-    drawList->AddRectFilled(header_pos, ImVec2(header_pos.x + header_size.x, header_pos.y + header_size.y), IM_COL32(rg, rg, rg + 3, 255));
-    drawList->AddRect(header_pos, ImVec2(header_pos.x + header_size.x, header_pos.y + header_size.y), IM_COL32(rg + 15, rg + 15, rg + 18, 255));
-
-    drawList->AddText(ImVec2(header_pos.x + 10, header_pos.y + 10), IM_COL32(200, 200, 200, 255), fmt::format("{} {}", type == TrackType::Audio ? "Audio" : "Video", trackIndex + 1).c_str());
 
     ImU32 track_bg_color = trackSelected ? IM_COL32(50, 50, 53, 255) : IM_COL32(45, 45, 48, 255);
     drawList->AddRectFilled(content_pos, ImVec2(content_pos.x + content_size.x, content_pos.y + content_size.y), track_bg_color);
@@ -224,6 +221,11 @@ void Timeline::drawTrack(ImDrawList* drawList, const ImVec2& canvasPos, const Im
             };
             break;
     }
+
+    drawList->AddRectFilled(header_pos, ImVec2(header_pos.x + header_size.x, header_pos.y + header_size.y), IM_COL32(rg, rg, rg + 3, 255));
+    drawList->AddRect(header_pos, ImVec2(header_pos.x + header_size.x, header_pos.y + header_size.y), IM_COL32(rg + 15, rg + 15, rg + 18, 255));
+
+    drawList->AddText(ImVec2(header_pos.x + 10, header_pos.y + 10), IM_COL32(200, 200, 200, 255), fmt::format("{} {}", type == TrackType::Audio ? "Audio" : "Video", trackIndex + 1).c_str());
 
     drawList->AddLine(ImVec2(content_pos.x, content_pos.y + content_size.y), ImVec2(content_pos.x + content_size.x, content_pos.y + content_size.y), IM_COL32(70, 70, 73, 255));
 
@@ -258,20 +260,76 @@ void Timeline::drawClip(ImDrawList* drawList, const TimelineClip& clip, const Im
     float visibleEndX = std::min(clipEndX, trackEndX);
     float visibleWidth = visibleEndX - visibleStartX;
 
+    bool leftHandleVisible = clipX >= trackPos.x - 1;
+    bool rightHandleVisible = clipEndX <= trackEndX + 1;
+
     ImVec2 clipPos = ImVec2(visibleStartX, trackPos.y + 5);
     ImVec2 clipSize = ImVec2(visibleWidth, trackSize.y - 10);
 
     ImU32 clipColor = type == TrackType::Video ? IM_COL32(150, 200, 255, 255) : IM_COL32(100, 150, 100, 255);
     drawList->AddRectFilled(clipPos, ImVec2(clipPos.x + clipSize.x, clipPos.y + clipSize.y), clipColor);
 
+    ImU32 darkenedCol = type == TrackType::Video ? IM_COL32(130, 180, 235, 255) : IM_COL32(80, 130, 80, 255);
+    drawList->AddRectFilled(
+        ImVec2(clipPos.x + (leftHandleVisible ? RESIZE_HANDLE_WIDTH : 0), clipPos.y + clipSize.y - 25),
+        ImVec2(clipPos.x + clipSize.x - (rightHandleVisible ? RESIZE_HANDLE_WIDTH : 0), clipPos.y + clipSize.y),
+        darkenedCol
+    );
+
+    auto height = CLIP_HEIGHT - 35.f;
+    auto previewSize = clip.clip->getPreviewSize();
+    auto scale = height / previewSize.y;
+    auto width = (previewSize.x * scale);
+    
+    auto& state = State::get();
+
+    if (clip.clip->getType() != ClipType::Audio) {
+        for (int x = 0; x < (clipWidth - (rightHandleVisible ? RESIZE_HANDLE_WIDTH : 0)); x++) {        
+            if ((int)x % (int)width != 0) continue;
+            
+            auto frame = state.video->frameForTime((x) / pixelsPerSecond);
+            
+            float imgStartX = clipX + RESIZE_HANDLE_WIDTH + x;
+            if (imgStartX < 0 || imgStartX > (clipX + visibleWidth + scrollX)) continue;
+            float imgEndX = imgStartX + width;
+
+            float cropAmount = (std::min(imgEndX, clipPos.x + clipSize.x - (rightHandleVisible ? RESIZE_HANDLE_WIDTH : 0)) - imgStartX) / width;
+
+            ImVec2 uv0 = ImVec2(0.0f, 0.0f);
+            ImVec2 uv1 = ImVec2(cropAmount, 1.0f);
+
+            drawList->AddImage(
+                (ImTextureID)(intptr_t)clip.clip->getPreviewTexture(frame),
+                ImVec2(imgStartX, clipPos.y),
+                ImVec2(std::min(imgStartX + width, clipPos.x + clipSize.x - (rightHandleVisible ? RESIZE_HANDLE_WIDTH : 0)), clipPos.y + height),
+                uv0,
+                uv1
+            );            
+        }
+    } else {
+        auto audioClip = std::static_pointer_cast<AudioClip>(clip.clip);
+        auto pixelsPerMs = pixelsPerSecond / 1000.f;
+
+        for (int i = 0; i < clipWidth; i++) {
+            auto ms = (i) / pixelsPerMs;
+            if (ms >= audioClip->waveform.size()) continue;
+            double amplitude = audioClip->waveform[ms];
+            auto x = (clipX + RESIZE_HANDLE_WIDTH + i);
+            if (x < 0 || x > (clipX + visibleWidth + scrollX)) continue;
+            drawList->AddLine(
+                ImVec2(x, clipPos.y + height),
+                ImVec2(x, clipPos.y + height - (std::min(amplitude * (Vector1D::fromString(audioClip->m_properties.getProperty("volume")->data).number / 100.f), 1.0) * height)),
+                IM_COL32(255, 255, 255, 255)
+            );
+        }
+    }
+
     drawList->AddRect(clipPos, ImVec2(clipPos.x + clipSize.x, clipPos.y + clipSize.y), IM_COL32(255, 255, 255, 100), 0.0f, 0, 1.0f);
 
     ImGuiIO& io = ImGui::GetIO();
     ImVec2 mousePos = io.MousePos;
 
-    auto& state = State::get();
-
-    if (clipX >= trackPos.x - 1) { // smol tolerance
+    if (leftHandleVisible) { // smol tolerance
         drawList->AddRectFilled(
             clipPos,
             ImVec2(clipPos.x + RESIZE_HANDLE_WIDTH, clipPos.y + clipSize.y),
@@ -291,7 +349,7 @@ void Timeline::drawClip(ImDrawList* drawList, const TimelineClip& clip, const Im
         }
     }
 
-    if (clipEndX <= trackEndX + 1) { // smol tolerance x2
+    if (rightHandleVisible) { // smol tolerance x2
         ImVec2 right_handle_pos = ImVec2(clipPos.x + clipSize.x - RESIZE_HANDLE_WIDTH, clipPos.y);
         drawList->AddRectFilled(
             right_handle_pos,
@@ -319,22 +377,6 @@ void Timeline::drawClip(ImDrawList* drawList, const TimelineClip& clip, const Im
         if (ImGui::IsMouseClicked(0) && hovered && !isPlacingClip) {
             auto& state = State::get();
             auto id = clip.clip->uID;
-            // Action action = {
-            //     .perform = [this](std::string info) {
-                    
-            //     },
-            //     .undo = [&](std::string info) {
-            //         state.deselect();
-            //         isDragging = false;
-            //         isMovingBetweenTracks = false;
-            //         resizingClip = nullptr;
-            //         draggingTrackIdx = -1;
-            //         originalTrackId = -1;
-            //     },
-            //     .info = id
-            // };
-
-            // fmt::println("{}", state.selectedClips.size());
             if (!io.KeyShift && !state.isClipSelected(clip.clip)) {
                 state.deselect();
             }
@@ -344,14 +386,10 @@ void Timeline::drawClip(ImDrawList* drawList, const TimelineClip& clip, const Im
             isMovingBetweenTracks = false;
             initialStartFrame = clip.clip->startFrame;
             
-            // action.perform(id);
             dragOffset = ImVec2(
                 (state.video->timeForFrame(clip.clip->startFrame) * pixelsPerSecond) - (mousePos.x - canvasPos.x - TRACK_HEADER_WIDTH + scrollX),
                 0
             );
-
-            // state.undoStack.push(action);
-            // state.redoStack = std::stack<Action>();
         }
     }
 
@@ -366,7 +404,7 @@ void Timeline::drawClip(ImDrawList* drawList, const TimelineClip& clip, const Im
         drawList->AddText(
             font,
             std::max(size, 0.1f),
-            ImVec2(clipPos.x + 5 + RESIZE_HANDLE_WIDTH, clipPos.y + 5),
+            ImVec2(clipPos.x + 5 + (leftHandleVisible ? RESIZE_HANDLE_WIDTH : 0), clipPos.y + clipSize.y - 25),
             clip.selected ?
                 IM_COL32(230, 245, 65, 255) :
                 IM_COL32(255, 255, 255, 255),
@@ -399,7 +437,26 @@ void Timeline::drawPlayhead(ImDrawList* drawList, const ImVec2& canvasPos, const
     float playhead_x = canvasPos.x + TRACK_HEADER_WIDTH + (getPlayheadTime() * pixelsPerSecond - scrollX);
 
     if (playhead_x >= canvasPos.x + TRACK_HEADER_WIDTH && playhead_x <= canvasPos.x + canvasSize.x) {
-        drawList->AddLine(ImVec2(playhead_x, canvasPos.y + RULER_HEIGHT - (RULER_HEIGHT + TRACK_HEADER_WIDTH + (60.f * std::min(trackScrollY, -2.2f)))), ImVec2(playhead_x, canvasPos.y + canvasSize.y - (RULER_HEIGHT + TRACK_HEADER_WIDTH + (60.f * std::min(trackScrollY, -2.2f)))), IM_COL32(255, 100, 100, 255), 2.0f);
+        drawList->AddLine(
+            ImVec2(
+                playhead_x,
+                canvasPos.y + RULER_HEIGHT -
+                (
+                    RULER_HEIGHT + TRACK_HEADER_WIDTH +
+                    (60.f * std::min(trackScrollY, -2.2f))
+                )
+            ),
+            ImVec2(
+                playhead_x,
+                canvasPos.y + canvasSize.y -
+                (
+                    RULER_HEIGHT + TRACK_HEADER_WIDTH +
+                    (60.f * std::min(trackScrollY, -2.2f))
+                )
+            ),
+            IM_COL32(255, 100, 100, 255),
+            2.0f
+        );
 
         ImVec2 handle_pos = ImVec2(playhead_x - 6, canvasPos.y + RULER_HEIGHT - 10);
         ImVec2 handle_size = ImVec2(12, 10);
@@ -484,12 +541,12 @@ void Timeline::handleInteractions(const ImVec2& canvasPos, const ImVec2& canvasS
 
         // playhead
         float playhead_x = canvasPos.x + TRACK_HEADER_WIDTH + (getPlayheadTime() * pixelsPerSecond - scrollX);
-        if (mouse_pos.y <= canvasPos.y - (TRACK_HEADER_WIDTH + (60.f * std::min(trackScrollY, -2.2f))) &&
+        if (mouse_pos.y <= canvasPos.y - (TRACK_HEADER_WIDTH + (CLIP_HEIGHT * std::min(trackScrollY, -2.2f))) &&
             std::abs(mouse_pos.x - playhead_x) < 10) {
             isScrubbing = true;
         }
         // ruler (scrub to time)
-        else if (mouse_pos.y <= canvasPos.y - (TRACK_HEADER_WIDTH + (60.f * std::min(trackScrollY, -2.2f))) && mouse_pos.x >= canvasPos.x + TRACK_HEADER_WIDTH) {
+        else if (mouse_pos.y <= canvasPos.y - (TRACK_HEADER_WIDTH + (CLIP_HEIGHT * std::min(trackScrollY, -2.2f))) && mouse_pos.x >= canvasPos.x + TRACK_HEADER_WIDTH) {
             float new_time = (mouse_pos.x - canvasPos.x - TRACK_HEADER_WIDTH + scrollX) / pixelsPerSecond;
             state.currentFrame = std::max(state.video->frameForTime(new_time), 0);
             isScrubbing = true;
@@ -884,7 +941,7 @@ void Timeline::handleInteractions(const ImVec2& canvasPos, const ImVec2& canvasS
 
     if (ImGui::IsMouseReleased(0)) {
         if (isDragging) {
-            if (resizeMode == RESIZE_NONE) {
+            if (resizeMode == RESIZE_NONE && totalDeltaFrame != 0) {
                 state.addAction(std::make_shared<MoveClip>(state.selectedClips, totalDeltaFrame));
             }
         }
