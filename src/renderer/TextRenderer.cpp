@@ -111,7 +111,7 @@ Vector2DF TextRenderer::getTextSize(std::string text, std::string fontName, floa
     return { maxWidth, height };
 }
 
-Vector2DF TextRenderer::drawText(Frame* frame, std::string text, std::string fontName, Vector2D pos, RGBAColor color, float pixelHeight, float rotation) {
+Vector2DF TextRenderer::drawText(Frame* frame, std::string text, std::string fontName, Transform transform, RGBAColor color, float pixelHeight) {
     if (!fonts.contains(fontName)) {
         loadFont(fontName);
     }
@@ -127,26 +127,23 @@ Vector2DF TextRenderer::drawText(Frame* frame, std::string text, std::string fon
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    glm::mat4 projection = glm::ortho(0.f, (float)frame->width, 0.f, (float)frame->height, -1.f, 1.f);
-
     auto size = getTextSize(text, fontName, scale);
-
-    auto center = glm::vec2(pos.x + size.x * 0.5f, pos.y + size.y * 0.5f);
-    glm::mat4 model = glm::mat4(1.0f);
-    model = glm::translate(model, glm::vec3(center, 0.0f));
-    model = glm::rotate(model, glm::radians(rotation), glm::vec3(0, 0, 1));
-    model = glm::translate(model, glm::vec3(-center.x, -center.y, 0.f));
-
-    projection = projection * model;
+    // glm::mat4 projection = glm::ortho(0.f, (float)frame->width, 0.f, (float)frame->height, -1.f, 1.f);
+    glm::mat4 matrix = frame->createBaseMatrix(transform.anchorPoint);
+    glm::mat4 flipY = glm::scale(glm::mat4(1.0f), glm::vec3(1.0f, -1.0f, 1.0f));
 
     glUseProgram(textShaderProgram);
     glUniform4f(
         glGetUniformLocation(textShaderProgram, "textColor"),
         color.r / 255.f, color.g / 255.f, color.b / 255.f, color.a / 255.f
     );
+    auto projectionLoc = glGetUniformLocation(textShaderProgram, "projection");
+    glm::mat4 model = frame->createModelFromTransform(transform, { .x = transform.position.x - (int)size.x, .y = -transform.position.y }, size, true);
+    glm::mat4 finalMatrix = matrix * flipY * model;
+
     glUniformMatrix4fv(
-        glGetUniformLocation(textShaderProgram, "projection"),
-        1, GL_FALSE, glm::value_ptr(projection)
+        projectionLoc,
+        1, GL_FALSE, glm::value_ptr(finalMatrix)
     );
 
     glUniform1i(
@@ -154,18 +151,19 @@ Vector2DF TextRenderer::drawText(Frame* frame, std::string text, std::string fon
         0
     );
 
-    float cursorX = pos.x;
-    float baseline = pos.y;
+    float cursorX = 0;
+    float baseline = 0;
     float maxCursorX = cursorX;
 
     Font font = fonts[fontName];
 
     int lines = 1;
 
+    fmt::println("--------");
     for (char character : text) {
         if (character == '\n') {
             baseline += font.lineHeight * scale;
-            cursorX = pos.x;
+            cursorX = 0;
             lines++;
             continue;
         }
@@ -181,7 +179,7 @@ Vector2DF TextRenderer::drawText(Frame* frame, std::string text, std::string fon
         float h = ch.size.y * scale;
 
         // little debugging thing
-        // fmt::println("x: {}, y: {}, w: {}, h: {}, cursor: {}", xPos, yPos, w, h, cursorX);
+        fmt::println("x: {}, y: {}, w: {}, h: {}, cursor: {}, char: {}", xPos, yPos, w, h, cursorX, character);
 
         float vertices[6][4] = {
             { xPos,     yPos + h,   0.0f, 1.0f },            
@@ -212,5 +210,5 @@ Vector2DF TextRenderer::drawText(Frame* frame, std::string text, std::string fon
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    return { maxCursorX - pos.x, font.lineHeight * scale * lines };
+    return { maxCursorX - transform.position.x, font.lineHeight * scale * lines };
 }

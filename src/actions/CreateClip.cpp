@@ -5,6 +5,7 @@
 
 void CreateClip::perform() {
     auto& state = State::get();
+    state.deselect();
     switch (type) {
         case ClipType::Audio:
             state.video->addAudioClip(trackIdx, std::static_pointer_cast<AudioClip>(clip));

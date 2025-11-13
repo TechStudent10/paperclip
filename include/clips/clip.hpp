@@ -15,6 +15,7 @@ enum class PropertyType {
     Dimensions,
     Color,
     Position,
+    Transform,
     Dropdown
 };
 
@@ -142,7 +143,7 @@ public:
             ->setType(PropertyType::Dimensions)
             ->setId("dimensions")
             ->setName("Dimensions")
-            ->setDefaultKeyframe(Dimensions{ .pos = { .x = 10, .y = 10 }, .size = { .x = 500, .y = 500 } }.toString());
+            ->setDefaultKeyframe(Dimensions{ .size = { .x = 500, .y = 500 }, .transform = { .position = { .x = 10, .y = 10 } } }.toString());
     }
 
     static ClipProperty* color() {
@@ -159,6 +160,20 @@ public:
             ->setId("position")
             ->setName("Position")
             ->setDefaultKeyframe(Vector2D{ .x = 0, .y = 0 }.toString());
+    }
+
+    static ClipProperty* transform() {
+        return ClipProperty::create()
+            ->setType(PropertyType::Transform)
+            ->setId("transform")
+            ->setName("Transform")
+            ->setDefaultKeyframe(Transform{
+                .position = { .x = 0, .y = 0 },
+                .anchorPoint = { 0.5f ,0.5f },
+                .rotation = 0,
+                .pitch = 0,
+                .roll = 0
+            }.toString());
     }
 };
 

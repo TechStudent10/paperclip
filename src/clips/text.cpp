@@ -5,7 +5,7 @@
 namespace clips {
     Text::Text(): Clip(60, 120) {
         m_properties.addProperty(
-            ClipProperty::position()
+            ClipProperty::transform()
         );
 
         m_properties.addProperty(
@@ -47,13 +47,6 @@ namespace clips {
                 ->setDefaultKeyframe(Vector1D{ .number = 90 }.toString())
         );
 
-        m_properties.addProperty(
-            ClipProperty::number()
-                ->setId("rotation")
-                ->setName("Rotation")
-                ->setDefaultKeyframe(Vector1D{ .number = 0 }.toString())
-        );
-
         m_metadata.name = "Text";
 
         previewFrame = std::make_shared<Frame>(
@@ -71,7 +64,7 @@ namespace clips {
     }
 
     Vector2D Text::getPos() {
-        Vector2D position = Vector2D::fromString(m_properties.getProperty("position")->data);
+        Vector2D position = Transform::fromString(m_properties.getProperty("transform")->data).position;
         return position;
     }
 
@@ -80,11 +73,10 @@ namespace clips {
         auto text = m_properties.getProperty("text")->data;
         auto font = fmt::format("resources/fonts/{}.ttf", m_properties.getProperty("font")->data);
         auto fontSize = Vector1D::fromString(m_properties.getProperty("size")->data).number;
-        auto rotation = Vector1D::fromString(m_properties.getProperty("rotation")->data).number;
-        auto pos = Vector2D::fromString(m_properties.getProperty("position")->data);
         auto color = RGBAColor::fromString(m_properties.getProperty("color")->data);
+        auto transform = Transform::fromString(m_properties.getProperty("transform")->data);
 
-        size = state.textRenderer->drawText(frame, text, font, pos, color, fontSize, rotation);
+        size = state.textRenderer->drawText(frame, text, font, transform, color, fontSize);
     }
 
     GLuint Text::getPreviewTexture(int) {

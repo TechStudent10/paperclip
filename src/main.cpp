@@ -36,21 +36,21 @@ int main() {
     state.video = video;
 
     auto rectClip = std::make_shared<clips::Circle>();
-    rectClip->m_properties.setKeyframe("position", 120, Vector2D{ .x = 500, .y = 1000}.toString());
-    rectClip->m_properties.setKeyframe("position", 180, Vector2D{ .x = 200, .y = 800}.toString());
-    rectClip->m_properties.setKeyframe("position", 240, Vector2D{ .x = 0, .y = 500}.toString());
+    rectClip->m_properties.setKeyframe("transform", 120, Transform{ .position = { .x = 500, .y = 1000 }, .anchorPoint = { 0, 0 } }.toString());
+    rectClip->m_properties.setKeyframe("transform", 180, Transform{ .position = { .x = 200, .y = 800 }, .anchorPoint = { 0, 0 } }.toString());
+    rectClip->m_properties.setKeyframe("transform", 240, Transform{ .position = { .x = 0, .y = 500 }, .anchorPoint = { 0, 0 } }.toString());
 
-    rectClip->m_properties.setKeyframeMeta("position", 120, {
+    rectClip->m_properties.setKeyframeMeta("transform", 120, {
         .easing = animation::Easing::Exponential,
         .mode = animation::EasingMode::EaseOut
     });
 
-    rectClip->m_properties.setKeyframeMeta("position", 180, {
+    rectClip->m_properties.setKeyframeMeta("transform", 180, {
         .easing = animation::Easing::Exponential,
         .mode = animation::EasingMode::EaseIn
     });
 
-    rectClip->m_properties.setKeyframeMeta("position", 240, {
+    rectClip->m_properties.setKeyframeMeta("transform", 240, {
         .easing = animation::Easing::Cubic,
         .mode = animation::EasingMode::EaseInOut
     });

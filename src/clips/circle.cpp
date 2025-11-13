@@ -4,7 +4,7 @@
 namespace clips {
     Circle::Circle(): Clip(60, 120) {
         m_properties.addProperty(
-            ClipProperty::position()
+            ClipProperty::transform()
         );
 
         m_properties.addProperty(
@@ -30,7 +30,7 @@ namespace clips {
 
         this->frame->clearFrame();
         auto previewRad = 150;
-        this->frame->drawCircle({ res.x / 2, res.y / 2 }, previewRad, { 0, 0, 0, 255 });
+        this->frame->drawCircle({ .position = {0 , 0 } }, previewRad, { 0, 0, 0, 255 });
     }
 
     Vector2D Circle::getSize() {
@@ -40,31 +40,19 @@ namespace clips {
     }
 
     Vector2D Circle::getPos() {
-        Vector2D position = Vector2D::fromString(m_properties.getProperty("position")->data);
+        Vector2D position = Transform::fromString(m_properties.getProperty("transform")->data).position;
         int radius = Vector1D::fromString(m_properties.getProperty("radius")->data).number;
-        return { position.x - radius, position.y - radius };
+        return position - radius;
     }
 
     void Circle::render(Frame* frame) {
-        Vector2D position = Vector2D::fromString(m_properties.getProperty("position")->data);
+        Transform transform = Transform::fromString(m_properties.getProperty("transform")->data);
         Vector1D radius = Vector1D::fromString(m_properties.getProperty("radius")->data);
         RGBAColor color = RGBAColor::fromString(m_properties.getProperty("color")->data);
-        debug(position.x);
-        debug(position.y);
-        debug(radius.number);
-        debug(color.r);
-        debug(color.g);
-        debug(color.b);
-        debug(color.a);
-        frame->drawCircle(position, radius.number, color);
-        if (frame != this->frame.get()) {
-            // this->frame->clearFrame();
-            // render(this->frame.get());
-        }
+        frame->drawCircle(transform, radius.number, color);
     }
 
     GLuint Circle::getPreviewTexture(int frameIdx) {
-        // frame->clearFrame({ frameIdx * 15, frameIdx * 15, frameIdx * 15 });
         return frame->textureID;
     }
 

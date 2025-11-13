@@ -50,6 +50,7 @@ void VideoTrack::render(Frame* frame, int targetFrame) {
                 }
 
 #define ANIMATE_NUM(old, new, arg) .arg = static_cast<int>(std::rint(old.arg + (float)(new.arg - old.arg) * progress))
+#define ANIMATE_FLOAT(old, new, arg) .arg = old.arg + (float)(new.arg - old.arg) * progress
 
                 std::map<PropertyType, std::function<void()>> handlers = {
                     { PropertyType::Position, [&]() {
@@ -85,13 +86,22 @@ void VideoTrack::render(Frame* frame, int targetFrame) {
                         auto nextDimensions = Dimensions::fromString(property.second->keyframes[nextKeyframe]);
 
                         property.second->data = Dimensions{
-                            .pos = {
-                                ANIMATE_NUM(oldDimensions.pos, nextDimensions.pos, x),
-                                ANIMATE_NUM(oldDimensions.pos, nextDimensions.pos, y),
-                            },
                             .size = {
-                                ANIMATE_NUM(oldDimensions.pos, nextDimensions.size, x),
-                                ANIMATE_NUM(oldDimensions.pos, nextDimensions.size, y),
+                                ANIMATE_NUM(oldDimensions.size, nextDimensions.size, x),
+                                ANIMATE_NUM(oldDimensions.size, nextDimensions.size, y),
+                            },
+                            .transform = {
+                                .position = {
+                                    ANIMATE_NUM(oldDimensions.transform.position, nextDimensions.transform.position, x),
+                                    ANIMATE_NUM(oldDimensions.transform.position, nextDimensions.transform.position, y),
+                                },
+                                .anchorPoint = {
+                                    ANIMATE_FLOAT(oldDimensions.transform.anchorPoint, nextDimensions.transform.anchorPoint, x),
+                                    ANIMATE_FLOAT(oldDimensions.transform.anchorPoint, nextDimensions.transform.anchorPoint, y),
+                                },
+                                ANIMATE_FLOAT(oldDimensions.transform, nextDimensions.transform, rotation),
+                                ANIMATE_FLOAT(oldDimensions.transform, nextDimensions.transform, pitch),
+                                ANIMATE_FLOAT(oldDimensions.transform, nextDimensions.transform, roll),
                             },
                         }.toString();
                     } },
@@ -109,9 +119,28 @@ void VideoTrack::render(Frame* frame, int targetFrame) {
                     { PropertyType::Percent, [&]() {
                         handlers[PropertyType::Number]();
                     } },
+                    { PropertyType::Transform, [&]() {
+                        auto oldTransform = Transform::fromString(property.second->keyframes[previousKeyframe]);
+                        auto nextTransform = Transform::fromString(property.second->keyframes[nextKeyframe]);
+
+                        property.second->data = Transform{
+                            .position = {
+                                ANIMATE_NUM(oldTransform.position, nextTransform.position, x),
+                                ANIMATE_NUM(oldTransform.position, nextTransform.position, y),
+                            },
+                            .anchorPoint = {
+                                ANIMATE_FLOAT(oldTransform.anchorPoint, nextTransform.anchorPoint, x),
+                                ANIMATE_FLOAT(oldTransform.anchorPoint, nextTransform.anchorPoint, y),
+                            },
+                            ANIMATE_FLOAT(oldTransform, nextTransform, rotation),
+                            ANIMATE_FLOAT(oldTransform, nextTransform, pitch),
+                            ANIMATE_FLOAT(oldTransform, nextTransform, roll),
+                        }.toString();
+                    } },
                 };
 
 #undef ANIMATE_NUM
+#undef ANIMATE_FLOAT
 
                 if (handlers.contains(property.second->type)) {
                     handlers[property.second->type]();

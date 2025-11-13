@@ -5,6 +5,7 @@
 
 void CreateVideoClip::perform() {
     auto& state = State::get();
+    state.deselect();
     auto videoClip = std::make_shared<clips::VideoClip>(metadata.filePath);
     
     videoClip->startFrame = frame;

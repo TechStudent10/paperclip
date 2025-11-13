@@ -11,7 +11,7 @@
 namespace clips {
     ImageClip::ImageClip(const std::string& path): Clip(0, 120), path(path) {
         m_properties.addProperty(
-            ClipProperty::position()
+            ClipProperty::transform()
         );
 
         m_properties.addProperty(
@@ -26,13 +26,6 @@ namespace clips {
                 ->setId("scale-y")
                 ->setName("Scale Y")
                 ->setDefaultKeyframe(Vector1D{ .number = 100 }.toString())   
-        );
-
-        m_properties.addProperty(
-            ClipProperty::number()
-                ->setId("rotation")
-                ->setName("Rotation (deg)")
-                ->setDefaultKeyframe(Vector1D{ .number = 0 }.toString())
         );
 
         m_metadata.name = std::filesystem::path(path).filename();
@@ -76,7 +69,7 @@ namespace clips {
             height
         );
         previewFrame->clearFrame();
-        previewFrame->drawTexture(texture, { 0, 0 }, { width, height }, VAO, VBO, EBO);
+        previewFrame->drawTexture(texture, { width, height }, { .position = { 0, 0 } }, VAO, VBO, EBO);
 
         initialized = true;
 
@@ -88,7 +81,7 @@ namespace clips {
     }
 
     Vector2D ImageClip::getPos() {
-        Vector2D position = Vector2D::fromString(m_properties.getProperty("position")->data);
+        Vector2D position = Transform::fromString(m_properties.getProperty("transform")->data).position;
         return position;
     }
 
@@ -99,16 +92,16 @@ namespace clips {
 
         float scaleX = (float)Vector1D::fromString(m_properties.getProperty("scale-x")->data).number / 100.f;
         float scaleY = (float)Vector1D::fromString(m_properties.getProperty("scale-y")->data).number / 100.f;
-        int rotation = Vector1D::fromString(m_properties.getProperty("rotation")->data).number;
         if (scaleX <= 0 || scaleY <= 0) {
             return;
         }
-        auto position = Vector2D::fromString(m_properties.getProperty("position")->data);
+
+        auto transform = Transform::fromString(m_properties.getProperty("transform")->data);
 
         scaledW = static_cast<int>(std::floor(width * scaleX));
         scaledH = static_cast<int>(std::floor(height * scaleY));
 
-        frame->drawTexture(texture, position, { scaledW, scaledH }, VAO, VBO, EBO, rotation);
+        frame->drawTexture(texture, { scaledW, scaledH }, transform, VAO, VBO, EBO);
     }
 
     GLuint ImageClip::getPreviewTexture(int) {

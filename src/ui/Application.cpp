@@ -194,7 +194,7 @@ void Application::draw() {
                 for (auto _clip : track->getClips()) {
                     auto clip = _clip.second;
                     audio.addClip(
-                        clip->m_metadata.name,
+                        clip->getPath(),
                         state.video->timeForFrame(clip->startFrame),
                         state.video->timeForFrame(clip->startFrame + clip->duration),
                         clip->m_properties.getProperty("volume")

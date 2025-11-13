@@ -20,7 +20,7 @@ namespace clips {
         m_metadata.name = std::filesystem::path(path).filename();
 
         m_properties.addProperty(
-            ClipProperty::position()
+            ClipProperty::transform()
         );
 
         m_properties.addProperty(
@@ -35,13 +35,6 @@ namespace clips {
                 ->setId("scale-y")
                 ->setName("Scale Y")
                 ->setDefaultKeyframe(Vector1D{ .number = 100 }.toString())
-        );
-
-        m_properties.addProperty(
-            ClipProperty::number()
-                ->setId("rotation")
-                ->setName("Rotation")
-                ->setDefaultKeyframe(Vector1D{ .number = 0 }.toString())
         );
 
         m_properties.addProperty(
@@ -143,7 +136,7 @@ namespace clips {
     }
 
     Vector2D VideoClip::getPos() {
-        Vector2D position = Vector2D::fromString(m_properties.getProperty("position")->data);
+        Vector2D position = Transform::fromString(m_properties.getProperty("transform")->data).position;
         return position;
     }
 
@@ -237,14 +230,12 @@ namespace clips {
             return;
         }
 
-        int rotation = Vector1D::fromString(m_properties.getProperty("rotation")->data).number;
-
-        auto position = Vector2D::fromString(m_properties.getProperty("position")->data);
+        auto transform = Transform::fromString(m_properties.getProperty("transform")->data);
 
         int scaledW = static_cast<int>(std::floor(width * scaleX));
         int scaledH = static_cast<int>(std::floor(height * scaleY));
 
-        frame->drawTextureYUV(textureY, textureU, textureV, position, { scaledW, scaledH }, VAO, VBO, EBO, rotation);
+        frame->drawTextureYUV(textureY, textureU, textureV, { scaledW, scaledH }, transform, VAO, VBO, EBO);
     }
 
     GLuint VideoClip::getPreviewTexture(int frameIdx) {
@@ -305,8 +296,8 @@ namespace clips {
                     textureY,
                     textureU,
                     textureV,
-                    { 0, 0 },
                     { width, height },
+                    { .position = { 0, 0 } },
                     VAO,
                     VBO,
                     EBO

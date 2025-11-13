@@ -34,12 +34,18 @@ void ClipProperty::drawProperty() {
     auto drawDimensions = [&]() {
         Dimensions dimensions = Dimensions::fromString(data);
 
-        bool x = ImGui::DragInt("X", &dimensions.pos.x);
-        bool y = ImGui::DragInt("Y", &dimensions.pos.y);
         bool w = ImGui::DragInt("Width", &dimensions.size.x);
         bool h = ImGui::DragInt("Height", &dimensions.size.y);
+
+        bool x = ImGui::DragInt("X", &dimensions.transform.position.x);
+        bool y = ImGui::DragInt("Y", &dimensions.transform.position.y);
+        bool rotation = ImGui::DragFloat("Rotation", &dimensions.transform.rotation);
+        bool pitch = ImGui::DragFloat("Pitch", &dimensions.transform.pitch);
+        bool roll = ImGui::DragFloat("Roll", &dimensions.transform.roll);
+        bool anchorX = ImGui::DragFloat("Anchor X", &dimensions.transform.anchorPoint.x);
+        bool anchorY = ImGui::DragFloat("Anchor Y", &dimensions.transform.anchorPoint.y);
         
-        if (x || y || w || h) {
+        if (x || y || w || h || rotation || pitch || roll || anchorX || anchorY) {
             setData(dimensions.toString());
         }
     };
@@ -109,6 +115,22 @@ void ClipProperty::drawProperty() {
         }
     };
 
+    auto drawTransform = [&]() {
+        Transform transform = Transform::fromString(data);
+
+        bool x = ImGui::DragInt("X", &transform.position.x);
+        bool y = ImGui::DragInt("Y", &transform.position.y);
+        bool rotation = ImGui::DragFloat("Rotation", &transform.rotation);
+        bool pitch = ImGui::DragFloat("Pitch", &transform.pitch);
+        bool roll = ImGui::DragFloat("Roll", &transform.roll);
+        bool anchorX = ImGui::DragFloat("Anchor X", &transform.anchorPoint.x);
+        bool anchorY = ImGui::DragFloat("Anchor Y", &transform.anchorPoint.y);
+
+        if (x || y || rotation || pitch || roll || anchorX || anchorY) {
+            setData(transform.toString());
+        }
+    };
+
     std::map<PropertyType, std::function<void()>> drawFuncs = {
         { PropertyType::Dimensions, drawDimensions },
         { PropertyType::Color, drawColorPicker },
@@ -116,6 +138,7 @@ void ClipProperty::drawProperty() {
         { PropertyType::Percent, drawInt },
         { PropertyType::Position, drawPosition },
         { PropertyType::Text, drawText },
+        { PropertyType::Transform, drawTransform },
         { PropertyType::Dropdown, drawDropdown }
     };
     drawFuncs[type]();

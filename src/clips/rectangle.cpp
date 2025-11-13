@@ -19,20 +19,21 @@ namespace clips {
         previewFrame->clearFrame();
         int squareSize = 200;
         previewFrame->drawRect({
-            .pos = {
-                (500 - squareSize) / 2,
-                (500 - squareSize) / 2
-            },
             .size {
                 squareSize,
                 squareSize
-            }
+            },
+            .transform = {
+                .position = {
+                    0, 0
+                }
+            },
         }, { 0, 0, 0, 255 });
     }
 
     Vector2D Rectangle::getPos() {
         Dimensions dimensions = Dimensions::fromString(m_properties.getProperty("dimensions")->data);
-        return dimensions.pos;
+        return dimensions.transform.position;
     }
 
     Vector2D Rectangle::getSize() {

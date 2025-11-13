@@ -45,6 +45,7 @@ public:
         path = reader.readStringU32().unwrapOr("");
     }
 
+    const std::string& getPath() { return path; }
     ClipType getType() override { return ClipType::Audio; }
 };
 
