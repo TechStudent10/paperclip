@@ -1,8 +1,12 @@
 #define SDL_MAIN_HANDLED
+#include <glad/include/glad/gl.h>
+#include <shaders/shader.hpp>
+#include <shaders/quad.hpp>
 #include <Application.hpp>
 #include <cstddef>
 #include <fmt/base.h>
 #include <fmt/format.h>
+#include <fmt/chrono.h>
 
 #include <state.hpp>
 #include <string_view>
@@ -18,7 +22,15 @@
 
 #include <fstream>
 
-bool ButtonCenteredOnLine(const char* label, float alignment = 0.5f) {
+#include <renderer/audio.hpp>
+
+#include <utils.hpp>
+
+#include <stb_image.h>
+
+#include <icons/IconsFontAwesome6.h>
+
+bool Application::ButtonCenteredOnLine(const char* label, float alignment) {
     ImGuiStyle& style = ImGui::GetStyle();
 
     float size = ImGui::CalcTextSize(label).x + style.FramePadding.x * 2.0f;
@@ -31,17 +43,34 @@ bool ButtonCenteredOnLine(const char* label, float alignment = 0.5f) {
     return ImGui::Button(label);
 }
 
-void TextCentered(std::string text) {
+bool Application::ImageButtonCenteredOnLine(const char* label, IconType iconType, float alignment) {
+    ImGuiStyle& style = ImGui::GetStyle();
+
+    auto icon = icons[iconType];
+
+    // float size = ImGui::CalcTextSize(label).x + style.FramePadding.x * 2.0f;
+    float size = icon.w;
+    float avail = ImGui::GetContentRegionAvail().x;
+
+    float off = (avail - size) * alignment;
+    if (off > 0.0f)
+        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + off);
+
+    return ImGui::ImageButton(label, icon.texture, ImVec2(icon.w, icon.h));
+}
+
+void TextCentered(std::string text, float alignment = 0.5f) {
     auto windowWidth = ImGui::GetContentRegionAvail().x;
     auto textWidth   = ImGui::CalcTextSize(text.c_str()).x;
 
-    ImGui::SetCursorPosX((windowWidth - textWidth) * 0.5f);
+    ImGui::SetCursorPosX((windowWidth - textWidth) * alignment);
     ImGui::Text("%s", text.c_str());
 }
 
 // wow i hate windows
 // https://stackoverflow.com/a/8032108
 #ifdef WIN32
+#include <winnls.h>
 const wchar_t* GetWC(const char* c) {
     std::string str(c);
     int count = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), str.length(), NULL, 0);
@@ -210,7 +239,8 @@ void Application::draw() {
 
             AudioRenderer audio(audioFilename, state.video->timeForFrame(state.video->frameCount));
             for (auto track : state.video->audioTracks) {
-                for (auto clip : track->getClips()) {
+                for (auto _clip : track->getClips()) {
+                    auto clip = _clip.second;
                     audio.addClip(
                         clip->m_metadata.name,
                         state.video->timeForFrame(clip->startFrame),
@@ -225,7 +255,7 @@ void Application::draw() {
 
             renderer.finish();
 
-            VPFFile::combineAV(audioFilename, videoFilename, state.exportPath);
+            utils::video::combineAV(audioFilename, videoFilename, state.exportPath);
 
             // ImGui::InsertNotification({
             //     ImGuiToastType::Success,
@@ -268,7 +298,7 @@ void Application::draw() {
         ImGui::DockBuilderSetNodeSize(dock_main_id, viewport->WorkSize);
 
         ImGuiID dock_right = ImGui::DockBuilderSplitNode(dock_main_id, ImGuiDir_Right, 0.25f, nullptr, &dock_main_id);
-        ImGuiID dock_bottom = ImGui::DockBuilderSplitNode(dock_main_id, ImGuiDir_Down, 0.35f, nullptr, &dock_main_id);
+        ImGuiID dock_bottom = ImGui::DockBuilderSplitNode(dock_main_id, ImGuiDir_Down, 0.4f, nullptr, &dock_main_id);
         ImGuiID dock_left = ImGui::DockBuilderSplitNode(dock_main_id, ImGuiDir_Left, 0.25f, nullptr, &dock_main_id);
 
         ImGui::DockBuilderDockWindow("Media", dock_left);
@@ -285,11 +315,13 @@ void Application::draw() {
     ImGui::SetNextWindowClass(&bareWindowClass);
     ImGui::Begin("Media");
 
+    static int defaultTime = state.video->frameForTime(5);
+
     if (ImGui::BeginTabBar("MediaTabBar")) {
-        if (ImGui::BeginTabItem("Bultin")) {
-            drawClipButton<clips::Rectangle>("Rectangle", 50);
-            drawClipButton<clips::Circle>("Circle", 50);
-            drawClipButton<clips::Text>("Text", 50);
+        if (ImGui::BeginTabItem("Built-in")) {
+            drawClipButton<clips::Rectangle>("Rectangle", defaultTime);
+            drawClipButton<clips::Circle>("Circle", defaultTime);
+            drawClipButton<clips::Text>("Text", defaultTime);
 
             ImGui::EndTabItem();
         }
@@ -308,10 +340,9 @@ void Application::draw() {
                 );
 
                 if (result == NFD_OKAY) {
-                    showUploadDialog = true;
-                    std::string outFile = std::move(ensureCStr(outPath));
+                    std::string outFile = std::string(ensureCStr(std::move(outPath)));
                     convertThread = std::thread([outFile]() {
-                        VPFFile::extractAudio(outFile);
+                        utils::video::extractAudio(outFile);
 
                         ma_decoder decoder;
                         ma_uint64 pcmLength;
@@ -422,7 +453,7 @@ void Application::draw() {
                         clip->duration = soundFile.frameCount;
                         clip->m_properties.getProperties()["volume"]->data = Vector1D{ .number = 100 }.toString();
                         state.lastRenderedFrame = -1;
-                        state.video->audioTracks[trackIdx]->addClip(clip);
+                        state.video->addAudioClip(trackIdx, clip);
                     };
                 }
             }
@@ -450,15 +481,6 @@ void Application::draw() {
     }
     ImGui::End();
 
-    if (showUploadDialog) {
-        ImGuiIO& io = ImGui::GetIO();
-        ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f), ImGuiCond_Always, ImVec2(0.5f,0.5f));
-        ImGui::SetNextWindowFocus();
-        ImGui::Begin("Uploading", &showUploadDialog);
-        ImGui::Text("%s", fmt::format("{}%", convertProgress * 100).c_str());
-        ImGui::End();
-    }
-
     ImGui::SetNextWindowClass(&bareWindowClass);
     ImGui::Begin("Properties");
     auto setData = [&](std::shared_ptr<ClipProperty> property, std::string data) {
@@ -471,14 +493,15 @@ void Application::draw() {
             return;
         }
 
-        int keyframe = state.currentFrame - state.draggingClip->startFrame;
-        state.draggingClip->m_properties.setKeyframe(property->id, keyframe, data);
+        auto selectedClip = state.getSelectedClip();
+        int keyframe = state.currentFrame - selectedClip->startFrame;
+        selectedClip->m_properties.setKeyframe(property->id, keyframe, data);
         state.lastRenderedFrame = -1;
         for (auto audTrack : state.video->audioTracks) {
             audTrack->processTime();
         }
     };
-    if (state.draggingClip) {
+    if (state.isClipSelected()) {
         auto drawDimensions = [&](std::shared_ptr<ClipProperty> property) {
             Dimensions dimensions = Dimensions::fromString(property->data);
 
@@ -537,7 +560,9 @@ void Application::draw() {
             }
         };
 
-        TextCentered(state.draggingClip->m_metadata.name);
+        auto selectedClip = state.getSelectedClip();
+
+        TextCentered(selectedClip->m_metadata.name);
 
         ImGui::Separator();
 
@@ -546,7 +571,7 @@ void Application::draw() {
 
         }
         if (ImGui::BeginPopup("Keyframe Editor")) {
-            for (auto prop : state.draggingClip->m_properties.getProperties()) {
+            for (auto prop : selectedClip->m_properties.getProperties()) {
                 ImGui::Text("%s", prop.second->name.c_str());
             }
             ImGui::EndPopup();
@@ -554,7 +579,7 @@ void Application::draw() {
 
         ImGui::SeparatorText("Properties");
 
-        for (auto prop : state.draggingClip->m_properties.getProperties()) {
+        for (auto prop : selectedClip->m_properties.getProperties()) {
             ImGui::SeparatorText(prop.second->name.c_str());
             prop.second->drawProperty();
         }
@@ -566,13 +591,14 @@ void Application::draw() {
             ImGui::Text("Are you sure you want to delete this clip?");
             ImGui::Separator();
             if (ImGui::Button("Yes")) {
+                int trackIdx = state.video->getClipMap()[selectedClip->uID];
                 if (timeline.selectedTrackType == TrackType::Audio) {
-                    state.video->audioTracks[timeline.selectedTrackIdx]->removeClip(std::dynamic_pointer_cast<AudioClip>(state.draggingClip));
+                    state.video->removeAudioClip(trackIdx, std::dynamic_pointer_cast<AudioClip>(selectedClip));
                 } else {
-                    state.video->getTracks()[timeline.selectedTrackIdx]->removeClip(state.draggingClip);
-                    state.draggingClip->onDelete();
+                    state.video->removeClip(trackIdx, selectedClip);
                 }
-                state.draggingClip = nullptr;
+                selectedClip->onDelete();
+                state.deselect();
                 ImGui::CloseCurrentPopup();
             }
             ImGui::SameLine();
@@ -583,6 +609,8 @@ void Application::draw() {
         }
     }
     ImGui::End();
+
+    // fmt::println("number of clips in vid track 0: {}", state.video->videoTracks[0]->getClips().size());
 
     ImGui::SetNextWindowClass(&bareWindowClass);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
@@ -602,7 +630,7 @@ void Application::draw() {
         if (elapsed >= msPerFrame) {
             int framesToAdvance = static_cast<int>(elapsed / msPerFrame);
 
-            state.currentFrame += framesToAdvance;
+            setCurrentFrame(state.currentFrame + framesToAdvance);
 
             if (state.currentFrame >= state.video->frameCount) {
                 state.isPlaying = false;
@@ -610,10 +638,6 @@ void Application::draw() {
                     audTrack->onStop();
                 }
             }
-
-            timeline.setPlayheadTime(
-                static_cast<float>(state.currentFrame) / state.video->getFPS()
-            );
 
             if (state.isPlaying) {
                 for (auto audTrack : state.video->audioTracks) {
@@ -631,24 +655,17 @@ void Application::draw() {
     if (state.lastRenderedFrame != state.currentFrame) {
         frame->clearFrame();
         state.video->renderIntoFrame(state.currentFrame, frame);
-        lastRenderedFrameData.resize(frame->width * frame->height * 4);
-        lastRenderedFrameData = frame->getFrameData();
         state.lastRenderedFrame = state.currentFrame;
-
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        glBindTexture(GL_TEXTURE_2D, imageTexture);
-        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, resolution.x, resolution.y, GL_RGBA, GL_UNSIGNED_BYTE, lastRenderedFrameData.data());
     }
 
     ImGui::SetNextWindowClass(&bareWindowClass);
     ImGui::Begin("Player");
     ImVec2 avail = ImGui::GetContentRegionAvail();
-    auto scale = ImMin(avail.x / resolution.x, (avail.y - 150) / resolution.y);
+    auto scale = ImMin(avail.x / resolution.x, (avail.y - 75) / resolution.y);
     ImVec2 imageSize = ImVec2(resolution.x * scale, resolution.y * scale);
     ImVec2 imagePos = ImVec2((ImGui::GetWindowSize().x - imageSize.x) * 0.5f , ImGui::GetCursorPosY());
     ImGui::SetCursorPos(imagePos);
-    ImGui::Image((ImTextureID)(uintptr_t)imageTexture, imageSize);
+    ImGui::Image((ImTextureID)(uintptr_t)frame->textureID, imageSize);
 
     ImGuiIO& io = ImGui::GetIO();
 
@@ -665,6 +682,8 @@ void Application::draw() {
         // fmt::println("btn");
     }
 
+    auto selectedClip = state.getSelectedClip();
+
     if (ImGui::IsItemHovered() && ImGui::IsMouseDown(0)) {
         // mouse position in the canvas
         // in terms of the video resolution
@@ -673,33 +692,33 @@ void Application::draw() {
         
         bool deselected = false;
 
-        if (isDraggingClip && io.MouseDownDuration[0] == 0) {
+        if (isDraggingClip && io.MouseDownDuration[0] == 0 && state.isClipSelected()) {
             // check if canvasX, canvasY are
             // outside of the clip bounding box
             // if so, deselect
 
-            Vector2D position = state.draggingClip->getPos();
-            Vector2D size = state.draggingClip->getSize();
+            Vector2D position = selectedClip->getPos();
+            Vector2D size = selectedClip->getSize();
 
             // top 10 laziest developer moments
             if (!(canvasX >= position.x && canvasX <= position.x + size.x &&
                 canvasY >= position.y && canvasY <= position.y + size.y)
             ) {
                 isDraggingClip = false;
-                state.draggingClip = nullptr;    
+                state.deselect();    
                 deselected = true;   
             }
         }
 
         if (!deselected) {
-            if (isDraggingClip) {
+            if (isDraggingClip && state.isClipSelected()) {
                 int dx = canvasX - initialPos.x;
                 int dy = canvasY - initialPos.y;
 
                 initialPos = { canvasX, canvasY };
 
-                if (state.draggingClip->m_properties.getProperties().contains("position")) {
-                    auto property = state.draggingClip->m_properties.getProperty("position");
+                if (selectedClip->m_properties.getProperties().contains("position")) {
+                    auto property = selectedClip->m_properties.getProperty("position");
                     auto oldPos = Vector2D::fromString(property->data);
                     Vector2D newPos = {
                         .x = std::clamp(oldPos.x + dx, 0, state.video->resolution.x),
@@ -715,22 +734,23 @@ void Application::draw() {
                 // and initialPos
 
                 for (auto track : state.video->videoTracks) {
-                    for (auto clip : track->getClips()) {
+                    for (auto _clip : track->getClips()) {
+                        auto clip = _clip.second;
                         Vector2D position = clip->getPos();
                         Vector2D size = clip->getSize();
-                        fmt::println("-------------------------");
-                        fmt::println("{}, {}", canvasX >= position.x, canvasX <= position.x + size.x);
-                        fmt::println("{}, {}", canvasY >= position.y, canvasY <= position.y + size.y);
-                        fmt::println("-------------------------");
-                        fmt::println("{}, {}", position.x, position.y);
-                        fmt::println("{}, {}", size.x, size.y);
-                        fmt::println("{}, {}", canvasX, canvasY);
-                        fmt::println("-------------------------");
+                        // fmt::println("-------------------------");
+                        // fmt::println("{}, {}", canvasX >= position.x, canvasX <= position.x + size.x);
+                        // fmt::println("{}, {}", canvasY >= position.y, canvasY <= position.y + size.y);
+                        // fmt::println("-------------------------");
+                        // fmt::println("{}, {}", position.x, position.y);
+                        // fmt::println("{}, {}", size.x, size.y);
+                        // fmt::println("{}, {}", canvasX, canvasY);
+                        // fmt::println("-------------------------");
                         if (canvasX >= position.x && canvasX <= position.x + size.x &&
                             canvasY >= position.y && canvasY <= position.y + size.y
                         ) {
                             fmt::println("found clip!");
-                            state.draggingClip = clip;
+                            selectedClip = clip;
                             initialPos = { canvasX, canvasY };
                             isDraggingClip = true;
                             break;
@@ -746,9 +766,9 @@ void Application::draw() {
     }
 
     ImDrawList* drawList = ImGui::GetWindowDrawList();
-    if (state.draggingClip) {
-        Vector2D position = state.draggingClip->getPos();
-        Vector2D size = state.draggingClip->getSize();
+    if (state.isClipSelected() && state.getSelectedClip()) {
+        Vector2D position = selectedClip->getPos();
+        Vector2D size = selectedClip->getSize();
         Vector2D resolution = state.video->getResolution();
         drawList->AddRect({
             imagePos.x + windowPos.x + std::clamp(position.x, 0, resolution.x) * scale,
@@ -759,15 +779,186 @@ void Application::draw() {
         }, ImColor(255, 0, 0, 127), 0.f, 0, 5.f);
     }
 
-    ImGui::Separator();
-    if (ButtonCenteredOnLine(
-        state.isPlaying ? "Pause" : "Play"
-    )) {
-        togglePlay();
+    // media control bar
+    float mediaControlW = imageSize.x;
+    float mediaControlH = 20.f;
+
+    float progress = std::max(
+        (state.currentFrame * 1.f) / (state.video->frameCount * 1.f),
+        1.f / 30.f
+    );
+
+    progress = std::clamp(progress, 0.f, 1.f);
+
+    ImGui::SetCursorPosX((ImGui::GetWindowWidth() - mediaControlW) / 2.f);
+    ImVec2 mediaControlPos = ImGui::GetCursorScreenPos();
+
+    float rounding = 30.f;
+
+    // background
+    drawList->AddRectFilled(
+        mediaControlPos,
+        ImVec2(mediaControlPos.x + mediaControlW, mediaControlPos.y + mediaControlH),
+        ImGui::GetColorU32(ImGuiCol_FrameBg),
+        rounding
+    );
+    
+    // fill
+    drawList->AddRectFilled(
+        mediaControlPos,
+        ImVec2(mediaControlPos.x + mediaControlW * progress, mediaControlPos.y + mediaControlH),
+        IM_COL32(255, 100, 100, 255),
+        rounding
+    );
+
+    float circleRad = mediaControlH / 2.f;
+
+    // circle drag thingy idk
+    drawList->AddCircleFilled(
+        ImVec2(
+            mediaControlPos.x + mediaControlW * progress - circleRad,
+            mediaControlPos.y + mediaControlH - circleRad
+        ),
+        circleRad,
+        IM_COL32(255, 150, 150, 255)
+    );
+
+    ImGui::SetCursorScreenPos(mediaControlPos);
+    ImGui::InvisibleButton("##media-control", ImVec2(mediaControlW, mediaControlH));
+
+    if (ImGui::IsItemActive()) {
+        float mouseX = ImGui::GetIO().MousePos.x;
+        float newProgress = std::clamp((mouseX - mediaControlPos.x) / mediaControlW, 0.0f, 1.0f);
+        setCurrentFrame(state.video->frameCount * newProgress);   
     }
-    TextCentered(fmt::format("{}s / {}s", std::floor((float)state.currentFrame / (float)state.video->getFPS()), std::floor((float)state.video->frameCount / (float)state.video->getFPS())));
+
+    // playback buttons
+
+    ImVec2 buttonSize = ImVec2(
+        ImGui::GetFontSize() * 2.f,
+        ImGui::GetFontSize() * 2.f
+    );
+
+    float spacing = ImGui::GetStyle().ItemSpacing.x;
+    float windowWidth = ImGui::GetContentRegionAvail().x;
+
+    float totalPlaybackBtnWidth = buttonSize.x * 3 + spacing * 2;
+    // UR = undo/redo
+    float totalURBtnWidth = buttonSize.x * 2 + spacing;
+
+    float playbackOffset = (windowWidth - totalPlaybackBtnWidth) * 0.5f;
+    auto btnStart = ImGui::GetCursorPosX();
+    float playbackBtnStart = btnStart + playbackOffset;
+    if (playbackOffset > 0.0f) {
+        ImGui::SetCursorPosX(playbackBtnStart);
+    }
+
+    ImGui::PushStyleColor(ImGuiCol_Button, IM_COL32(0, 0, 0, 0));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, IM_COL32(0, 0, 0, 0));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, IM_COL32(0, 0, 0, 0));
+    ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 255, 255, 150));
+
+    auto playbackBtn = [&](const char* label, std::function<void()> cb, bool disabled = false) {
+        auto min = ImGui::GetCursorScreenPos();
+        bool hovered = ImGui::IsMouseHoveringRect(min, ImVec2(min.x + buttonSize.x, min.y + buttonSize.y));
+        if (disabled) {
+            ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 255, 255, 75));
+        }
+        if (hovered && !disabled) {
+            ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 255, 255, 255));
+        }
+        
+        if (ImGui::Button(
+            label,
+            buttonSize
+        ) && !disabled) {
+            cb();
+        }
+
+        if (hovered && !disabled) {
+            ImGui::PopStyleColor();
+        }
+
+        if (disabled) {
+            ImGui::PopStyleColor();
+        }
+    };
+
+    playbackBtn(ICON_FA_BACKWARD, [&]() {
+        setCurrentFrame(state.currentFrame - state.video->frameForTime(5));
+    });
+    
+    ImGui::SameLine();
+
+    playbackBtn(state.isPlaying ? ICON_FA_PAUSE : ICON_FA_PLAY, [&]() {
+        togglePlay();
+    });
+
+    ImGui::SameLine();
+
+    playbackBtn(ICON_FA_FORWARD, [&]() {
+        setCurrentFrame(state.currentFrame + state.video->frameForTime(5));
+    });
+
+    ImGui::SameLine();
+
+    ImGui::SetCursorPosX((ImGui::GetWindowWidth() - mediaControlW) / 2.f + mediaControlW - totalURBtnWidth);
+        
+    playbackBtn(ICON_FA_ROTATE_LEFT, [&]() {
+        state.undo();
+    });
+
+    ImGui::SameLine();
+
+    playbackBtn(ICON_FA_ROTATE_RIGHT, [&]() {
+        state.redo();
+    }, state.redoStack.size() <= 0);
+
+
+    ImGui::PopStyleColor(4);
+
+    ImGui::SameLine();
+
+    int duration = state.video->timeForFrame(state.video->frameCount);
+    int currentTime = std::clamp(state.video->timeForFrame(state.currentFrame), 0.f, duration * 1.f);
+
+    ImGui::PushFont(progressFont, 22.f);
+
+    auto currentTimeText =
+        duration >= 3600 ?
+            fmt::format("{:%H:%M:%S}", std::chrono::seconds(currentTime)) :
+            fmt::format("{:%M:%S}", std::chrono::seconds(currentTime));
+    
+    auto durationText = duration >= 3600 ?
+            fmt::format("/ {:%H:%M:%S}", std::chrono::seconds(duration)) :
+            fmt::format("/ {:%M:%S}", std::chrono::seconds(duration));
+    
+    auto currentTimeTextSize = ImGui::CalcTextSize(currentTimeText.c_str()).x;
+    auto durationTextSize = ImGui::CalcTextSize(durationText.c_str()).x;
+
+    ImGui::SetCursorPosX((ImGui::GetWindowWidth() - mediaControlW) / 2.f);
+    
+    ImGui::Text("%s", currentTimeText.c_str());
+
+    ImGui::SameLine();
+    ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(150, 150, 150, 255));
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(-25, 0));
+ 
+    ImGui::Text("%s", durationText.c_str());
+
+    ImGui::PopStyleVar();
+    ImGui::PopStyleColor();
+
+    ImGui::PopFont();
 
     ImGui::End();
+}
+
+void Application::setCurrentFrame(int frame) {
+    auto& state = State::get();
+    frame = std::clamp(frame, 0, state.video->frameCount);
+    state.currentFrame = frame;
+    // timeline.setPlayheadTime(state.video->timeForFrame(frame));
 }
 
 template<class T>
@@ -777,10 +968,31 @@ void Application::drawClipButton(std::string name, int defaultDuration) {
         timeline.placeType = TrackType::Video;
         timeline.placeCb = [this, defaultDuration](int frame, int trackIdx) {
             auto& state = State::get();
-            auto clip = std::make_shared<T>();
-            clip->startFrame = frame;
-            clip->duration = defaultDuration;
-            state.video->addClip(trackIdx, clip);
+            std::string uID = utils::generateUUID();
+
+            Action action = {
+                .perform = [&state, trackIdx, frame, defaultDuration](std::string info) {
+                    auto clip = std::make_shared<T>();
+                    clip->startFrame = frame;
+                    clip->duration = defaultDuration;
+                    clip->uID = info;
+                    state.video->addClip(trackIdx, clip);
+                    state.selectClip(clip);
+                },
+                .undo = [&state, trackIdx, uID](std::string) {
+                    int trackIdx = state.video->getClipMap()[uID];
+                    if (state.selectedClipId == uID) {
+                        state.deselect();
+                    }
+                    state.video->getTracks()[trackIdx]->removeClip(uID);
+                },
+                .info = uID
+            };
+
+            action.perform(uID);
+
+            state.undoStack.push(action);
+            state.redoStack = std::stack<Action>();
 
             state.lastRenderedFrame = -1;
         };
@@ -816,6 +1028,7 @@ void Application::exit() {
 
 bool Application::initSDL() {
     if (!SDL_Init(SDL_INIT_VIDEO)) {
+        fmt::println("SDL Init error: {}", SDL_GetError());
         return false;
     }
 
@@ -827,16 +1040,45 @@ bool Application::initSDL() {
 
     window = SDL_CreateWindow("Paperclip", 1200, 800, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
     if (!window) {
+        fmt::println("no window?");
         return false;
     }
 
+    
     SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
-    gl_context = SDL_GL_CreateContext(window);
-    SDL_GL_MakeCurrent(window, gl_context);
-    SDL_GL_SetSwapInterval(1); // Enable vsync
-
-    // gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress);
     // SDL_GL_LoadLibrary(nullptr);
+    gl_context = SDL_GL_CreateContext(window);
+    if (!gl_context) {
+        fmt::println("no GL Context");
+        return false;
+    }
+    SDL_GL_MakeCurrent(window, gl_context);
+    
+    SDL_GL_SetSwapInterval(1); // Enable vsync
+    
+    int version = gladLoadGL((GLADloadfunc)&SDL_GL_GetProcAddress);
+    if (version == 0) {
+        fmt::println("could NOT initalize GLAD");
+        return false;
+    }
+    fmt::println("GLAD loaded OpenGL {}.{}", GLAD_VERSION_MAJOR(version), GLAD_VERSION_MINOR(version));
+    fmt::println("GL Version: {}", (const char*)glGetString(GL_VERSION));
+    fmt::println("GLSL Version: {}", (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION));
+
+    int w, h;
+    SDL_GetWindowSize(window, &w, &h);
+    glViewport(0, 0, w, h);
+    glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+    SDL_GL_SwapWindow(window);
+
+    if (!glGenTextures) fmt::println("glGenTextures is null!");
+    if (!glBindTexture) fmt::println("glBindTexture is null!");
+
+    // wireframe mode
+    // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+    fmt::println("SUCCESS!!!!!!!!!!!!!!!!!!!! i think");
 
     return true;
 }
@@ -861,6 +1103,39 @@ bool Application::initImGui() {
     return true;
 }
 
+bool Application::initIcons() {
+    // icons relative to resources/imgs
+    std::unordered_map<IconType, std::string> paths = {
+        { IconType::PlayPause, "play.png" }
+    };
+
+    int w = 0, h = 0, ch = 0;
+    for (auto img : paths) {
+        unsigned char* data = stbi_load(fmt::format("resources/imgs/{}", img.second).c_str(), &w, &h, &ch, 3);
+
+        if (!data) {
+            return false;
+        }
+
+        GLuint texture;
+        glGenTextures(1, &texture);
+        glBindTexture(GL_TEXTURE_2D, texture);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+
+        icons[img.first] = {
+            .texture = texture,
+            .w = w,
+            .h = h
+        };
+
+        stbi_image_free(data);
+    }
+
+    return true;
+}
+
 void Application::setup() {
     if (!initSDL()) {
         fmt::println("could not initialize SDL");
@@ -869,6 +1144,11 @@ void Application::setup() {
 
     if (!initImGui()) {
         fmt::println("could not initalize ImGui");
+        return;
+    }
+
+    if (!initIcons()) {
+        fmt::println("could not initialize icons");
         return;
     }
 }
@@ -886,15 +1166,6 @@ void Application::run() {
     auto resolution = state.video->getResolution();
     frame = std::make_shared<Frame>(resolution.x, resolution.y);
 
-    glGenTextures(1, &imageTexture);
-    glBindTexture(GL_TEXTURE_2D, imageTexture);
-
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, resolution.x, resolution.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-    glBindTexture(GL_TEXTURE_2D, 0);
-
     while (running) {
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
@@ -908,28 +1179,48 @@ void Application::run() {
                 break;
             } else if (event.type == SDL_EVENT_KEY_DOWN) {
                 if (!ImGui::IsAnyItemActive() && !ImGui::IsAnyItemFocused()) {
-                    if (event.key.key == SDLK_SPACE) {
-                        togglePlay();
+                    switch (event.key.key) {
+                        case SDLK_SPACE:
+                            togglePlay();
+                            break;
+                        case SDLK_D:
+                            if (event.key.mod & SDL_KMOD_ALT) {
+                                state.deselect();
+                            }
+                            break;
+                        case SDLK_Y:
+                            if (event.key.mod & SDL_KMOD_CTRL && !(event.key.mod & SDL_KMOD_SHIFT)) {
+                                state.redo();
+                            }
+                            break;
+                        case SDLK_Z:
+                            if (event.key.mod & SDL_KMOD_CTRL && !(event.key.mod & SDL_KMOD_SHIFT)) {
+                                state.undo();
+                            } else if (event.key.mod & SDL_KMOD_CTRL | SDL_KMOD_SHIFT) {
+                                state.redo();
+                            }
+                            break;
                     }
                 }
             }
         }
-
+        
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplSDL3_NewFrame();
         ImGui::NewFrame();
-
-        // actual drawing
-        draw();
-
-        // ImGui::ShowDemoWindow();
 
         int win_w, win_h;
         SDL_GetWindowSize(window, &win_w, &win_h);
 
         glViewport(0, 0, win_w, win_h);
+        // glClearColor(1.f, 0.1f, 1.f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
+        
+        // actual drawing
+        draw();
 
+        // ImGui::ShowDemoWindow();
+        
         /* clear the window to the draw color. */
 
 
@@ -1037,4 +1328,16 @@ void Application::setupStyle() {
 
     ImGuiIO& io = ImGui::GetIO();
     io.Fonts->AddFontFromFileTTF("resources/opensans.ttf");
+
+    float baseFontSize = 13.0f; // 13.0f is the size of the default font. Change to the font size you use.
+    float iconFontSize = baseFontSize * 2.0f / 3.0f; // FontAwesome fonts need to have their sizes reduced by 2.0f/3.0f in order to align correctly
+
+    // merge in icons from Font Awesome
+    static const ImWchar icons_ranges[] = { ICON_MIN_FA, ICON_MAX_16_FA, 0 };
+    ImFontConfig icons_config; 
+    icons_config.MergeMode = true; 
+    icons_config.PixelSnapH = true; 
+    icons_config.GlyphMinAdvanceX = iconFontSize;
+    io.Fonts->AddFontFromFileTTF(fmt::format("resources/icons/{}", FONT_ICON_FILE_NAME_FAS).c_str(), iconFontSize, &icons_config, icons_ranges);
+    progressFont = io.Fonts->AddFontFromFileTTF("resources/boldonse.ttf");
 }

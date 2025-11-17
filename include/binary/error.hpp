@@ -40,23 +40,23 @@ namespace qn {
 using geode::Ok;
 using geode::Err;
 
-#ifndef QUNET_DEBUG
-[[noreturn]] inline void unreachable() {
-#if defined __clang__ || defined __GNUC__
-    __builtin_unreachable();
-#elif defined _MSC_VER
-    __assume(0);
-#endif
-}
+// #ifndef QUNET_DEBUG
+// [[noreturn]] inline void unreachable() {
+// #if defined __clang__ || defined __GNUC__
+//     __builtin_unreachable();
+// #elif defined _MSC_VER
+//     __assume(0);
+// #endif
+// }
 
-#else
+// #else
 
-[[noreturn]] inline void unreachable() {
-    assert(false && "Unreachable code reached!");
-    __builtin_trap();
-}
+// [[noreturn]] inline void unreachable() {
+//     assert(false && "Unreachable code reached!");
+//     __builtin_trap();
+// }
 
-#endif
+// #endif
 
 QN_MAKE_ERROR_STRUCT(ByteReaderError,
     OutOfBoundsRead,

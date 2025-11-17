@@ -1,6 +1,6 @@
 // stolen from https://github.com/dankmeme01/qunet-cpp/blob/main/src/buffers/HeapByteWriter.cpp
 
-#include <format/binary/writer.hpp>
+#include <binary/writer.hpp>
 #include <cstring>
 
 template <typename T = void>

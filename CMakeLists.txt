@@ -2,8 +2,12 @@ cmake_minimum_required(VERSION 3.21...4.0)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-set(BUILD_SHARED_LIBS OFF)
-set(BUILD_STATIC_LIBS ON)
+# set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
+set(BUILD_SHARED_LIBS ON)
+# set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-Bdynamic -lstdc++ -lgcc -Wl,-Bstatic")
+# set(CMAKE_CXX_STANDARD_LIBRARIES "")
+
+add_compile_definitions(_GLIBCXX_USE_CXX11_ABI=1)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
@@ -24,7 +28,7 @@ endif()
 
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.cpp)
 add_executable(${PROJECT_NAME} ${SOURCES})
-target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR}/libs)
 
 include(cmake/CPM.cmake)
 
@@ -38,11 +42,13 @@ CPMAddPackage("gh:btzy/nativefiledialog-extended#6db343a")
 CPMAddPackage("gh:lemenkov/libyuv#5b22f31")
 CPMAddPackage("gh:nothings/stb#fede005")
 CPMAddPackage("gh:fmtlib/fmt#12.0.0")
+CPMAddPackage("gh:g-truc/glm#4962d27")
+CPMAddPackage("gh:freetype/freetype#4334f00")
 
 CPMAddPackage(
     NAME imgui
     GITHUB_REPOSITORY ocornut/imgui
-    GIT_TAG 4d216d4
+    GIT_TAG 8de97d1
     DOWNLOAD_ONLY ON
 )
 add_library(imgui STATIC
@@ -58,22 +64,10 @@ add_library(imgui STATIC
 target_include_directories(imgui PUBLIC ${imgui_SOURCE_DIR} ${imgui_SOURCE_DIR}/backends ${imgui_SOURCE_DIR}/misc/cpp ${json_SOURCE_DIR}/include)
 target_link_libraries(imgui PUBLIC SDL3::SDL3 OpenGL::GL)
 
-# CPMAddPackage(
-#     NAME libvips
-#     GITHUB_REPOSITORY libvips/libvips
-#     GIT_TAG v8.17.2
-#     DOWNLOAD_ONLY ON
-# )
-
-# file(GLOB_RECURSE libvipscpp_SOURCES CONFIGURE_DEPENDS ${libvips_SOURCE_DIR}/cplusplus/*.cpp)
-# file(GLOB_RECURSE libvips_SOURCES CONFIGURE_DEPENDS ${libvips_SOURCE_DIR}/libvips/*/*.c)
-
-# add_library(libvips STATIC
-#     ${libvips_SOURCES}
-#     ${libvipscpp_SOURCES}
-# )
-
-# target_include_directories(libvips PUBLIC ${libvips_SOURCE_DIR}/cplusplus/include ${libvips_SOURCE_DIR}/libvips/include)
+add_library(glad STATIC
+    libs/glad/src/gl.c
+)
+target_include_directories(glad PUBLIC libs/glad/include)
 
 if (WIN32)
     file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/out/share/mlt)
@@ -106,13 +100,14 @@ CPMAddPackage(
     GIT_TAG sans-nanosleep
     OPTIONS
         "MLT_DATA_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/out/lib/mlt"
-        "ENABLE_QT OFF"
         "MOD_QT OFF"
+        "MOD_MOVIT ON"
+        "ENABLE_QT OFF"
         "ENABLE_QT6 OFF"
         "ENABLE_QT5 OFF"
         "ENABLE_AVFORMAT ON"
-        "BUILD_TESTING OFF"
         "ENABLE_MLTPLUSPLUS ON"
+        "BUILD_TESTING OFF"
         "RELOCATABLE OFF"
 )
 
@@ -164,7 +159,9 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     # mlt++
     GeodeResult
     fmt
-    # -static-libstdc++ -static-libgcc
+    glad
+    glm::glm
+    freetype
 )
 
 if (APPLE)
@@ -176,11 +173,33 @@ if (APPLE)
 
     target_link_libraries(${PROJECT_NAME} PRIVATE ${AVCODEC_LIBRARY} ${AVFORMAT_LIBRARY} ${AVUTIL_LIBRARY} ${SWSCALE_LIBRARY} ${SWRESAMPLE_LIBRARY})
 else()
-    target_link_libraries(${PROJECT_NAME} PRIVATE avutil avcodec avformat swscale swresample)
+    target_link_libraries(${PROJECT_NAME} PRIVATE avformat avcodec swresample swscale avutil)
 endif()
+
+# target_link_libraries(${PROJECT_NAME} PUBLIC -static)
 
 add_dependencies(${PROJECT_NAME} mlt)
 set_target_properties(melt PROPERTIES EXCLUDE_FROM_ALL True)
+
+# if (WIN32)
+#     include(InstallRequiredSystemLibraries)
+#     install(TARGETS ${PROJECT_NAME}
+#         RUNTIME DESTINATION .
+#     )
+
+#     # This copies all DLLs that the EXE depends on, including libstdc++-6.dll etc.
+#     install(
+#         CODE [[
+#             include(BundleUtilities)
+#             fixup_bundle(
+#                 "${CMAKE_INSTALL_PREFIX}/${PROJECT_NAME}.exe"
+#                 ""
+#                 "${CMAKE_INSTALL_PREFIX}"
+#                 IGNORE_ITEM "${CMAKE_INSTALL_PREFIX}/melt.exe"
+#             )
+#         ]]
+#     )
+# endif()
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${stb_SOURCE_DIR} ${libyuv_SOURCE_DIR}/include)
 
@@ -197,22 +216,43 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 )
 
 if(WIN32)
-    get_filename_component(COMPILER_PATH "${CMAKE_CXX_COMPILER}" DIRECTORY)
-    file(COPY
-        "${COMPILER_PATH}/avcodec-61.dll"
-        "${COMPILER_PATH}/avdevice-61.dll"
-        "${COMPILER_PATH}/avfilter-10.dll"
-        "${COMPILER_PATH}/avformat-61.dll"
-        "${COMPILER_PATH}/avutil-59.dll"
-        "${COMPILER_PATH}/libdl.dll"
-        "${COMPILER_PATH}/libgcc_s_seh-1.dll"
-        "${COMPILER_PATH}/libiconv-2.dll"
-        "${COMPILER_PATH}/libstdc++-6.dll"
-        "${COMPILER_PATH}/libwinpthread-1.dll"
-        "${COMPILER_PATH}/swresample-5.dll"
-        "${COMPILER_PATH}/swscale-8.dll"
-        DESTINATION
-        "${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE}/"
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+                ${CMAKE_SOURCE_DIR}/libs/ffmpeg/ext/windows
+                $<TARGET_FILE_DIR:${PROJECT_NAME}>
     )
+#     get_filename_component(COMPILER_PATH "${CMAKE_CXX_COMPILER}" DIRECTORY)
+#     file(COPY
+#         "${COMPILER_PATH}/avcodec-61.dll"
+#         "${COMPILER_PATH}/avdevice-61.dll"
+#         "${COMPILER_PATH}/avfilter-10.dll"
+#         "${COMPILER_PATH}/avformat-61.dll"
+#         "${COMPILER_PATH}/avutil-59.dll"
+#         "${COMPILER_PATH}/libdl.dll"
+#         "${COMPILER_PATH}/libgcc_s_seh-1.dll"
+#         "${COMPILER_PATH}/libiconv-2.dll"
+#         "${COMPILER_PATH}/libstdc++-6.dll"
+#         "${COMPILER_PATH}/libbz2-1.dll"
+#         "${COMPILER_PATH}/libpng16-16.dll"
+#         "${COMPILER_PATH}/libbrotlidec.dll"
+#         "${COMPILER_PATH}/libbluray-2.dll"
+#         "${COMPILER_PATH}/libgme.dll"
+#         "${COMPILER_PATH}/libgnutls-30.dll"
+#         "${COMPILER_PATH}/libmodplug-1.dll"
+#         "${COMPILER_PATH}/librtmp-1.dll"
+#         "${COMPILER_PATH}/libsrt.dll"
+#         "${COMPILER_PATH}/libssh.dll"
+#         "${COMPILER_PATH}/libaom.dll"
+#         "${COMPILER_PATH}/libxml2-16.dll"
+#         "${COMPILER_PATH}/libcairo-2.dll"
+#         "${COMPILER_PATH}/libdav1d-7.dll"
+#         "${COMPILER_PATH}/libglib-2.0.0.dll"
+#         "${COMPILER_PATH}/libwinpthread-1.dll"
+#         "${COMPILER_PATH}/swresample-5.dll"
+#         "${COMPILER_PATH}/swscale-8.dll"
+#         "${COMPILER_PATH}/zlib1.dll"
+#         DESTINATION
+#         "${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE}/"
+#     )
 endif()
 

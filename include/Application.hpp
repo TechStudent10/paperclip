@@ -2,16 +2,23 @@
 
 #include <SDL3/SDL.h>
 // #include <SDL3/SDL_main.h>
-#include <SDL3/SDL_opengl.h>
-
 #include <imgui.h>
 
 #include <thread>
 #include <vector>
 
 #include <video.hpp>
+#include <SDL3/SDL_opengl.h>
 #include <widgets.hpp>
 
+struct IconInfo {
+    GLuint texture;
+    int w = 0, h = 0;
+};
+
+enum class IconType {
+    PlayPause
+};
 
 class Application {
 public:
@@ -23,8 +30,11 @@ public:
     void run();
     void exit();
 protected:
+    // this gets loaded in at init time
+    // (icon ID, icon info)
+    std::unordered_map<IconType, IconInfo> icons;
+
     bool running = false;
-    bool showUploadDialog = false;
     float convertProgress = 0.f;
 
     bool firstFrame;
@@ -33,8 +43,6 @@ protected:
 
     SDL_Window* window;
     SDL_GLContext gl_context;
-
-    GLuint imageTexture;
 
     VideoTimeline timeline;
 
@@ -47,6 +55,12 @@ protected:
 
     bool initSDL();
     bool initImGui();
+    bool initIcons();
+
+    bool ButtonCenteredOnLine(const char* label, float alignment = 0.5f);
+    bool ImageButtonCenteredOnLine(const char* label, IconType iconType, float alignment = 0.5f);
+
+    void setCurrentFrame(int frame);
 
     template<class T>
     void drawClipButton(std::string name, int defaultDuration);
@@ -57,4 +71,6 @@ protected:
 
     bool isDraggingClip = false;
     Vector2D initialPos;
+
+    ImFont* progressFont;
 };

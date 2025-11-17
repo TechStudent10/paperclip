@@ -1,6 +1,6 @@
 // stolen from https://github.com/dankmeme01/qunet-cpp/blob/main/src/buffers/ByteReader.cpp
 
-#include <format/binary/reader.hpp>
+#include <binary/reader.hpp>
 #include <cstring>
 
 template <typename T = void>
