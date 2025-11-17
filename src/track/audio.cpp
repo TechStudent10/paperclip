@@ -11,12 +11,16 @@ AudioClip::AudioClip(const std::string& path): Clip(0, 7680), path(path) {
     // default = 100
     addProperty(
         std::make_shared<NumberProperty>()
+            ->setId("volume")
+            ->setName("Volume")
     );
 
     // start time
     // default = 0
     addProperty(
-        std::make_shared<NumberProperty>()
+        std::make_shared<NumberProperty>(0)
+            ->setId("start-time")
+            ->setName("Start Time")
     );
 
     if (!path.empty()) {
