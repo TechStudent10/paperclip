@@ -41,6 +41,6 @@ public:
     TextRenderer();
     void loadFont(std::string fontName);
 
-    Vector2DF drawText(Frame* frame, std::string text, std::string fontName, Vector2D pos, RGBAColor color, float pixelHeight = 48.f, float rotation = 0.f);
+    Vector2DF drawText(Frame* frame, std::string text, std::string fontName, Transform transform, RGBAColor color, float pixelHeight = 48.f);
     Vector2DF getTextSize(std::string text, std::string fontName, float scale = 1.f);
 };

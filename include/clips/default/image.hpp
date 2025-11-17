@@ -11,10 +11,15 @@ namespace clips {
     class ImageClip : public Clip {
     private:
         GLuint texture;
+        GLuint VAO;
+        GLuint VBO;
+        GLuint EBO;
         unsigned char* imageData;
 
         int width, height;
         int scaledW = 0, scaledH = 0;
+
+        std::shared_ptr<Frame> previewFrame;
 
         bool initialize();
     public:
@@ -43,5 +48,8 @@ namespace clips {
 
         Vector2D getSize() override;
         Vector2D getPos() override;
+
+        GLuint getPreviewTexture(int frame) override;
+        Vector2D getPreviewSize() override;
     };
 } // namespace clips

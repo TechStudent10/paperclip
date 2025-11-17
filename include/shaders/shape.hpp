@@ -4,21 +4,10 @@ inline auto shapeVertex = R"(
 #version 330 core
 layout (location = 0) in vec3 aPos;
 
-uniform vec2 screenSize;
-
-out vec2 vertPos;
-
-vec2 normalize() {
-    return vec2(
-        aPos.x / (screenSize.x / 2.f) - 1,
-        aPos.y / (screenSize.y / 2.f) - 1
-    );
-}
+uniform mat4 matrix;
 
 void main() {
-    vertPos = aPos.xy;
-    vec2 normalized = normalize();
-    gl_Position = vec4(normalized.x, normalized.y, 0.0, 1.0);
+    gl_Position = matrix * vec4(aPos, 1.0);
 }   
 )";
 
@@ -26,10 +15,8 @@ inline auto shapeFragment = R"(
 #version 330 core
 out vec4 FragColor;
 
-in vec2 vertPos;
-
 uniform vec4 outColor;
-uniform vec2 screenSize;
+uniform mat4 matrix;
 
 // different types/circle stuff
 uniform int type;

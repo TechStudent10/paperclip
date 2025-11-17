@@ -3,20 +3,20 @@
 
 #include <state.hpp>
 
+#include <clips/properties/number.hpp>
+
 AudioClip::AudioClip(const std::string& path): Clip(0, 7680), path(path) {
     m_metadata.name = std::filesystem::path(path).filename().string();
-    m_properties.addProperty(
-        ClipProperty::number()
-            ->setId("volume")
-            ->setName("Volume")
-            ->setDefaultKeyframe(Vector1D{ .number = 100 }.toString())
+    // volume
+    // default = 100
+    addProperty(
+        std::make_shared<NumberProperty>()
     );
 
-    m_properties.addProperty(
-        ClipProperty::number()
-            ->setId("start-time")
-            ->setName("Start Time")
-            ->setDefaultKeyframe(Vector1D{ .number = 0 }.toString())
+    // start time
+    // default = 0
+    addProperty(
+        std::make_shared<NumberProperty>()
     );
 
     if (!path.empty()) {
@@ -42,6 +42,39 @@ bool AudioClip::initalize() {
         return false;
     }
 
+    ma_decoder decoder;
+    ma_decoder_config config = ma_decoder_config_init(ma_format_f32, 1, 48000);
+
+    auto res = ma_decoder_init_file(path.c_str(), &config, &decoder);
+    if (res != MA_SUCCESS) {
+        fmt::println("could not initialize decoder: {}", (int)res);
+        return false;
+    }
+    int framesPerChunk = decoder.outputSampleRate * 0.001f; // every 1ms
+    float buffer[framesPerChunk];
+    ma_uint64 framesRead;
+
+    // do NOT switch this to a regular while loop
+    // it breaks the res != MA_SUCCESS check up there
+    // because of undefined behavior
+    // i love c++
+    do {
+        ma_decoder_read_pcm_frames(&decoder, buffer, framesPerChunk, &framesRead);
+
+        float sumSq = 0.f;
+        for (ma_uint32 i = 0; i < framesRead; i++) {
+            float s = buffer[i];
+            sumSq += s * s;
+        }
+
+        float rms = sqrt(sumSq / framesRead);
+        waveform.push_back(rms);
+    } while (framesRead > 0);
+
+    fmt::println("decoded audio waveform!");
+
+    ma_decoder_uninit(&decoder);
+
     initialized = true;
 
     return true;
@@ -50,8 +83,8 @@ bool AudioClip::initalize() {
 void AudioClip::play() {
     initalize();
     if (this->playing) return;
-    auto volume = Vector1D::fromString(m_properties.getProperty("volume")->data).number;
-    ma_sound_set_volume(&sound, (float)volume / 255);
+    int volume = getProperty<NumberProperty>("volume").unwrap()->data;
+    ma_sound_set_volume(&sound, (float)volume / 100.f);
     if (ma_sound_start(&sound) != MA_SUCCESS) {
         fmt::println("no success :(");
     }
@@ -69,7 +102,7 @@ void AudioClip::seekToSec(float seconds) {
     initalize();
 
     auto& state = State::get();
-    int startTime = Vector1D::fromString(m_properties.getProperty("start-time")->data).number;
+    int startTime = getProperty<NumberProperty>("start-time").unwrap()->data;
     ma_sound_seek_to_second(&sound, seconds + startTime);
 }
 
@@ -77,7 +110,7 @@ float AudioClip::getCursor() {
     initalize();
     float cursor = 0;
     ma_sound_get_cursor_in_seconds(&sound, &cursor);
-    int startTime = Vector1D::fromString(m_properties.getProperty("start-time")->data).number;
+    int startTime = getProperty<NumberProperty>("start-time").unwrap()->data;
     return cursor - startTime;
 }
 
@@ -93,7 +126,9 @@ void AudioTrack::processTime() {
         auto clip = _clip.second;
         if (currentFrame >= clip->startFrame && currentFrame < clip->startFrame + clip->duration && state.isPlaying) {
             float seconds = state.video->timeForFrame(currentFrame - clip->startFrame);
-            if (std::abs(clip->getCursor() - seconds) >= 0.25f) {
+            // the threshold is how far off the playback audio can be before we re-align it
+            float threshold = 0.05f;
+            if (std::abs(clip->getCursor() - seconds) >= threshold) {
                 clip->seekToSec(seconds);
             }
             clip->play();
@@ -101,57 +136,12 @@ void AudioTrack::processTime() {
         if (clip->startFrame + clip->duration < currentFrame && state.isPlaying) {
             clip->stop();
         }
-        for (auto property : clip->m_properties.getProperties()) {
-            // only one keyframe? use that
-            if (property.second->keyframes.size() == 1) {
-                property.second->data = property.second->keyframes[0];
-                continue;
-            }
-
-            // beyond the last keyframe? use that
-            if (std::prev(property.second->keyframes.end())->first <= currentFrame - clip->startFrame) {
-                property.second->data = property.second->keyframes.rbegin()->second;
-                continue;
-            }
-
-            int previousKeyframe = 0;
-            int nextKeyframe = 0;
-
-            for (auto keyframe : property.second->keyframes) {
-                if (keyframe.first > currentFrame) {
-                    nextKeyframe = keyframe.first;
-                    break;
-                }
-
-                if (keyframe.first > previousKeyframe) {
-                    previousKeyframe = keyframe.first;
-                }
-            }
-
-            if (nextKeyframe == 0) {
-                // somehow we did not catch the last keyframe, so we just set it here
-                property.second->data = property.second->keyframes[previousKeyframe];
-                continue;
-            }
-
-            float progress = (float)(currentFrame - previousKeyframe) / (float)(nextKeyframe - previousKeyframe);
-            if (property.second->keyframeInfo.contains(nextKeyframe)) {
-                progress = animation::getEasingFunction(property.second->keyframeInfo[nextKeyframe].easing, property.second->keyframeInfo[nextKeyframe].mode)(progress);
-            }
-
-            auto oldNumber = Vector1D::fromString(property.second->keyframes[previousKeyframe]);
-            auto nextNumber = Vector1D::fromString(property.second->keyframes[nextKeyframe]);
-
-#define ANIMATE_NUM(old, new, arg) .arg = static_cast<int>(std::rint(old.arg + (float)(new.arg - old.arg) * progress))
-
-            property.second->data = Vector1D{
-                ANIMATE_NUM(oldNumber, nextNumber, number),
-            }.toString();
-
-#undef ANIMATE_NUM
+        for (auto [id, property] : clip->m_properties) {
+            property->processKeyframe(currentFrame);
         }
 
-        clip->setVolume(Vector1D::fromString(clip->m_properties.getProperty("volume")->data).number / 100.f);
+        int volume = clip->getProperty<NumberProperty>("volume").unwrap()->data;
+        clip->setVolume(volume / 100.f);
     }
 }
 

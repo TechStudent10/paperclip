@@ -7,6 +7,7 @@
 #include <fmt/base.h>
 #include <fmt/format.h>
 #include <fmt/chrono.h>
+#include <fmt/color.h>
 
 #include <state.hpp>
 #include <string_view>
@@ -29,6 +30,9 @@
 #include <stb_image.h>
 
 #include <icons/IconsFontAwesome6.h>
+
+#include <action/actions/CreateClip.hpp>
+#include <action/actions/CreateVideoClip.hpp>
 
 bool Application::ButtonCenteredOnLine(const char* label, float alignment) {
     ImGuiStyle& style = ImGui::GetStyle();
@@ -242,10 +246,10 @@ void Application::draw() {
                 for (auto _clip : track->getClips()) {
                     auto clip = _clip.second;
                     audio.addClip(
-                        clip->m_metadata.name,
+                        clip->getPath(),
                         state.video->timeForFrame(clip->startFrame),
                         state.video->timeForFrame(clip->startFrame + clip->duration),
-                        clip->m_properties.getProperty("volume")
+                        clip->getProperty<NumberProperty>("volume").unwrap()
                     );
                 }
             }
@@ -356,10 +360,10 @@ void Application::draw() {
                             .filePath = outFile,
                             .frameCount = frameCount
                         });
-                        state.video->audioClipPool.push_back({
-                            .filePath = fmt::format("{}.mp3", outFile),
-                            .frameCount = frameCount
-                        });
+                        // state.video->audioClipPool.push_back({
+                        //     .filePath = fmt::format("{}.mp3", outFile),
+                        //     .frameCount = frameCount
+                        // });
                     });
                     convertThread.detach();
                 }
@@ -429,13 +433,17 @@ void Application::draw() {
                 if (ImGui::Button(clipMeta.filePath.c_str(), ImVec2(-1.0f, 0.0f))) {
                     timeline.isPlacingClip = true;
                     timeline.placeType = TrackType::Video;
+                    timeline.placeDuration = clipMeta.frameCount;
                     timeline.placeCb = [this, clipMeta](int frame, int trackIdx) {
+                        // it is guaranteed that the video clip can be placed
+                        // but not the audio clip
+                        // so check that before adding both
+                        if (timeline.willClipCollide(frame, clipMeta.frameCount, trackIdx, TrackType::Audio)) return;
+
                         auto& state = State::get();
-                        auto clip = std::make_shared<clips::VideoClip>(clipMeta.filePath);
-                        clip->startFrame = frame;
-                        clip->duration = clipMeta.frameCount;
-                        state.lastRenderedFrame = -1;
-                        state.video->addClip(trackIdx, clip);
+                        auto action = std::make_shared<CreateVideoClip>(clipMeta, frame, trackIdx);
+                        state.addAction(action);
+                        action->perform();
                     };
                 }
             }
@@ -446,14 +454,18 @@ void Application::draw() {
                 if (ImGui::Button(soundFile.filePath.c_str(), ImVec2(-1.0f, 0.0f))) {
                     timeline.isPlacingClip = true;
                     timeline.placeType = TrackType::Audio;
+                    timeline.placeDuration = soundFile.frameCount;
                     timeline.placeCb = [this, soundFile](int frame, int trackIdx) {
                         auto& state = State::get();
                         auto clip = std::make_shared<AudioClip>(soundFile.filePath);
                         clip->startFrame = frame;
                         clip->duration = soundFile.frameCount;
-                        clip->m_properties.getProperties()["volume"]->data = Vector1D{ .number = 100 }.toString();
+                        clip->getProperty<NumberProperty>("volume").unwrap()->data = 100;
+                        
+                        auto action = std::make_shared<CreateClip>(clip, clip->getType(), trackIdx);
+                        action->perform();
+                        state.addAction(action);                        
                         state.lastRenderedFrame = -1;
-                        state.video->addAudioClip(trackIdx, clip);
                     };
                 }
             }
@@ -464,13 +476,16 @@ void Application::draw() {
                 if (ImGui::Button(imageFile.filePath.c_str(), ImVec2(-1.0f, 0.0f))) {
                     timeline.isPlacingClip = true;
                     timeline.placeType = TrackType::Video;
+                    timeline.placeDuration = imageFile.frameCount;
                     timeline.placeCb = [this, imageFile](int frame, int trackIdx) {
                         auto& state = State::get();
                         auto clip = std::make_shared<clips::ImageClip>(imageFile.filePath);
                         clip->startFrame = frame;
                         clip->duration = imageFile.frameCount;
+                        auto action = std::make_shared<CreateClip>(clip, clip->getType(), trackIdx);
+                        action->perform();
+                        state.addAction(action);
                         state.lastRenderedFrame = -1;
-                        state.video->getTracks()[trackIdx]->addClip(clip);
                     };
                 }
             }
@@ -483,134 +498,55 @@ void Application::draw() {
 
     ImGui::SetNextWindowClass(&bareWindowClass);
     ImGui::Begin("Properties");
-    auto setData = [&](std::shared_ptr<ClipProperty> property, std::string data) {
-        if (property->keyframes.size() == 1) {
-            property->keyframes[0] = data;
-            state.lastRenderedFrame = -1;
-            for (auto audTrack : state.video->audioTracks) {
-                audTrack->processTime();
-            }
-            return;
-        }
-
-        auto selectedClip = state.getSelectedClip();
-        int keyframe = state.currentFrame - selectedClip->startFrame;
-        selectedClip->m_properties.setKeyframe(property->id, keyframe, data);
-        state.lastRenderedFrame = -1;
-        for (auto audTrack : state.video->audioTracks) {
-            audTrack->processTime();
-        }
-    };
-    if (state.isClipSelected()) {
-        auto drawDimensions = [&](std::shared_ptr<ClipProperty> property) {
-            Dimensions dimensions = Dimensions::fromString(property->data);
-
-            bool x = ImGui::DragInt("X", &dimensions.pos.x);
-            bool y = ImGui::DragInt("Y", &dimensions.pos.y);
-            bool w = ImGui::DragInt("Width", &dimensions.size.x);
-            bool h = ImGui::DragInt("Height", &dimensions.size.y);
-
-            if (x || y || w || h) {
-                setData(property, dimensions.toString());
-            }
-        };
-
-        auto drawPosition = [&](std::shared_ptr<ClipProperty> property) {
-            Vector2D position = Vector2D::fromString(property->data);
-
-            bool x = ImGui::DragInt("X", &position.x);
-            bool y = ImGui::DragInt("Y", &position.y);
-
-            if (x || y) {
-                setData(property, position.toString());
-            }
-        };
-
-        auto drawInt = [&](std::shared_ptr<ClipProperty> property) {
-            Vector1D number = Vector1D::fromString(property->data);
-            if (ImGui::DragInt(
-                fmt::format("##{}", property->name).c_str(),
-                &number.number,
-                1.0f,
-                0,
-                property->type == PropertyType::Percent ? 100 : 0
-            )) {
-                setData(property, number.toString());
-            }
-        };
-
-        auto drawColorPicker = [&](std::shared_ptr<ClipProperty> property) {
-            RGBAColor color = RGBAColor::fromString(property->data);
-
-            float colorBuf[4] = { (float)color.r / 255, (float)color.g / 255, (float)color.b / 255, (float)color.a / 255 };
-            if (ImGui::ColorPicker4("Color", colorBuf)) {
-                color.r = std::round(colorBuf[0] * 255);
-                color.g = std::round(colorBuf[1] * 255);
-                color.b = std::round(colorBuf[2] * 255);
-                color.a = std::round(colorBuf[3] * 255);
-
-                setData(property, color.toString());
-            }
-        };
-
-        auto drawText = [&](std::shared_ptr<ClipProperty> property) {
-            std::string text = property->data;
-            if (ImGui::InputText(fmt::format("##{}", property->id).c_str(), &text)) {
-                setData(property, text);
-            }
-        };
-
-        auto selectedClip = state.getSelectedClip();
-
-        TextCentered(selectedClip->m_metadata.name);
-
-        ImGui::Separator();
-
+    if (state.areClipsSelected()) {
         if (ImGui::Button("Open Keyframe Editor", ImVec2(-1.0f, 0.0f))) {
             ImGui::OpenPopup("Keyframe Editor");
 
         }
         if (ImGui::BeginPopup("Keyframe Editor")) {
-            for (auto prop : selectedClip->m_properties.getProperties()) {
-                ImGui::Text("%s", prop.second->name.c_str());
-            }
+            ImGui::Text("boop");
+            // for (auto prop : selectedClip->m_properties) {
+            //     ImGui::Text("%s", prop.second->name.c_str());
+            // }
             ImGui::EndPopup();
         }
+        ImGui::Separator();
+        for (auto [clipID, selectedClip] : state.getSelectedClips()) {
+            ImGui::SeparatorText(selectedClip->m_metadata.name.c_str());
 
-        ImGui::SeparatorText("Properties");
+            ImGui::SeparatorText("Properties");
 
-        for (auto prop : selectedClip->m_properties.getProperties()) {
-            ImGui::SeparatorText(prop.second->name.c_str());
-            prop.second->drawProperty();
-        }
+            for (auto prop : selectedClip->m_properties) {
+                ImGui::SeparatorText(prop.second->name.c_str());
+                prop.second->_drawProperty();
+            }
 
-        if (ImGui::Button("Delete")) {
-            ImGui::OpenPopup("Delete confirmation");
-        }
-        if (ImGui::BeginPopupModal("Delete confirmation")) {
-            ImGui::Text("Are you sure you want to delete this clip?");
-            ImGui::Separator();
-            if (ImGui::Button("Yes")) {
-                int trackIdx = state.video->getClipMap()[selectedClip->uID];
-                if (timeline.selectedTrackType == TrackType::Audio) {
-                    state.video->removeAudioClip(trackIdx, std::dynamic_pointer_cast<AudioClip>(selectedClip));
-                } else {
-                    state.video->removeClip(trackIdx, selectedClip);
+            if (ImGui::Button("Delete")) {
+                ImGui::OpenPopup("Delete confirmation");
+            }
+            if (ImGui::BeginPopupModal("Delete confirmation")) {
+                ImGui::Text("Are you sure you want to delete this clip?");
+                ImGui::Separator();
+                if (ImGui::Button("Yes")) {
+                    int trackIdx = state.video->getClipMap()[selectedClip->uID];
+                    if (timeline.selectedTrackType == TrackType::Audio) {
+                        state.video->removeAudioClip(trackIdx, std::static_pointer_cast<AudioClip>(selectedClip));
+                    } else {
+                        state.video->removeClip(trackIdx, selectedClip);
+                    }
+                    selectedClip->onDelete();
+                    state.deselect();
+                    ImGui::CloseCurrentPopup();
                 }
-                selectedClip->onDelete();
-                state.deselect();
-                ImGui::CloseCurrentPopup();
+                ImGui::SameLine();
+                if (ImGui::Button("No")) {
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::EndPopup();
             }
-            ImGui::SameLine();
-            if (ImGui::Button("No")) {
-                ImGui::CloseCurrentPopup();
-            }
-            ImGui::EndPopup();
         }
     }
     ImGui::End();
-
-    // fmt::println("number of clips in vid track 0: {}", state.video->videoTracks[0]->getClips().size());
 
     ImGui::SetNextWindowClass(&bareWindowClass);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
@@ -682,91 +618,100 @@ void Application::draw() {
         // fmt::println("btn");
     }
 
-    auto selectedClip = state.getSelectedClip();
+    ImDrawList* drawList = ImGui::GetWindowDrawList();
+    for (auto [clipID, selectedClip] : state.getSelectedClips()) {
+        if (ImGui::IsItemHovered() && ImGui::IsMouseDown(0)) {
+            // mouse position in the canvas
+            // in terms of the video resolution
+            auto canvasX = static_cast<int>(std::round(mousePos.x / scale));
+            auto canvasY = static_cast<int>(std::round(mousePos.y / scale));
+            
+            bool deselected = false;
 
-    if (ImGui::IsItemHovered() && ImGui::IsMouseDown(0)) {
-        // mouse position in the canvas
-        // in terms of the video resolution
-        auto canvasX = static_cast<int>(std::round(mousePos.x / scale));
-        auto canvasY = static_cast<int>(std::round(mousePos.y / scale));
-        
-        bool deselected = false;
+            if (isDraggingClip && io.MouseDownDuration[0] == 0) {
+                // check if canvasX, canvasY are
+                // outside of the clip bounding box
+                // if so, deselect
 
-        if (isDraggingClip && io.MouseDownDuration[0] == 0 && state.isClipSelected()) {
-            // check if canvasX, canvasY are
-            // outside of the clip bounding box
-            // if so, deselect
+                Vector2D position = selectedClip->getPos();
+                Vector2D size = selectedClip->getSize();
 
-            Vector2D position = selectedClip->getPos();
-            Vector2D size = selectedClip->getSize();
-
-            // top 10 laziest developer moments
-            if (!(canvasX >= position.x && canvasX <= position.x + size.x &&
-                canvasY >= position.y && canvasY <= position.y + size.y)
-            ) {
-                isDraggingClip = false;
-                state.deselect();    
-                deselected = true;   
-            }
-        }
-
-        if (!deselected) {
-            if (isDraggingClip && state.isClipSelected()) {
-                int dx = canvasX - initialPos.x;
-                int dy = canvasY - initialPos.y;
-
-                initialPos = { canvasX, canvasY };
-
-                if (selectedClip->m_properties.getProperties().contains("position")) {
-                    auto property = selectedClip->m_properties.getProperty("position");
-                    auto oldPos = Vector2D::fromString(property->data);
-                    Vector2D newPos = {
-                        .x = std::clamp(oldPos.x + dx, 0, state.video->resolution.x),
-                        .y = std::clamp(oldPos.y + dy, 0, state.video->resolution.y)
-                    };
-                    setData(property, newPos.toString());
+                // top 10 laziest developer moments
+                if (!(canvasX >= position.x && canvasX <= position.x + size.x &&
+                    canvasY >= position.y && canvasY <= position.y + size.y)
+                ) {
+                    isDraggingClip = false;
+                    state.deselect();    
+                    deselected = true;   
                 }
             }
 
-            if (!isDraggingClip) {
-                // find the clip currently being clicked on
-                // set state.draggingClip
-                // and initialPos
+            if (!deselected) {
+                if (isDraggingClip) {
+                    int dx = canvasX - initialPos.x;
+                    int dy = canvasY - initialPos.y;
 
-                for (auto track : state.video->videoTracks) {
-                    for (auto _clip : track->getClips()) {
-                        auto clip = _clip.second;
-                        Vector2D position = clip->getPos();
-                        Vector2D size = clip->getSize();
-                        // fmt::println("-------------------------");
-                        // fmt::println("{}, {}", canvasX >= position.x, canvasX <= position.x + size.x);
-                        // fmt::println("{}, {}", canvasY >= position.y, canvasY <= position.y + size.y);
-                        // fmt::println("-------------------------");
-                        // fmt::println("{}, {}", position.x, position.y);
-                        // fmt::println("{}, {}", size.x, size.y);
-                        // fmt::println("{}, {}", canvasX, canvasY);
-                        // fmt::println("-------------------------");
-                        if (canvasX >= position.x && canvasX <= position.x + size.x &&
-                            canvasY >= position.y && canvasY <= position.y + size.y
-                        ) {
-                            fmt::println("found clip!");
-                            selectedClip = clip;
-                            initialPos = { canvasX, canvasY };
-                            isDraggingClip = true;
+                    initialPos = { canvasX, canvasY };
+
+                    if (selectedClip->m_properties.contains("position")) {
+                        // TODO: REWORK THIS FOR TRANSFORM
+
+                        // auto property = selectedClip->m_properties["position"];
+                        // auto oldPos = Vector2D::fromString(property->data);
+                        // Vector2D newPos = {
+                        //     .x = std::clamp(oldPos.x + dx, 0, state.video->resolution.x),
+                        //     .y = std::clamp(oldPos.y + dy, 0, state.video->resolution.y)
+                        // };
+
+                        // auto data = newPos.toString();
+                        // if (property->keyframes.size() == 1) {
+                        //     property->keyframes[0] = data;
+                        //     state.lastRenderedFrame = -1;
+                        // } else {
+                        //     int keyframe = state.currentFrame - selectedClip->startFrame;
+                        //     selectedClip->m_properties.setKeyframe(property->id, keyframe, data);
+                        //     state.lastRenderedFrame = -1;
+                        // }
+                    }
+                }
+
+                if (!isDraggingClip) {
+                    // find the clip currently being clicked on
+                    // set state.draggingClip
+                    // and initialPos
+
+                    for (auto track : state.video->videoTracks) {
+                        for (auto _clip : track->getClips()) {
+                            auto clip = _clip.second;
+                            Vector2D position = clip->getPos();
+                            Vector2D size = clip->getSize();
+                            // fmt::println("-------------------------");
+                            // fmt::println("{}, {}", canvasX >= position.x, canvasX <= position.x + size.x);
+                            // fmt::println("{}, {}", canvasY >= position.y, canvasY <= position.y + size.y);
+                            // fmt::println("-------------------------");
+                            // fmt::println("{}, {}", position.x, position.y);
+                            // fmt::println("{}, {}", size.x, size.y);
+                            // fmt::println("{}, {}", canvasX, canvasY);
+                            // fmt::println("-------------------------");
+                            if (canvasX >= position.x && canvasX <= position.x + size.x &&
+                                canvasY >= position.y && canvasY <= position.y + size.y
+                            ) {
+                                fmt::println("found clip!");
+                                selectedClip = clip;
+                                initialPos = { canvasX, canvasY };
+                                isDraggingClip = true;
+                                break;
+                            }
+                        }
+
+                        if (isDraggingClip) {
                             break;
                         }
                     }
-
-                    if (isDraggingClip) {
-                        break;
-                    }
                 }
             }
         }
-    }
 
-    ImDrawList* drawList = ImGui::GetWindowDrawList();
-    if (state.isClipSelected() && state.getSelectedClip()) {
         Vector2D position = selectedClip->getPos();
         Vector2D size = selectedClip->getSize();
         Vector2D resolution = state.video->getResolution();
@@ -844,7 +789,7 @@ void Application::draw() {
 
     float totalPlaybackBtnWidth = buttonSize.x * 3 + spacing * 2;
     // UR = undo/redo
-    float totalURBtnWidth = buttonSize.x * 2 + spacing;
+    float totalURBtnWidth = buttonSize.x * 3 + spacing * 2;
 
     float playbackOffset = (windowWidth - totalPlaybackBtnWidth) * 0.5f;
     auto btnStart = ImGui::GetCursorPosX();
@@ -858,62 +803,81 @@ void Application::draw() {
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, IM_COL32(0, 0, 0, 0));
     ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 255, 255, 150));
 
-    auto playbackBtn = [&](const char* label, std::function<void()> cb, bool disabled = false) {
+    // ok so these param names are a bit misleading (aside from label thats obvious)
+    // disabled = button does absolutely nothing; gets greyed out
+    // enabled = on state, used for a toggle; button gets slightly more illuminated
+    auto playbackBtn = [&](const char* label, bool disabled = false, bool enabled = false) {
         auto min = ImGui::GetCursorScreenPos();
         bool hovered = ImGui::IsMouseHoveringRect(min, ImVec2(min.x + buttonSize.x, min.y + buttonSize.y));
+        int popCount = 0;
+        
         if (disabled) {
             ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 255, 255, 75));
+            popCount++;
         }
+
+        if (enabled) {
+            ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 255, 255, 225));
+            popCount++;
+        }
+
         if (hovered && !disabled) {
             ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 255, 255, 255));
+            popCount++;
         }
         
-        if (ImGui::Button(
+        auto clicked = ImGui::Button(
             label,
             buttonSize
-        ) && !disabled) {
-            cb();
-        }
+        ) && !disabled;
 
-        if (hovered && !disabled) {
-            ImGui::PopStyleColor();
-        }
+        ImGui::PopStyleColor(popCount);
 
-        if (disabled) {
-            ImGui::PopStyleColor();
-        }
+        return clicked;
     };
 
-    playbackBtn(ICON_FA_BACKWARD, [&]() {
+    if (playbackBtn(ICON_FA_BACKWARD)) {
         setCurrentFrame(state.currentFrame - state.video->frameForTime(5));
-    });
+    }
     
     ImGui::SameLine();
 
-    playbackBtn(state.isPlaying ? ICON_FA_PAUSE : ICON_FA_PLAY, [&]() {
+    if (playbackBtn(state.isPlaying ? ICON_FA_PAUSE : ICON_FA_PLAY)) {
         togglePlay();
-    });
+    }
 
     ImGui::SameLine();
 
-    playbackBtn(ICON_FA_FORWARD, [&]() {
+    if (playbackBtn(ICON_FA_FORWARD)) {
         setCurrentFrame(state.currentFrame + state.video->frameForTime(5));
-    });
+    }
 
     ImGui::SameLine();
 
     ImGui::SetCursorPosX((ImGui::GetWindowWidth() - mediaControlW) / 2.f + mediaControlW - totalURBtnWidth);
         
-    playbackBtn(ICON_FA_ROTATE_LEFT, [&]() {
+    if (playbackBtn(ICON_FA_ROTATE_LEFT, state.undoStack.size() <= 0)) {
         state.undo();
-    });
+    }
 
     ImGui::SameLine();
 
-    playbackBtn(ICON_FA_ROTATE_RIGHT, [&]() {
+    if (playbackBtn(ICON_FA_ROTATE_RIGHT, state.redoStack.size() <= 0)) {
         state.redo();
-    }, state.redoStack.size() <= 0);
+    }
 
+    ImGui::SameLine();
+
+    bool areClipsLinked = state.areClipsLinked();
+    if (playbackBtn(areClipsLinked ? ICON_FA_LINK_SLASH : ICON_FA_LINK, state.selectedClips.size() <= 1, areClipsLinked)) {
+        for (auto selectedClip : state.getSelectedClips()) {
+            if (areClipsLinked) {
+                selectedClip.second->linkedClips = {};
+            } else {
+                selectedClip.second->linkedClips = state.selectedClips;
+            }
+        }
+    }
 
     ImGui::PopStyleColor(4);
 
@@ -958,7 +922,6 @@ void Application::setCurrentFrame(int frame) {
     auto& state = State::get();
     frame = std::clamp(frame, 0, state.video->frameCount);
     state.currentFrame = frame;
-    // timeline.setPlayheadTime(state.video->timeForFrame(frame));
 }
 
 template<class T>
@@ -966,33 +929,18 @@ void Application::drawClipButton(std::string name, int defaultDuration) {
     if (ImGui::Button(name.c_str(), ImVec2(-1.0f, 0.0f))) {
         timeline.isPlacingClip = true;
         timeline.placeType = TrackType::Video;
+        timeline.placeDuration = defaultDuration;
         timeline.placeCb = [this, defaultDuration](int frame, int trackIdx) {
             auto& state = State::get();
-            std::string uID = utils::generateUUID();
 
-            Action action = {
-                .perform = [&state, trackIdx, frame, defaultDuration](std::string info) {
-                    auto clip = std::make_shared<T>();
-                    clip->startFrame = frame;
-                    clip->duration = defaultDuration;
-                    clip->uID = info;
-                    state.video->addClip(trackIdx, clip);
-                    state.selectClip(clip);
-                },
-                .undo = [&state, trackIdx, uID](std::string) {
-                    int trackIdx = state.video->getClipMap()[uID];
-                    if (state.selectedClipId == uID) {
-                        state.deselect();
-                    }
-                    state.video->getTracks()[trackIdx]->removeClip(uID);
-                },
-                .info = uID
-            };
-
-            action.perform(uID);
-
-            state.undoStack.push(action);
-            state.redoStack = std::stack<Action>();
+            auto clip = std::make_shared<T>();
+            clip->startFrame = frame;
+            clip->duration = defaultDuration;
+            auto action = std::make_shared<CreateClip>(clip, clip->getType(), trackIdx);
+            
+            action->perform();
+            state.selectClip(clip);
+            state.addAction(action);
 
             state.lastRenderedFrame = -1;
         };
@@ -1026,6 +974,55 @@ void Application::exit() {
     SDL_Quit();
 }
 
+// shoutout chatgpt
+void GLDebugCallback(GLenum source,
+                              GLenum type,
+                              GLuint id,
+                              GLenum severity,
+                              GLsizei length,
+                              const GLchar* message,
+                              const void* userParam)
+{
+    // Ignore known non-critical messages (optional)
+    if (id == 131169 || id == 131185 || id == 131218 || id == 131204)
+        return;
+
+    fmt::print("---------------\nOpenGL Debug Message ({}): {}\n", id, message);
+
+    const char* srcStr = "Unknown";
+    switch (source) {
+        case GL_DEBUG_SOURCE_API:             srcStr = "API"; break;
+        case GL_DEBUG_SOURCE_WINDOW_SYSTEM:   srcStr = "Window System"; break;
+        case GL_DEBUG_SOURCE_SHADER_COMPILER: srcStr = "Shader Compiler"; break;
+        case GL_DEBUG_SOURCE_THIRD_PARTY:     srcStr = "Third Party"; break;
+        case GL_DEBUG_SOURCE_APPLICATION:     srcStr = "Application"; break;
+        case GL_DEBUG_SOURCE_OTHER:           srcStr = "Other"; break;
+    }
+
+    const char* typeStr = "Other";
+    switch (type) {
+        case GL_DEBUG_TYPE_ERROR:               typeStr = "Error"; break;
+        case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR: typeStr = "Deprecated Behaviour"; break;
+        case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:  typeStr = "Undefined Behaviour"; break;
+        case GL_DEBUG_TYPE_PORTABILITY:         typeStr = "Portability"; break;
+        case GL_DEBUG_TYPE_PERFORMANCE:         typeStr = "Performance"; break;
+        case GL_DEBUG_TYPE_MARKER:              typeStr = "Marker"; break;
+        case GL_DEBUG_TYPE_PUSH_GROUP:          typeStr = "Push Group"; break;
+        case GL_DEBUG_TYPE_POP_GROUP:           typeStr = "Pop Group"; break;
+    }
+
+    const char* sevStr = "Unknown";
+    switch (severity) {
+        case GL_DEBUG_SEVERITY_HIGH:         sevStr = "HIGH"; break;
+        case GL_DEBUG_SEVERITY_MEDIUM:       sevStr = "MEDIUM"; break;
+        case GL_DEBUG_SEVERITY_LOW:          sevStr = "LOW"; break;
+        case GL_DEBUG_SEVERITY_NOTIFICATION: sevStr = "NOTIFICATION"; break;
+    }
+
+    fmt::print("Source: {}\nType: {}\n", srcStr, typeStr);
+    fmt::print("Severity: {}\n\n", sevStr);
+}
+
 bool Application::initSDL() {
     if (!SDL_Init(SDL_INIT_VIDEO)) {
         fmt::println("SDL Init error: {}", SDL_GetError());
@@ -1034,9 +1031,10 @@ bool Application::initSDL() {
 
     SDL_SetAppMetadata("paperclip", "1.0", "com.underscored.paperclip");
 
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 6);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
 
     window = SDL_CreateWindow("Paperclip", 1200, 800, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
     if (!window) {
@@ -1064,6 +1062,11 @@ bool Application::initSDL() {
     fmt::println("GLAD loaded OpenGL {}.{}", GLAD_VERSION_MAJOR(version), GLAD_VERSION_MINOR(version));
     fmt::println("GL Version: {}", (const char*)glGetString(GL_VERSION));
     fmt::println("GLSL Version: {}", (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION));
+
+    // glEnable(GL_DEBUG_OUTPUT);
+    // glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS); // Ensures callback is called immediately
+    // glDebugMessageCallback(GLDebugCallback, nullptr);
+    // glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_TRUE);
 
     int w, h;
     SDL_GetWindowSize(window, &w, &h);

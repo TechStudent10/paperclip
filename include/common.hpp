@@ -57,6 +57,22 @@ public:
     Vector2D operator/(const Vector2D& other) {
         return { x / other.x, y / other.y };
     }
+
+    Vector2D operator+(const int& other) {
+        return { x + other, y + other };
+    }
+
+    Vector2D operator-(const int& other) {
+        return { x - other, y - other };
+    }
+
+    Vector2D operator*(const int& other) {
+        return { x * other, y * other };
+    }
+
+    Vector2D operator/(const int& other) {
+        return { x / other, y / other };
+    }
 };
 
 struct Vector2DF {
@@ -74,6 +90,42 @@ struct Vector2DF {
         x = reader.readF32().unwrapOr(0);
         y = reader.readF32().unwrapOr(0);
     }
+
+    Vector2DF operator+(const Vector2DF& other) {
+        return { x + other.x, y + other.y };
+    }
+
+    Vector2DF operator-(const Vector2DF& other) {
+        return { x - other.x, y - other.y };
+    }
+
+    Vector2DF operator*(const Vector2DF& other) {
+        return { x * other.x, y * other.y };
+    }
+
+    Vector2DF operator/(const Vector2DF& other) {
+        return { x / other.x, y / other.y };
+    }
+
+    Vector2DF operator+(const float& other) {
+        return { x + other, y + other };
+    }
+
+    Vector2DF operator-(const float& other) {
+        return { x - other, y - other };
+    }
+
+    Vector2DF operator*(const float& other) {
+        return { x * other, y * other };
+    }
+
+    Vector2DF operator/(const float& other) {
+        return { x / other, y / other };
+    }
+
+    operator Vector2D() {
+        return { .x = (int)x, .y = (int)y };
+    }
 };
 
 struct Vector1D {
@@ -82,10 +134,25 @@ struct Vector1D {
     JSON_METHODS(Vector1D);
 };
 
+struct Transform {
+    Vector2D position;
+    // 0.5, 0.5 = center
+    // 0, 0 = top left
+    // 0, 1 = top right
+    // 1, 0 = bottom left
+    // 1, 1 = bottom right
+    Vector2DF anchorPoint = { 0.5, 0.5 };
+    float rotation;
+    float pitch;
+    float roll;
+
+    JSON_METHODS(Transform)
+};
+
 struct Dimensions {
-    Vector2D pos;
     Vector2D size;
-    
+    Transform transform;
+
     JSON_METHODS(Dimensions)
 };
 

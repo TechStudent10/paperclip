@@ -17,14 +17,13 @@ AudioRenderer::AudioRenderer(std::string_view outputPath, float length): outputP
     decoderConfig = ma_decoder_config_init(ma_format_f32, CHANNELS, SAMPLE_RATE);
 }
 
-void AudioRenderer::addClip(std::string path, float start, float end, std::shared_ptr<ClipProperty> volume) {
+void AudioRenderer::addClip(std::string path, float start, float end, std::shared_ptr<NumberProperty> volume) {
     AudioRenderFile file;
     ma_decoder_init_file(path.c_str(), &decoderConfig, &file.decoder);
     file.path = path;
     file.startTime = start;
     file.endTime = end;
-    file.keyframes = volume->keyframes;
-    file.keyframeInfo = volume->keyframeInfo;
+    file.volume = volume;
     clips.push_back(file);
 }
 
@@ -50,53 +49,10 @@ void AudioRenderer::render(float fps) {
                 double sampleTime = localTime + (i / (double)CHANNELS / SAMPLE_RATE);
                 int currentFrame = sampleTime * fps;
 
-                // only one keyframe? use that
-                if (clip.keyframes.size() == 1) {
-                    // fmt::println("a {}", clip.keyframes[0]);
-                    outBuffer[i] += temp[i] * ((float)Vector1D::fromString(clip.keyframes[0]).number / 100.f);
-                    continue;
-                }
+                clip.volume->processKeyframe(currentFrame);
 
-                // beyond the last keyframe? use that
-                if (std::prev(clip.keyframes.end())->first <= currentFrame - (clip.startTime / fps)) {
-                    // fmt::println("b {}", clip.keyframes.rbegin()->second);
-                    outBuffer[i] += temp[i] * ((float)Vector1D::fromString(clip.keyframes.rbegin()->second).number / 100.f);
-                    continue;
-                }
-
-                int previousKeyframe = 0;
-                int nextKeyframe = 0;
-
-                for (auto keyframe : clip.keyframes) {
-                    if (keyframe.first > currentFrame) {
-                        nextKeyframe = keyframe.first;
-                        break;
-                    }
-
-                    if (keyframe.first > previousKeyframe) {
-                        previousKeyframe = keyframe.first;
-                    }
-                }
-
-                if (nextKeyframe == 0) {
-                    // somehow we did not catch the last keyframe, so we just set it here
-                    // fmt::println("c {}", clip.keyframes[previousKeyframe]);
-                    outBuffer[i] += temp[i] * ((float)Vector1D::fromString(clip.keyframes[previousKeyframe]).number / 100.f);
-                    continue;
-                }
-
-                float progress = (float)(currentFrame - previousKeyframe) / (float)(nextKeyframe - previousKeyframe);
-                if (clip.keyframeInfo.contains(nextKeyframe)) {
-                    progress = animation::getEasingFunction(clip.keyframeInfo[nextKeyframe].easing, clip.keyframeInfo[nextKeyframe].mode)(progress);
-                }
-
-                auto oldNumber = Vector1D::fromString(clip.keyframes[previousKeyframe]);
-                auto nextNumber = Vector1D::fromString(clip.keyframes[nextKeyframe]);
-
-                float vol = std ::rint(oldNumber.number +
-                                (float)(nextNumber.number - oldNumber.number) * progress) / 100.f;
                 // fmt::println("d {}", vol);
-                outBuffer[i] += temp[i] * vol;
+                outBuffer[i] += temp[i] * clip.volume->data;
                 // fmt::println("{}", outBuffer[i]);
             }
         }

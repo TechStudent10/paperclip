@@ -8,34 +8,34 @@
 
 #include <utils.hpp>
 
+#include <clips/properties/transform.hpp>
+#include <clips/properties/number.hpp>
+
 namespace clips {
     ImageClip::ImageClip(const std::string& path): Clip(0, 120), path(path) {
-        m_properties.addProperty(
-            ClipProperty::position()
+        addProperty(
+            std::make_shared<TransformProperty>()
         );
 
-        m_properties.addProperty(
-            ClipProperty::number()
+        // scale x (default = 100)
+        addProperty(
+            std::make_shared<NumberProperty>()
                 ->setId("scale-x")
                 ->setName("Scale X")
-                ->setDefaultKeyframe(Vector1D{ .number = 100 }.toString())   
         );
 
-        m_properties.addProperty(
-            ClipProperty::number()
+        // scale y (default = 100)
+        addProperty(
+            std::make_shared<NumberProperty>()
                 ->setId("scale-y")
                 ->setName("Scale Y")
-                ->setDefaultKeyframe(Vector1D{ .number = 100 }.toString())   
-        );
-
-        m_properties.addProperty(
-            ClipProperty::number()
-                ->setId("rotation")
-                ->setName("Rotation (deg)")
-                ->setDefaultKeyframe(Vector1D{ .number = 0 }.toString())
         );
 
         m_metadata.name = std::filesystem::path(path).filename().string();
+
+        glGenBuffers(1, &VBO);
+        glGenVertexArrays(1, &VAO);
+        glGenBuffers(1, &EBO);
 
         if (path.empty()) return;
 
@@ -67,6 +67,13 @@ namespace clips {
 
         stbi_image_free(imageData);
 
+        previewFrame = std::make_shared<Frame>(
+            width,
+            height
+        );
+        previewFrame->clearFrame();
+        previewFrame->drawTexture(texture, { width, height }, { .position = { 0, 0 } }, VAO, VBO, EBO);
+
         initialized = true;
 
         return true;
@@ -77,7 +84,7 @@ namespace clips {
     }
 
     Vector2D ImageClip::getPos() {
-        Vector2D position = Vector2D::fromString(m_properties.getProperty("position")->data);
+        Vector2D position = getProperty<TransformProperty>("transform").unwrap()->data.position;
         return position;
     }
 
@@ -86,19 +93,25 @@ namespace clips {
     void ImageClip::render(Frame* frame) {
         initialize();
 
-        float scaleX = (float)Vector1D::fromString(m_properties.getProperty("scale-x")->data).number / 100.f;
-        float scaleY = (float)Vector1D::fromString(m_properties.getProperty("scale-y")->data).number / 100.f;
-        int rotation = Vector1D::fromString(m_properties.getProperty("rotation")->data).number;
+        float scaleX = (float)getProperty<NumberProperty>("scale-x").unwrap()->data / 100.f;
+        float scaleY = (float)getProperty<NumberProperty>("scale-y").unwrap()->data / 100.f;;
         if (scaleX <= 0 || scaleY <= 0) {
             return;
         }
-        auto position = Vector2D::fromString(m_properties.getProperty("position")->data);
+
+        auto transform = getProperty<TransformProperty>("transform").unwrap()->data;
 
         scaledW = static_cast<int>(std::floor(width * scaleX));
         scaledH = static_cast<int>(std::floor(height * scaleY));
 
-        frame->drawTexture(texture, position, { scaledW, scaledH }, rotation);
+        frame->drawTexture(texture, { scaledW, scaledH }, transform, VAO, VBO, EBO);
     }
+
+    GLuint ImageClip::getPreviewTexture(int) {
+        return previewFrame->textureID;
+    }
+
+    Vector2D ImageClip::getPreviewSize() { return { width, height }; }
 
     ImageClip::~ImageClip() {
         onDelete();
