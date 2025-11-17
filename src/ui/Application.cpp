@@ -101,7 +101,7 @@ const char* ensureCStr(const char* c) {
 
 nfdnfilteritem_t createFilter(const char* name, const char* spec) {
 #ifndef WIN32
-    return { name, spec }
+    return { name, spec };
 #else
     return { GetWC(name), GetWC(spec) };
 #endif
