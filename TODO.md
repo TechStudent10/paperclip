@@ -20,7 +20,7 @@
 - [ ] generate audio previews on import
 - [ ] separate panels into their own files
 - [x] transforms
-- [ ] new property system
+- [x] new property system
 
 - [x] fix whatever this means (happened when i clicked on text that was above a video, or when i clicked on the video, idk but it happened on one of those occasions)
 ```

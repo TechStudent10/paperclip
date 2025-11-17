@@ -1,50 +1,70 @@
 #include <clips/default/text.hpp>
 
 #include <state.hpp>
+#include <clips/properties/transform.hpp>
+#include <clips/properties/color.hpp>
+#include <clips/properties/text.hpp>
+#include <clips/properties/dropdown.hpp>
+#include <clips/properties/number.hpp>
 
 namespace clips {
     Text::Text(): Clip(60, 120) {
-        m_properties.addProperty(
-            ClipProperty::transform()
+        addProperty(
+            std::make_shared<TransformProperty>()
         );
 
-        m_properties.addProperty(
-            ClipProperty::color()
+        addProperty(
+            std::make_shared<ColorProperty>()
+                ->setId("color")
+                ->setName("Color")
         );
 
         // default text property is fine here
-        m_properties.addProperty(
-            ClipProperty::text()
-                ->setDefaultKeyframe("Hello\nWorld!")
+        // (default = "Hello\nWorld!")
+        addProperty(
+            std::make_shared<TextProperty>("Hello\nWorld!")
+                ->setId("text")
+                ->setName("Text")
         );
 
-        m_properties.addProperty(
-            ClipProperty::dropdown()
+        // font
+        // default = "Inter"
+        // options = 
+        // "Inter",
+        // "JetBrains Mono",
+        // "Noto Sans",
+        // "Noto Serif",
+        // "Open Sans",
+        // "Oswald",
+        // "Raleway",
+        // "Raleway Dots",
+        // "Roboto",
+        // "Source Code Pro",
+        // "Source Serif 4"
+        addProperty(
+            std::make_shared<DropdownProperty>(std::vector<std::string>{
+                "Inter",
+                "JetBrains Mono",
+                "Noto Sans",
+                "Noto Serif",
+                "Open Sans",
+                "Oswald",
+                "Raleway",
+                "Raleway Dots",
+                "Roboto",
+                "Source Code Pro",
+                "Source Serif 4"
+            }, "Inter")
                 ->setId("font")
                 ->setName("Font")
-                ->setOptions(DropdownOptions{
-                    .options = std::vector<std::string>({
-                        "Inter",
-                        "JetBrains Mono",
-                        "Noto Sans",
-                        "Noto Serif",
-                        "Open Sans",
-                        "Oswald",
-                        "Raleway",
-                        "Raleway Dots",
-                        "Roboto",
-                        "Source Code Pro",
-                        "Source Serif 4"
-                    })
-                }.toString())
-                ->setDefaultKeyframe("Inter")
         );
 
-        m_properties.addProperty(
-            ClipProperty::number()
+        // font size
+        // default = 90
+        addProperty(
+            std::make_shared<NumberProperty>(90)
                 ->setId("size")
                 ->setName("Font Size")
-                ->setDefaultKeyframe(Vector1D{ .number = 90 }.toString())
         );
 
         m_metadata.name = "Text";
@@ -58,23 +78,23 @@ namespace clips {
     }
 
     Vector2D Text::getSize() {
-        auto fontSize = Vector1D::fromString(m_properties.getProperty("size")->data).number;
+        auto fontSize = getProperty<NumberProperty>("size").unwrap()->data;
 
         return { (int)std::round(size.x), (int)std::round(size.y) };
     }
 
     Vector2D Text::getPos() {
-        Vector2D position = Transform::fromString(m_properties.getProperty("transform")->data).position;
+        Vector2D position = getProperty<TransformProperty>("transform").unwrap()->data.position;
         return position;
     }
 
     void Text::render(Frame* frame) {
         auto& state = State::get();
-        auto text = m_properties.getProperty("text")->data;
-        auto font = fmt::format("resources/fonts/{}.ttf", m_properties.getProperty("font")->data);
-        auto fontSize = Vector1D::fromString(m_properties.getProperty("size")->data).number;
-        auto color = RGBAColor::fromString(m_properties.getProperty("color")->data);
-        auto transform = Transform::fromString(m_properties.getProperty("transform")->data);
+        auto text = getProperty<TextProperty>("text").unwrap()->data;
+        auto font = fmt::format("resources/fonts/{}.ttf", getProperty<DropdownProperty>("font").unwrap()->data);
+        auto fontSize = getProperty<NumberProperty>("size").unwrap()->data;
+        auto color = getProperty<ColorProperty>("color").unwrap()->data;
+        auto transform = getProperty<TransformProperty>("transform").unwrap()->data;
 
         size = state.textRenderer->drawText(frame, text, font, transform, color, fontSize);
     }

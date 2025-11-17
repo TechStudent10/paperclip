@@ -8,6 +8,8 @@
 #include <frame.hpp>
 #include <utils.hpp>
 
+#include <Geode/Result.hpp>
+
 enum class PropertyType {
     Text,
     Number,
@@ -36,30 +38,40 @@ struct PropertyKeyframeMeta {
 
 class Clip;
 
-class ClipProperty {
+// this is weird however it allows me
+// to use template arguments in ClipProperty
+// :double_thumbs:
+class ClipPropertyBase : public std::enable_shared_from_this<ClipPropertyBase> {
 public:
-    ClipProperty() {}
+    ClipPropertyBase() {}
+
     Clip* clip;
-    std::string id;
-    std::string name;
+    std::string id = "";
+    std::string name = "";
     PropertyType type;
-    std::string data; // can be interpreted by each individual clip
-    std::string options; // can be interpreted by each individual property
-    std::map<int, std::string> keyframes;
     std::map<int, PropertyKeyframeMeta> keyframeInfo;
 
+    virtual void drawProperty() {}
+    void _drawProperty();
+
+    virtual void updateData(float progress, int previous, int next) {}
+    virtual std::vector<int> getKeyframes() { fmt::println("calling the virtual"); return {}; }
+    virtual void writeData(qn::HeapByteWriter& writer) {}
+    virtual void readData(qn::ByteReader& reader) {}
+
+    virtual void addKeyframe(int frame) {}
+    virtual void removeKeyframe(int frame) {}
+
+    void processKeyframe(int frame);
+
     void write(qn::HeapByteWriter& writer) {
+        writer.writeI16(debug((int)type));
         UNWRAP_WITH_ERR(writer.writeStringU32(id));
         UNWRAP_WITH_ERR(writer.writeStringU32(name));
-        writer.writeI16((int)type);
-        UNWRAP_WITH_ERR(writer.writeStringU32(data));
-        UNWRAP_WITH_ERR(writer.writeStringU32(options));
 
-        writer.writeI16(keyframes.size());
-        for (auto keyframe : keyframes) {
-            writer.writeI16(keyframe.first);
-            UNWRAP_WITH_ERR(writer.writeStringU32(keyframe.second));
-        }
+        writer.writeI64(getKeyframes().size());
+        // writes the keyframes
+        writeData(writer);
 
         writer.writeI16(keyframeInfo.size());
         for (auto info : keyframeInfo) {
@@ -71,16 +83,9 @@ public:
     void read(qn::ByteReader& reader) {
         id = reader.readStringU32().unwrapOr("");
         name = reader.readStringU32().unwrapOr("");
-        type = (PropertyType)(reader.readI16().unwrapOr(0));
-        data = reader.readStringU32().unwrapOr("");
-        options = reader.readStringU32().unwrapOr("");
-
-        auto keyframesSize = reader.readI16().unwrapOr(0);
-        for (int i = 0; i < keyframesSize; i++) {
-            auto key = reader.readI16().unwrapOr(0);
-            auto keyframe = reader.readStringU32().unwrapOr("{}");
-            keyframes[key] = keyframe;
-        }
+        
+        // read the keyframes
+        readData(reader);
 
         auto infoSize = reader.readI16().unwrapOr(0);
         for (int j = 0; j < infoSize; j++) {
@@ -91,121 +96,11 @@ public:
         }
     }
 
-    ClipProperty* setId(std::string_view id) {
-        this->id = id;
-        return this;
-    }
-    ClipProperty* setName(std::string_view name) {
-        this->name = name;
-        return this;
-    }
-    ClipProperty* setType(PropertyType type) {
-        this->type = type;
-        return this;
-    }
-    ClipProperty* setDefaultKeyframe(std::string_view data) {
-        this->keyframes[0] = data;
-        return this;
-    }
-    ClipProperty* setOptions(std::string_view options) {
-        this->options = options;
-        return this;
-    }
-
-    void drawProperty();
-
-    static ClipProperty* create() {
-        return new ClipProperty();
-    }
-
-    // defaults that most clips are gonna use (but can override)
-
-    static ClipProperty* text() {
-        return ClipProperty::create()
-            ->setType(PropertyType::Text)
-            ->setId("text")
-            ->setName("Text")
-            ->setDefaultKeyframe("Hello World!");
-    }
-
-    static ClipProperty* number() {
-        return ClipProperty::create()
-            ->setType(PropertyType::Number);
-    }
-
-    static ClipProperty* dropdown() {
-        return ClipProperty::create()
-            ->setType(PropertyType::Dropdown);
-    }
-
-    static ClipProperty* dimensions() {
-        return ClipProperty::create()
-            ->setType(PropertyType::Dimensions)
-            ->setId("dimensions")
-            ->setName("Dimensions")
-            ->setDefaultKeyframe(Dimensions{ .size = { .x = 500, .y = 500 }, .transform = { .position = { .x = 10, .y = 10 } } }.toString());
-    }
-
-    static ClipProperty* color() {
-        return ClipProperty::create()
-            ->setType(PropertyType::Color)
-            ->setId("color")
-            ->setName("Color")
-            ->setDefaultKeyframe(RGBAColor{ .r = 0, .g = 0, .b = 0, .a = 255 }.toString());
-    }
+    virtual ~ClipPropertyBase() = default;
     
-    static ClipProperty* position() {
-        return ClipProperty::create()
-            ->setType(PropertyType::Position)
-            ->setId("position")
-            ->setName("Position")
-            ->setDefaultKeyframe(Vector2D{ .x = 0, .y = 0 }.toString());
-    }
-
-    static ClipProperty* transform() {
-        return ClipProperty::create()
-            ->setType(PropertyType::Transform)
-            ->setId("transform")
-            ->setName("Transform")
-            ->setDefaultKeyframe(Transform{
-                .position = { .x = 0, .y = 0 },
-                .anchorPoint = { 0.5f ,0.5f },
-                .rotation = 0,
-                .pitch = 0,
-                .roll = 0
-            }.toString());
-    }
-};
-
-struct ClipProperties {
-private:
-    std::map<std::string, std::shared_ptr<ClipProperty>> properties;
-    Clip* clip;
-
-    friend class Clip;
-public:
-    void addProperty(ClipProperty* property);
-    std::map<std::string, std::shared_ptr<ClipProperty>> getProperties() { return properties; }
-    std::shared_ptr<ClipProperty> getProperty(std::string id);
-    void setKeyframe(std::string id, int frame, std::string data);
-    void setKeyframeMeta(std::string id, int frame, PropertyKeyframeMeta data);
-
-    void write(qn::HeapByteWriter& writer) {
-        writer.writeI16(properties.size());
-        for (auto prop : properties) {
-            UNWRAP_WITH_ERR(writer.writeStringU32(prop.first));
-            prop.second->write(writer);
-        }
-    }
-
-    void read(qn::ByteReader& reader) {
-        auto size = reader.readI16().unwrapOr(0);
-        for (int i = 0; i < size; i++) {
-            auto key = reader.readStringU32().unwrapOr("");
-            auto prop = std::make_shared<ClipProperty>();
-            prop->read(reader);
-            properties[key] = prop;
-        }
+    template<typename T, std::enable_if_t<std::is_base_of_v<ClipPropertyBase, T>, bool> = true>
+    std::shared_ptr<T> as() {
+        return std::static_pointer_cast<T>(shared_from_this());
     }
 };
 
@@ -239,11 +134,9 @@ public:
     Clip(): Clip(0, 60) {}
     Clip(std::string uID): Clip(0, 60, uID) {}
 
-    Clip(int startFrame, int duration, std::string uID): uID(uID), startFrame(startFrame), duration(duration) {
-        m_properties.clip = this;
-    }
+    Clip(int startFrame, int duration, std::string uID): uID(uID), startFrame(startFrame), duration(duration) {}
 
-    ClipProperties m_properties;
+    std::unordered_map<std::string, std::shared_ptr<ClipPropertyBase>> m_properties;
     ClipMetadata m_metadata;
 
     int startFrame;
@@ -252,24 +145,28 @@ public:
     std::string uID; // unique ID
     std::vector<std::string> linkedClips; // linked clip IDs
 
+    template<typename T>
+    geode::Result<std::shared_ptr<T>, std::string> getProperty(const std::string& id) {
+        if (!m_properties.contains(id)) {
+            return geode::Err(fmt::format("Could not find property with id `{}`", id));
+        }
+
+        return geode::Ok(m_properties[id]->as<T>());
+    }
+
+    void addProperty(std::shared_ptr<ClipPropertyBase> property) {
+        property->clip = this;
+        m_properties[property->id] = property;
+    }
+
+    void dispatchChange();
+
     virtual void render(Frame* frame) {}
     virtual void onDelete() {}
 
-    virtual void write(qn::HeapByteWriter& writer) {
-        writer.writeI16((int)getType());
-        fmt::println("wrote {} as type", (int)getType());
-        m_properties.write(writer);
-        m_metadata.write(writer);
-        writer.writeI16(startFrame);
-        writer.writeI16(duration);
-    }
+    virtual void write(qn::HeapByteWriter& writer);
 
-    virtual void read(qn::ByteReader& reader) {
-        m_properties.read(reader);
-        m_metadata.read(reader);
-        startFrame = reader.readI16().unwrapOr(0);
-        duration = reader.readI16().unwrapOr(0);
-    }
+    virtual void read(qn::ByteReader& reader);
 
     virtual ClipType getType() { return ClipType::None; }
     virtual Vector2D getSize() { return { 0, 0 }; }
@@ -280,4 +177,55 @@ public:
         return 0;
     }
     virtual Vector2D getPreviewSize() { return { 0, 0 }; }
+};
+
+#include <imgui.h>
+
+template<typename T>
+class ClipProperty : public ClipPropertyBase {
+public:
+    ClipProperty() {}
+    T data;
+    std::map<int, T> keyframes;
+
+    void addKeyframe(int frame) override {
+        keyframes[frame] = data;
+    }
+
+    void removeKeyframe(int frame) override {
+        keyframes.erase(frame);
+    }
+
+    std::vector<int> getKeyframes() override {
+        std::vector<int> res;
+
+        for (auto [key, _] : keyframes) {
+            res.push_back(key);
+        }
+
+        return res;
+    }
+
+    void setData(T data, int keyframe) {
+        if (keyframes.size() == 1) {
+            keyframe = 0;
+        }
+
+        keyframes[keyframe] = data;
+        // this->data = data;
+        clip->dispatchChange();
+    }
+
+    std::shared_ptr<ClipProperty<T>> setId(std::string_view id) {
+        this->id = id;
+        return as<ClipProperty<T>>();
+    }
+    std::shared_ptr<ClipProperty<T>> setName(std::string_view name) {
+        this->name = name;
+        return as<ClipProperty<T>>();
+    }
+    std::shared_ptr<ClipProperty<T>> setType(PropertyType type) {
+        this->type = type;
+        return as<ClipProperty<T>>();
+    }
 };

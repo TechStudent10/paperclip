@@ -8,24 +8,27 @@
 
 #include <utils.hpp>
 
+#include <clips/properties/transform.hpp>
+#include <clips/properties/number.hpp>
+
 namespace clips {
     ImageClip::ImageClip(const std::string& path): Clip(0, 120), path(path) {
-        m_properties.addProperty(
-            ClipProperty::transform()
+        addProperty(
+            std::make_shared<TransformProperty>()
         );
 
-        m_properties.addProperty(
-            ClipProperty::number()
+        // scale x (default = 100)
+        addProperty(
+            std::make_shared<NumberProperty>()
                 ->setId("scale-x")
                 ->setName("Scale X")
-                ->setDefaultKeyframe(Vector1D{ .number = 100 }.toString())   
         );
 
-        m_properties.addProperty(
-            ClipProperty::number()
+        // scale y (default = 100)
+        addProperty(
+            std::make_shared<NumberProperty>()
                 ->setId("scale-y")
                 ->setName("Scale Y")
-                ->setDefaultKeyframe(Vector1D{ .number = 100 }.toString())   
         );
 
         m_metadata.name = std::filesystem::path(path).filename();
@@ -81,7 +84,7 @@ namespace clips {
     }
 
     Vector2D ImageClip::getPos() {
-        Vector2D position = Transform::fromString(m_properties.getProperty("transform")->data).position;
+        Vector2D position = getProperty<TransformProperty>("transform").unwrap()->data.position;
         return position;
     }
 
@@ -90,13 +93,13 @@ namespace clips {
     void ImageClip::render(Frame* frame) {
         initialize();
 
-        float scaleX = (float)Vector1D::fromString(m_properties.getProperty("scale-x")->data).number / 100.f;
-        float scaleY = (float)Vector1D::fromString(m_properties.getProperty("scale-y")->data).number / 100.f;
+        float scaleX = (float)getProperty<NumberProperty>("scale-x").unwrap()->data / 100.f;
+        float scaleY = (float)getProperty<NumberProperty>("scale-y").unwrap()->data / 100.f;;
         if (scaleX <= 0 || scaleY <= 0) {
             return;
         }
 
-        auto transform = Transform::fromString(m_properties.getProperty("transform")->data);
+        auto transform = getProperty<TransformProperty>("transform").unwrap()->data;
 
         scaledW = static_cast<int>(std::floor(width * scaleX));
         scaledH = static_cast<int>(std::floor(height * scaleY));

@@ -6,6 +6,8 @@
 #include <state.hpp>
 #include <utils.hpp>
 
+#include <clips/properties/transform.hpp>
+#include <clips/properties/number.hpp>
 
 double roundToNearestN(double value, double n) {
     if (n == 0) {
@@ -19,29 +21,32 @@ namespace clips {
     VideoClip::VideoClip(const std::string& path): Clip(10, 60), path(path) {
         m_metadata.name = std::filesystem::path(path).filename();
 
-        m_properties.addProperty(
-            ClipProperty::transform()
+        addProperty(
+            std::make_shared<TransformProperty>()
         );
 
-        m_properties.addProperty(
-            ClipProperty::number()
+        // scale x
+        // default = 100
+        addProperty(
+            std::make_shared<NumberProperty>()
                 ->setId("scale-x")
                 ->setName("Scale X")
-                ->setDefaultKeyframe(Vector1D{ .number = 100 }.toString())
         );
 
-        m_properties.addProperty(
-            ClipProperty::number()
+        // scale y
+        // default = 100
+        addProperty(
+            std::make_shared<NumberProperty>()
                 ->setId("scale-y")
                 ->setName("Scale Y")
-                ->setDefaultKeyframe(Vector1D{ .number = 100 }.toString())
         );
 
-        m_properties.addProperty(
-            ClipProperty::number()
+        // start time
+        // default = 0
+        addProperty(
+            std::make_shared<NumberProperty>()
                 ->setId("start-time")
                 ->setName("Start Time")
-                ->setDefaultKeyframe(Vector1D{ .number = 0 }.toString())
         );
 
         glGenBuffers(1, &VBO);
@@ -136,7 +141,7 @@ namespace clips {
     }
 
     Vector2D VideoClip::getPos() {
-        Vector2D position = Transform::fromString(m_properties.getProperty("transform")->data).position;
+        Vector2D position = getProperty<TransformProperty>("transform").unwrap()->data.position;
         return position;
     }
 
@@ -217,20 +222,20 @@ namespace clips {
         initialize();
 
         auto& state = State::get();
-        int startTime = Vector1D::fromString(m_properties.getProperty("start-time")->data).number;
+        int startTime = getProperty<NumberProperty>("start-time").unwrap()->data;
         int offset = startTime * fps;
         int targetFrame = std::floor(state.video->timeForFrame(state.currentFrame - startFrame) * (float)fps) + offset;
         if (targetFrame < 0) return;
 
         if (!decodeFrame(targetFrame)) return;
 
-        float scaleX = Vector1D::fromString(m_properties.getProperty("scale-x")->data).number / 100.f;
-        float scaleY = Vector1D::fromString(m_properties.getProperty("scale-y")->data).number / 100.f;
+        float scaleX = (float)getProperty<NumberProperty>("scale-x").unwrap()->data / 100.f;;
+        float scaleY = (float)getProperty<NumberProperty>("scale-y").unwrap()->data / 100.f;;
         if (scaleX <= 0 || scaleY <= 0) {
             return;
         }
 
-        auto transform = Transform::fromString(m_properties.getProperty("transform")->data);
+        auto transform = getProperty<TransformProperty>("transform").unwrap()->data;
 
         int scaledW = static_cast<int>(std::floor(width * scaleX));
         int scaledH = static_cast<int>(std::floor(height * scaleY));

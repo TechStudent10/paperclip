@@ -3,6 +3,8 @@
 #include <state.hpp>
 #include <clips/clip.hpp>
 
+#include <clips/properties/number.hpp>
+
 void CreateVideoClip::perform() {
     auto& state = State::get();
     state.deselect();
@@ -16,7 +18,7 @@ void CreateVideoClip::perform() {
     audioClip->startFrame = frame;
     audioClip->duration = metadata.frameCount;
     audioClip->m_metadata.name = videoClip->m_metadata.name;
-    audioClip->m_properties.getProperties()["volume"]->data = Vector1D{ .number = 100 }.toString();
+    audioClip->getProperty<NumberProperty>("volume").unwrap()->data = 100;
 
     videoClip->linkedClips = { videoClip->uID, audioClip->uID };
     audioClip->linkedClips = { videoClip->uID, audioClip->uID };

@@ -19,7 +19,7 @@
 #define UNWRAP_WITH_ERR(expr) ([&]() { \
     auto b = expr; \
     if (b.isErr()) { \
-        fmt::println("{} failed to unwrap: {}", #expr, b.unwrapErr().message()); \
+        fmt::println("{} failed to unwrap at {}:{}: {}", #expr, __FILE__, __LINE__, b.unwrapErr().message()); \
         return; \
     } \
 })()
@@ -44,6 +44,12 @@ namespace utils {
             std::remove(vec.begin(), vec.end(), elem),
             vec.end()
         );
+    }
+
+    // interpolates from a to b
+    // based on progress
+    inline float interpolate(float progress, float a, float b) {
+        return a + (b - a) * progress;
     }
 } // namespace utils
 

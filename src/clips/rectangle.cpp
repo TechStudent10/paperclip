@@ -1,13 +1,18 @@
 #include <clips/default/rectangle.hpp>
+#include <clips/properties/dimensions.hpp>
+#include <clips/properties/color.hpp>
+
 
 namespace clips {
     Rectangle::Rectangle(): Clip(60, 120) {
-        m_properties.addProperty(
-            ClipProperty::dimensions()
+        addProperty(
+            std::make_shared<DimensionsProperty>()
         );
 
-        m_properties.addProperty(
-            ClipProperty::color()
+        addProperty(
+            std::make_shared<ColorProperty>()
+                ->setId("color")
+                ->setName("Color")
         );
 
         m_metadata.name = "Rectangle";
@@ -32,18 +37,18 @@ namespace clips {
     }
 
     Vector2D Rectangle::getPos() {
-        Dimensions dimensions = Dimensions::fromString(m_properties.getProperty("dimensions")->data);
+        Dimensions dimensions = getProperty<DimensionsProperty>("dimensions").unwrap()->data;
         return dimensions.transform.position;
     }
 
     Vector2D Rectangle::getSize() {
-        Dimensions dimensions = Dimensions::fromString(m_properties.getProperty("dimensions")->data);
+        Dimensions dimensions = getProperty<DimensionsProperty>("dimensions").unwrap()->data;
         return dimensions.size;
     }
 
     void Rectangle::render(Frame* frame) {
-        Dimensions dimensions = Dimensions::fromString(m_properties.getProperty("dimensions")->data);
-        RGBAColor color = RGBAColor::fromString(m_properties.getProperty("color")->data);
+        Dimensions dimensions = getProperty<DimensionsProperty>("dimensions").unwrap()->data;
+        RGBAColor color = getProperty<ColorProperty>("color").unwrap()->data;
         frame->drawRect(dimensions, color);
     }
 

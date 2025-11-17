@@ -197,7 +197,7 @@ void Application::draw() {
                         clip->getPath(),
                         state.video->timeForFrame(clip->startFrame),
                         state.video->timeForFrame(clip->startFrame + clip->duration),
-                        clip->m_properties.getProperty("volume")
+                        clip->getProperty<NumberProperty>("volume").unwrap()
                     );
                 }
             }
@@ -396,7 +396,7 @@ void Application::draw() {
                         auto clip = std::make_shared<AudioClip>(soundFile.filePath);
                         clip->startFrame = frame;
                         clip->duration = soundFile.frameCount;
-                        clip->m_properties.getProperties()["volume"]->data = Vector1D{ .number = 100 }.toString();
+                        clip->getProperty<NumberProperty>("volume").unwrap()->data = 100;
                         
                         auto action = std::make_shared<CreateClip>(clip, clip->getType(), trackIdx);
                         action->perform();
@@ -435,29 +435,26 @@ void Application::draw() {
     ImGui::SetNextWindowClass(&bareWindowClass);
     ImGui::Begin("Properties");
     if (state.areClipsSelected()) {
+        if (ImGui::Button("Open Keyframe Editor", ImVec2(-1.0f, 0.0f))) {
+            ImGui::OpenPopup("Keyframe Editor");
+
+        }
+        if (ImGui::BeginPopup("Keyframe Editor")) {
+            ImGui::Text("boop");
+            // for (auto prop : selectedClip->m_properties) {
+            //     ImGui::Text("%s", prop.second->name.c_str());
+            // }
+            ImGui::EndPopup();
+        }
+        ImGui::Separator();
         for (auto [clipID, selectedClip] : state.getSelectedClips()) {
-
             ImGui::SeparatorText(selectedClip->m_metadata.name.c_str());
-            
-            ImGui::Separator();
-
-            if (ImGui::Button("Open Keyframe Editor", ImVec2(-1.0f, 0.0f))) {
-                ImGui::OpenPopup("Keyframe Editor");
-
-            }
-            if (ImGui::BeginPopup("Keyframe Editor")) {
-                for (auto prop : selectedClip->m_properties.getProperties()) {
-                    ImGui::Text("%s", prop.second->name.c_str());
-                }
-                ImGui::EndPopup();
-            }
 
             ImGui::SeparatorText("Properties");
 
-            for (auto prop : selectedClip->m_properties.getProperties()) {
-                if (!prop.second) continue;
+            for (auto prop : selectedClip->m_properties) {
                 ImGui::SeparatorText(prop.second->name.c_str());
-                prop.second->drawProperty();
+                prop.second->_drawProperty();
             }
 
             if (ImGui::Button("Delete")) {
@@ -592,23 +589,25 @@ void Application::draw() {
 
                     initialPos = { canvasX, canvasY };
 
-                    if (selectedClip->m_properties.getProperties().contains("position")) {
-                        auto property = selectedClip->m_properties.getProperty("position");
-                        auto oldPos = Vector2D::fromString(property->data);
-                        Vector2D newPos = {
-                            .x = std::clamp(oldPos.x + dx, 0, state.video->resolution.x),
-                            .y = std::clamp(oldPos.y + dy, 0, state.video->resolution.y)
-                        };
+                    if (selectedClip->m_properties.contains("position")) {
+                        // TODO: REWORK THIS FOR TRANSFORM
 
-                        auto data = newPos.toString();
-                        if (property->keyframes.size() == 1) {
-                            property->keyframes[0] = data;
-                            state.lastRenderedFrame = -1;
-                        } else {
-                            int keyframe = state.currentFrame - selectedClip->startFrame;
-                            selectedClip->m_properties.setKeyframe(property->id, keyframe, data);
-                            state.lastRenderedFrame = -1;
-                        }
+                        // auto property = selectedClip->m_properties["position"];
+                        // auto oldPos = Vector2D::fromString(property->data);
+                        // Vector2D newPos = {
+                        //     .x = std::clamp(oldPos.x + dx, 0, state.video->resolution.x),
+                        //     .y = std::clamp(oldPos.y + dy, 0, state.video->resolution.y)
+                        // };
+
+                        // auto data = newPos.toString();
+                        // if (property->keyframes.size() == 1) {
+                        //     property->keyframes[0] = data;
+                        //     state.lastRenderedFrame = -1;
+                        // } else {
+                        //     int keyframe = state.currentFrame - selectedClip->startFrame;
+                        //     selectedClip->m_properties.setKeyframe(property->id, keyframe, data);
+                        //     state.lastRenderedFrame = -1;
+                        // }
                     }
                 }
 

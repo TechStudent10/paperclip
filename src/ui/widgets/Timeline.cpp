@@ -27,6 +27,8 @@
 #include <action/actions/ResizeClip.hpp>
 #include <action/actions/ChangeClipTrack.hpp>
 
+#include <clips/properties/number.hpp>
+
 TimelineClip::TimelineClip(int _id, const std::string& _name, float _start, float _duration, std::shared_ptr<Clip> _clip, ImU32 _color)
     : id(_id), name(_name), startTime(_start), duration(_duration), color(_color), clip(_clip), selected(false) {
 }
@@ -318,7 +320,7 @@ void Timeline::drawClip(ImDrawList* drawList, const TimelineClip& clip, const Im
             if (x < 0 || x > (clipX + visibleWidth + scrollX)) continue;
             drawList->AddLine(
                 ImVec2(x, clipPos.y + height),
-                ImVec2(x, clipPos.y + height - (std::min(amplitude * (Vector1D::fromString(audioClip->m_properties.getProperty("volume")->data).number / 100.f), 1.0) * height)),
+                ImVec2(x, clipPos.y + height - (std::min(amplitude * (audioClip->getProperty<NumberProperty>("volume").unwrap()->data) / 100.f, 1.0) * height)),
                 IM_COL32(255, 255, 255, 255)
             );
         }
