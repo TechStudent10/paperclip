@@ -7,13 +7,14 @@
 #include <clips/clip.hpp>
 #include <miniaudio.h>
 
+#include <clips/properties/number.hpp>
+
 struct AudioRenderFile {
     ma_decoder decoder;
     std::string_view path;
     float startTime;
     float endTime;
-    std::map<int, std::string> keyframes;
-    std::map<int, PropertyKeyframeMeta> keyframeInfo;
+    std::shared_ptr<NumberProperty> volume;
 };
 
 class AudioRenderer {
@@ -27,6 +28,6 @@ protected:
 public:
     AudioRenderer(std::string_view outputPath, float length);
 
-    void addClip(std::string path, float start, float end, std::shared_ptr<ClipProperty> volume);
+    void addClip(std::string path, float start, float end, std::shared_ptr<NumberProperty> volume);
     void render(float fps);
 };

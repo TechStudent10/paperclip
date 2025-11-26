@@ -1,41 +1,69 @@
 #include <clips/default/circle.hpp>
+#include <state.hpp>
+
+#include <clips/properties/transform.hpp>
+#include <clips/properties/number.hpp>
+#include <clips/properties/color.hpp>
 
 namespace clips {
     Circle::Circle(): Clip(60, 120) {
-        m_properties.addProperty(
-            ClipProperty::position()
+        addProperty(
+            std::make_shared<TransformProperty>()
         );
 
-        m_properties.addProperty(
-            ClipProperty::number()
-                ->setName("Radius")
+        // radius (default = 500) 
+        addProperty(
+            std::make_shared<NumberProperty>()
                 ->setId("radius")
-                ->setDefaultKeyframe(Vector1D{ .number = 500 }.toString())
+                ->setName("Radius")
         );
 
-        m_properties.addProperty(
-            ClipProperty::color()
+        // color (self explanatory, default = black)
+        addProperty(
+            std::make_shared<ColorProperty>()
+                ->setId("color")
+                ->setName("Color")
         );
 
         m_metadata.name = "Circle";
+
+        auto& state = State::get();
+
+        Vector2D res = { 600, 600 };
+        frame = std::make_shared<Frame>(
+            res.x,
+            res.y
+        );
+
+        this->frame->clearFrame();
+        auto previewRad = 150;
+        this->frame->drawCircle({ .position = {0 , 0 } }, previewRad, { 0, 0, 0, 255 });
     }
 
     Vector2D Circle::getSize() {
-        int diameter = Vector1D::fromString(m_properties.getProperty("radius")->data).number * 2;
+        int radius = getProperty<NumberProperty>("radius").unwrap()->data;
+        int diameter = radius * 2;
         
         return { diameter, diameter };
     }
 
     Vector2D Circle::getPos() {
-        Vector2D position = Vector2D::fromString(m_properties.getProperty("position")->data);
-        int radius = Vector1D::fromString(m_properties.getProperty("radius")->data).number;
-        return { position.x - radius, position.y - radius };
+        Vector2D position = getProperty<TransformProperty>("transform").unwrap()->data.position;
+        int radius = getProperty<NumberProperty>("radius").unwrap()->data;
+        return position - radius;
     }
 
     void Circle::render(Frame* frame) {
-        Vector2D position = Vector2D::fromString(m_properties.getProperty("position")->data);
-        Vector1D radius = Vector1D::fromString(m_properties.getProperty("radius")->data);
-        RGBAColor color = RGBAColor::fromString(m_properties.getProperty("color")->data);
-        frame->drawCircle(position, radius.number, color);
+        Transform transform = getProperty<TransformProperty>("transform").unwrap()->data;
+        int radius = getProperty<NumberProperty>("radius").unwrap()->data;
+        debug(radius);
+        RGBAColor color = getProperty<ColorProperty>("color").unwrap()->data;
+        frame->drawCircle(transform, radius, color);
     }
+
+    GLuint Circle::getPreviewTexture(int frameIdx) {
+        return frame->textureID;
+    }
+
+    Vector2D Circle::getPreviewSize() { return { 600, 600 }; }
 }

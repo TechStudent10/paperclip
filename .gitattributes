@@ -1,1 +1,2 @@
-libs/* linguist-vendored
+libs/** linguist-vendored
+include/icons/** linguist-vendored

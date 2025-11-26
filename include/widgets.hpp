@@ -40,10 +40,10 @@ enum class TrackType {
     // Disco
 };
 
-class VideoTimeline {
-private:
+class Timeline {
+protected:
     // std::vector<TimelineTrack> tracks;
-    float playheadTime;
+    // float playheadTime;
     float zoomFactor;
     float scrollX;
     float timelineLength;  // total timeline duration in seconds
@@ -54,11 +54,18 @@ private:
     bool isDragging;
     bool isScrubbing;
     
-    int draggingTrackIdx;
+    // int draggingTrackIdx;
 
     bool isMovingBetweenTracks;
     int originalTrackId;
     ImVec2 dragStartPos;
+
+    int initialStartFrame = 0;
+    int initialDuration = 0;
+
+    std::unordered_map<std::string, GLuint> previewTextures;
+    std::vector<unsigned char> pixelData;
+    GLuint btex = 0;
 
     // Constants
     static constexpr float TRACK_HEADER_WIDTH = 100.0f;
@@ -66,6 +73,8 @@ private:
     static constexpr float MIN_ZOOM = 10.0f;   // pixels per second
     static constexpr float MAX_ZOOM = 200.0f;
     static constexpr float RESIZE_HANDLE_WIDTH = 10.0f;
+
+    static constexpr float CLIP_HEIGHT = 80.f;
 
     enum ResizeMode {
         RESIZE_NONE,
@@ -79,6 +88,8 @@ private:
     float resizeOriginalStart;
     float resizeOriginalDuration;
     int resizingTrackIdx;
+
+    int totalDeltaFrame = 0;
 
     ImVec2 canvasSize;
     ImVec2 canvasPos;
@@ -94,7 +105,7 @@ private:
     ResizeMode GetResizeMode(const ImVec2& mouse_pos, std::shared_ptr<Clip> clip, const ImVec2& track_pos, const ImVec2& track_size, float clickTime);
 
 public:
-    VideoTimeline();
+    Timeline();
 
     float isPlacingClip = false;
     ImVec2 hoverPos;
@@ -102,30 +113,27 @@ public:
     float trackScrollY = 0.f;
     int selectedTrackIdx = 0;
     int hoveredTrackIdx = 0;
-    TrackType selectedTrackType;
+    TrackType selectedTrackType = TrackType::Video;
     TrackType hoveredTrackType;
     TrackType ogTrackType;
     TrackType placeType;
 
     std::function<void(int frame, int trackIdx)> placeCb = nullptr;
+    int placeDuration = -1;
     
-    // Track management
-    void addTrack(const std::string& name);
-    
-    // Clip management
-    void addClip(int track_id, const std::string& name, float start_time, float duration, ImU32 color = IM_COL32(100, 150, 200, 255));
-    
-    // Playhead control
-    void setPlayheadTime(float time);
     float getPlayheadTime() const;
-    
-    // Zoom control
+
+    void addTrack(const std::string& name);
+    void addClip(int track_id, const std::string& name, float start_time, float duration, ImU32 color = IM_COL32(100, 150, 200, 255));
     void setZoom(float zoom);
-    
-    // Main rendering function
+
+    void autoScroll();
+    void scrollToTime(float time, bool center = true);
+
     void render();
 
-    void scrollToTime(float time, bool center = true);
+    bool willClipCollide(int frame, int duration, int trackIdx, TrackType type, std::vector<std::string> exclusionList = {});
+    bool willClipCollide(float seconds, float duration, int trackIdx, TrackType type, std::vector<std::string> exclusionList = {});
 };
 
 // https://github.com/ocornut/imgui/issues/1901

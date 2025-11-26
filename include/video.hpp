@@ -1,6 +1,5 @@
 #pragma once
 #include <memory>
-#include <map>
 #include <unordered_map>
 #include <vector>
 #include <string>
@@ -14,12 +13,15 @@
 
 #include <renderer/video.hpp>
 
+#include <utils.hpp>
+
 struct ExtClipMetadata {
     std::string filePath;
     int frameCount;
 
     void write(qn::HeapByteWriter& writer) {
-        writer.writeStringU32(filePath);
+        auto b = writer.writeStringU32(filePath);
+        UNWRAP_WITH_ERR(writer.writeStringU32(filePath));
         writer.writeI16(frameCount);
     }
 
@@ -31,15 +33,22 @@ struct ExtClipMetadata {
 
 class Video {
 protected:
+    // map of all clip IDs to their respective track indexes
+    // positive idx = video track
+    // negative idx = audio track
+    std::unordered_map<std::string, int> clipMap;
 public:
     int framerate;
 
     Vector2D resolution;
+    
     std::vector<std::shared_ptr<VideoTrack>> videoTracks;
     std::vector<std::shared_ptr<AudioTrack>> audioTracks;
+
     std::vector<ExtClipMetadata> clipPool;
     std::vector<ExtClipMetadata> imagePool;
     std::vector<ExtClipMetadata> audioClipPool;
+
     Video(int framerate, Vector2D resolution): framerate(framerate), resolution(resolution) {}
     Video(): Video(30, {1920, 1080}) {}
 
@@ -50,9 +59,15 @@ public:
         videoTracks.push_back(track);
         return videoTracks.size() - 1;
     }
+
     void addClip(int trackIdx, std::shared_ptr<Clip> clip);
+    void addAudioClip(int trackIdx, std::shared_ptr<AudioClip> clip);
+
+    void removeClip(int trackIdx, std::shared_ptr<Clip> clip);
+    void removeAudioClip(int trackIdx, std::shared_ptr<AudioClip> clip);
 
     const std::vector<std::shared_ptr<VideoTrack>>& getTracks() const { return videoTracks; }
+    std::unordered_map<std::string, int> getClipMap() { return clipMap; }
 
     void render(VideoRenderer* renderer);
     Frame* renderAtFrame(int frame);

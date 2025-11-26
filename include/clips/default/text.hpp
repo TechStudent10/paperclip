@@ -6,6 +6,8 @@
 
 namespace clips {
     class Text : public Clip {
+    protected:
+        std::shared_ptr<Frame> previewFrame;
     public:
         Vector2DF size;
 
@@ -15,5 +17,8 @@ namespace clips {
         ClipType getType() override { return ClipType::Text; }
         Vector2D getSize() override;
         Vector2D getPos() override;
+
+        GLuint getPreviewTexture(int frame) override;
+        Vector2D getPreviewSize() override;
     };
 } // namespace clips

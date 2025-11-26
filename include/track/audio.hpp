@@ -4,6 +4,7 @@
 #include <string>
 
 #include <miniaudio.h>
+#include <utils.hpp>
 
 class AudioClip : public Clip {
 private:
@@ -12,8 +13,14 @@ private:
     bool initialized = false;
 
     bool initalize();
+
+    friend class AudioTrack;
 public:
     bool playing = false;
+
+    // RMS values (chunks of 5ms)
+    std::vector<double> waveform;
+
     AudioClip(const std::string& path);
     AudioClip();
     ~AudioClip();
@@ -27,32 +34,57 @@ public:
     
     void write(qn::HeapByteWriter& writer) override {
         Clip::write(writer);
-        writer.writeStringU32(path);
+        UNWRAP_WITH_ERR(writer.writeStringU32(path));
     }
 
     void read(qn::ByteReader& reader) override {
+        UNWRAP_WITH_ERR(reader.readStringU32());
+        UNWRAP_WITH_ERR(reader.readI16());
         Clip::read(reader);
+        UNWRAP_WITH_ERR(reader.readStringVar());
         path = reader.readStringU32().unwrapOr("");
     }
+
+    const std::string& getPath() { return path; }
+    ClipType getType() override { return ClipType::Audio; }
 };
 
 class AudioTrack {
 private:
-    std::vector<std::shared_ptr<AudioClip>> clips;
+    std::unordered_map<std::string, std::shared_ptr<AudioClip>> clips;
 public:
     AudioTrack() {
         clips = {};
     }
 
     void addClip(std::shared_ptr<AudioClip> clip) {
-        clips.push_back(clip);
+        clips[clip->uID] = (clip);
+    }
+
+    std::shared_ptr<AudioClip> getClip(std::string id) {
+        if (!clips.contains(id)) return nullptr;
+
+        return clips[id];
     }
 
     void removeClip(std::shared_ptr<AudioClip> clip) {
-        clips.erase(std::remove(clips.begin(), clips.end(), clip), clips.end());
+        std::erase_if(clips, [clip](const auto& _clip) {
+            return _clip.second == clip;
+        });
     }
 
-    std::vector<std::shared_ptr<AudioClip>> getClips() {
+    void removeClip(std::string clipID) {
+        if (!clips.at(clipID).get()) {
+            fmt::println("invalid pointer!");
+            return;
+        }
+        // std::erase_if(clips, [clipID](const auto& _clip) {
+        //     return _clip.second->uID == clipID;
+        // });
+        clips.erase(clipID);
+    }
+
+    std::unordered_map<std::string, std::shared_ptr<AudioClip>> getClips() {
         return clips;
     }
 
@@ -62,7 +94,8 @@ public:
 
     void write(qn::HeapByteWriter& writer) {
         writer.writeI16(clips.size());
-        for (auto clip : clips) {
+        for (auto _clip : clips) {
+            auto clip = _clip.second;
             clip->write(writer);
         }
     }
@@ -72,7 +105,7 @@ public:
         for (int i = 0; i < size; i++) {
             auto clip = std::make_shared<AudioClip>();
             clip->read(reader);
-            clips.push_back(clip);
+            addClip(clip);
         }
     }
 };

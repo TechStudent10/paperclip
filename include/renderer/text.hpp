@@ -3,6 +3,9 @@
 #include <unordered_map>
 #include <string>
 
+#include <glad/include/glad/gl.h>
+#include <SDL3/SDL_opengl.h>
+
 #include <common.hpp>
 #include <frame.hpp>
 
@@ -32,10 +35,12 @@ protected:
     GLuint textShaderProgram;
 
     static constexpr float LOAD_SIZE = 100.f;
+
+    GLuint VAO, VBO;
 public:
     TextRenderer();
     void loadFont(std::string fontName);
 
-    Vector2DF drawText(Frame* frame, std::string text, std::string fontName, Vector2D pos, RGBAColor color, float pixelHeight = 48.f, float rotation = 0.f);
+    Vector2DF drawText(Frame* frame, std::string text, std::string fontName, Transform transform, RGBAColor color, float pixelHeight = 48.f);
     Vector2DF getTextSize(std::string text, std::string fontName, float scale = 1.f);
 };

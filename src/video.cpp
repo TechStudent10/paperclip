@@ -3,7 +3,34 @@
 #include <state.hpp>
 
 void Video::addClip(int trackIdx, std::shared_ptr<Clip> clip) {
-    getTracks()[trackIdx]->addClip(clip);
+    trackIdx = std::clamp(trackIdx, 0, static_cast<int>(videoTracks.size()) - 1);
+    fmt::println("{}", trackIdx);
+    videoTracks.at(trackIdx)->addClip(clip);
+    clipMap[clip->uID] = trackIdx;
+    recalculateFrameCount();
+}
+
+void Video::addAudioClip(int trackIdx, std::shared_ptr<AudioClip> clip) {
+    trackIdx = std::clamp(trackIdx, 0, static_cast<int>(audioTracks.size()) - 1);
+    audioTracks[trackIdx]->addClip(clip);
+    clipMap[clip->uID] = -(trackIdx + 1);
+    recalculateFrameCount();
+}
+
+void Video::removeClip(int trackIdx, std::shared_ptr<Clip> clip) {
+    videoTracks.at(trackIdx)->removeClip(clip->uID);
+    clipMap.erase(clip->uID);
+    recalculateFrameCount();
+}
+
+void Video::removeAudioClip(int trackIdx, std::shared_ptr<AudioClip> clip) {
+    if (trackIdx < 0) trackIdx = -(trackIdx + 1);
+    if (audioTracks.at(trackIdx).get() == nullptr) {
+        fmt::println("invalid point");
+        return;
+    }
+    audioTracks.at(trackIdx)->removeClip(clip->uID);
+    clipMap.erase(clip->uID);
     recalculateFrameCount();
 }
 
@@ -35,7 +62,8 @@ void Video::recalculateFrameCount() {
     int currentFrameCount = 0;
     for (auto track : videoTracks) {
         auto clips = track->getClips();
-        for (auto clip : clips) {
+        for (auto _clip : clips) {
+            auto clip = _clip.second;
             auto lastFrame = clip->startFrame + clip->duration;
             if (lastFrame > currentFrameCount) {
                 currentFrameCount = lastFrame;

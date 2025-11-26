@@ -1,27 +1,46 @@
 #pragma once
 
-#include <vector>
+#include <unordered_map>
 #include <memory>
 
 #include <clips/all.hpp>
 
 class VideoTrack {
 private:
-    std::vector<std::shared_ptr<Clip>> clips;
+    std::unordered_map<std::string, std::shared_ptr<Clip>> clips = {};
+    std::string uID;
 public:
     VideoTrack() {
-        clips = {};
+        uID = utils::generateUUID();
     }
 
+    VideoTrack(VideoTrack const&) = delete;
+    VideoTrack& operator=(VideoTrack const&) = delete;
+
     void addClip(std::shared_ptr<Clip> clip) {
-        clips.push_back(clip);
+        clips[clip->uID] = clip;
+        fmt::println("added clip with id {}", clip->uID);
+    }
+
+    std::shared_ptr<Clip> getClip(std::string id) {
+        if (!clips.contains(id)) return nullptr;
+
+        return clips[id];
     }
 
     void removeClip(std::shared_ptr<Clip> clip) {
-        clips.erase(std::remove(clips.begin(), clips.end(), clip), clips.end());
+        std::erase_if(clips, [clip](const auto& _clip) {
+            return _clip.second->uID == clip->uID;
+        });
     }
 
-    std::vector<std::shared_ptr<Clip>> getClips() {
+    void removeClip(std::string clipID) {
+        std::erase_if(this->clips, [clipID](const auto& _clip) {
+            return _clip.second->uID == clipID;
+        });
+    }
+
+    std::unordered_map<std::string, std::shared_ptr<Clip>> getClips() {
         return clips;
     }
 
@@ -29,7 +48,7 @@ public:
 
     void write(qn::HeapByteWriter& writer) {
         writer.writeI16(clips.size());
-        for (auto clip : clips) {
+        for (auto [idx, clip] : clips) {
             clip->write(writer);
         }
     }
@@ -62,6 +81,8 @@ public:
                     fmt::println("making vide");
                     clip = std::make_shared<clips::VideoClip>();
                     break;
+                case ClipType::Audio:
+                    break;
                 default:
                     fmt::println("making god knows what");
                     clip = std::make_shared<Clip>();
@@ -70,7 +91,7 @@ public:
 
             clip->read(reader);
             fmt::println("{}", clip->m_metadata.name);
-            clips.push_back(clip);
+            addClip(clip);
         }
     }
 };

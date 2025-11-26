@@ -6,10 +6,51 @@
 // i roll my OWN pi
 #define PI 3.14159265358927
 
+// use this to log errors from geode results
+#define UNWRAP_WITH_ERR_DEFAULT(expr, default) ([&]() { \
+    auto b = expr; \
+    if (b.isErr()) { \
+        fmt::println("##expr failed to unwrap: {}", b.unwrapErr().message()); \
+        return default; \
+    } \
+    return b.unwrap(); \
+})()
+
+#define UNWRAP_WITH_ERR(expr) ([&]() { \
+    auto b = expr; \
+    if (b.isErr()) { \
+        fmt::println("{} failed to unwrap at {}:{}: {}", #expr, __FILE__, __LINE__, b.unwrapErr().message()); \
+        return; \
+    } \
+})()
+
+// cool little debug macro
+// TODO: add __FILE__ and line
+#define debug(statement) ([&]() { auto res = statement; fmt::println("{}:{} {}: {}", __FILE__, __LINE__, #statement, res); return res; })()
+
 static constexpr double PI_DIV_180 = PI / 180.f;
 
 namespace utils {
-    
+    std::string generateUUID();
+
+    template <typename T>
+    bool vectorContains(std::vector<T> vec, T elem) {
+        return std::find(vec.begin(), vec.end(), elem) != vec.end();
+    }
+
+    template <typename T>
+    void removeFromVector(std::vector<T> vec, T elem) {
+        vec.erase(
+            std::remove(vec.begin(), vec.end(), elem),
+            vec.end()
+        );
+    }
+
+    // interpolates from a to b
+    // based on progress
+    inline float interpolate(float progress, float a, float b) {
+        return a + (b - a) * progress;
+    }
 } // namespace utils
 
 namespace utils::video {
