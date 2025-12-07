@@ -159,6 +159,15 @@ struct Dimensions {
 struct RGBAColor {
     int r; int g; int b; int a = 255;
 
+    RGBAColor fade(float progress) {
+        return {
+            r,
+            g,
+            b,
+            static_cast<int>(a * progress)
+        };
+    }
+
     JSON_METHODS(RGBAColor)
 };
 

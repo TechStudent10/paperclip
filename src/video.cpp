@@ -64,12 +64,21 @@ void Video::recalculateFrameCount() {
         auto clips = track->getClips();
         for (auto _clip : clips) {
             auto clip = _clip.second;
-            auto lastFrame = clip->startFrame + clip->duration;
-            if (lastFrame > currentFrameCount) {
-                currentFrameCount = lastFrame;
+            currentFrameCount = std::max(clip->startFrame + clip->duration, currentFrameCount);
+        }
+    }
+
+    // if it's still 0, then check audio
+    if (currentFrameCount == 0) {
+        for (auto track : audioTracks) {
+            auto clips = track->getClips();
+            for (auto _clip : clips) {
+                auto clip = _clip.second;
+                currentFrameCount = std::max(clip->startFrame + clip->duration, currentFrameCount);
             }
         }
     }
+
     frameCount = currentFrameCount;
 }
 

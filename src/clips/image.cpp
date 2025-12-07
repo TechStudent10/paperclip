@@ -71,7 +71,7 @@ namespace clips {
             width,
             height
         );
-        previewFrame->clearFrame();
+        previewFrame->clearFrame({ 255, 255, 255, 255 });
         previewFrame->drawTexture(texture, { width, height }, { .position = { 0, 0 } }, VAO, VBO, EBO);
 
         initialized = true;
@@ -104,7 +104,7 @@ namespace clips {
         scaledW = static_cast<int>(std::floor(width * scaleX));
         scaledH = static_cast<int>(std::floor(height * scaleY));
 
-        frame->drawTexture(texture, { scaledW, scaledH }, transform, VAO, VBO, EBO);
+        frame->drawTexture(texture, { scaledW, scaledH }, transform, VAO, VBO, EBO, opacity);
     }
 
     GLuint ImageClip::getPreviewTexture(int) {

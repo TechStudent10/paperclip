@@ -278,9 +278,9 @@ void Timeline::drawClip(ImDrawList* drawList, const TimelineClip& clip, const Im
         darkenedCol
     );
 
-    auto height = CLIP_HEIGHT - 35.f;
+    auto previewHeight = CLIP_HEIGHT - 35.f;
     auto previewSize = clip.clip->getPreviewSize();
-    auto scale = height / previewSize.y;
+    auto scale = previewHeight / previewSize.y;
     auto width = (previewSize.x * scale);
     
     auto& state = State::get();
@@ -303,7 +303,7 @@ void Timeline::drawClip(ImDrawList* drawList, const TimelineClip& clip, const Im
             drawList->AddImage(
                 (ImTextureID)(intptr_t)clip.clip->getPreviewTexture(frame),
                 ImVec2(imgStartX, clipPos.y),
-                ImVec2(std::min(imgStartX + width, clipPos.x + clipSize.x - (rightHandleVisible ? RESIZE_HANDLE_WIDTH : 0)), clipPos.y + height),
+                ImVec2(std::min(imgStartX + width, clipPos.x + clipSize.x - (rightHandleVisible ? RESIZE_HANDLE_WIDTH : 0)), clipPos.y + previewHeight),
                 uv0,
                 uv1
             );            
@@ -319,8 +319,8 @@ void Timeline::drawClip(ImDrawList* drawList, const TimelineClip& clip, const Im
             auto x = (clipX + RESIZE_HANDLE_WIDTH + i);
             if (x < 0 || x > (clipX + visibleWidth + scrollX)) continue;
             drawList->AddLine(
-                ImVec2(x, clipPos.y + height),
-                ImVec2(x, clipPos.y + height - (std::min(amplitude * (audioClip->getProperty<NumberProperty>("volume").unwrap()->data) / 100.f, 1.0) * height)),
+                ImVec2(x, clipPos.y + previewHeight),
+                ImVec2(x, clipPos.y + previewHeight - (std::min(amplitude * (audioClip->getProperty<NumberProperty>("volume").unwrap()->data) / 100.f, 1.0) * previewHeight)),
                 IM_COL32(255, 255, 255, 255)
             );
         }
@@ -372,11 +372,11 @@ void Timeline::drawClip(ImDrawList* drawList, const TimelineClip& clip, const Im
         }
     }
 
-    if (resizeMode == RESIZE_NONE) {
-        bool hovered = mousePos.x >= clipPos.x && mousePos.x <= clipPos.x + clipSize.x &&
-            mousePos.y >= clipPos.y && mousePos.y <= clipPos.y + clipSize.y;
+    bool clipHovered = mousePos.x >= clipPos.x && mousePos.x <= clipPos.x + clipSize.x &&
+        mousePos.y >= clipPos.y && mousePos.y <= clipPos.y + clipSize.y;
 
-        if (ImGui::IsMouseClicked(0) && hovered && !isPlacingClip) {
+    if (resizeMode == RESIZE_NONE) {
+        if (ImGui::IsMouseClicked(0) && clipHovered && !isPlacingClip) {
             auto& state = State::get();
             auto id = clip.clip->uID;
             if (!io.KeyShift && !state.isClipSelected(clip.clip)) {
@@ -392,6 +392,123 @@ void Timeline::drawClip(ImDrawList* drawList, const TimelineClip& clip, const Im
                 (state.video->timeForFrame(clip.clip->startFrame) * pixelsPerSecond) - (mousePos.x - canvasPos.x - TRACK_HEADER_WIDTH + scrollX),
                 0
             );
+        }
+    }
+
+    clipHovered = clipHovered || (state.isClipSelected(clip.clip) && (resizeMode != RESIZE_NONE || isAdjustingFade || isDragging));
+
+    const float topY = clipPos.y - 10;
+
+    auto addRect = [drawList](const ImVec2& pos, const ImVec2& size, const ImU32& col, const ImU32& borderCol, float rounding, float thickness) {
+        drawList->AddRectFilled(
+            pos, ImVec2(
+                pos.x + size.x,
+                pos.y + size.y
+            ),
+            col,
+            rounding
+        );
+
+        drawList->AddRect(
+            pos, ImVec2(
+                pos.x + size.x,
+                pos.y + size.y
+            ),
+            borderCol,
+            rounding,
+            0,
+            thickness
+        );
+    };
+
+    // fade in
+    auto fadeInPos = ImVec2(
+        state.video->timeForFrame(clip.clip->fadeInFrame) * pixelsPerSecond + clipX,
+        topY
+    );
+    auto fadeInSize = ImVec2(
+        RESIZE_HANDLE_WIDTH,
+        25.f
+    );
+
+    if (clipHovered) {
+        addRect(
+            fadeInPos,
+            fadeInSize,
+            IM_COL32(255, 255, 255, 255),
+            IM_COL32(0, 0, 0, 255),
+            3.5f,
+            2.f
+        );
+
+        if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) &&
+            mousePos.x >= fadeInPos.x && mousePos.x <= fadeInPos.x + fadeInSize.x &&
+            mousePos.y >= fadeInPos.y && mousePos.y <= fadeInPos.y + fadeInSize.y
+        ) {
+            isAdjustingFade = true;
+            fadeAdjustID = clip.clip->uID;
+            fadeDragMode = FadeDragMode::In;
+        }
+    }
+
+    if (clip.clip->fadeInFrame != 0) {
+        drawList->AddTriangleFilled(
+            ImVec2(clipX, clipPos.y),
+            ImVec2(clipX + (clip.clip->fadeInFrame * 1.f / state.video->getFPS() * pixelsPerSecond), clipPos.y),
+            ImVec2(clipX, clipPos.y + previewHeight),
+            IM_COL32(0, 0, 0, 125)
+        );
+    }
+
+    // fade out
+    auto fadeOutPos = ImVec2(
+        state.video->timeForFrame(clip.clip->duration - clip.clip->fadeOutFrame) * pixelsPerSecond + clipX - RESIZE_HANDLE_WIDTH,
+        topY
+    );
+    auto fadeOutSize = ImVec2(
+        RESIZE_HANDLE_WIDTH,
+        25.f
+    );
+
+    if (clipHovered) {
+        addRect(
+            fadeOutPos,
+            fadeOutSize,
+            IM_COL32(255, 255, 255, 255),
+            IM_COL32(0, 0, 0, 255),
+            3.5f,
+            2.f
+        );
+
+        if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) &&
+            mousePos.x >= fadeOutPos.x && mousePos.x <= fadeOutPos.x + fadeOutSize.x &&
+            mousePos.y >= fadeOutPos.y && mousePos.y <= fadeOutPos.y + fadeOutSize.y
+        ) {
+            isAdjustingFade = true;
+            fadeAdjustID = clip.clip->uID;
+            fadeDragMode = FadeDragMode::Out;
+        }
+    }
+
+    if (clip.clip->fadeOutFrame != 0) {
+        drawList->AddTriangleFilled(
+            ImVec2(clipX + clipWidth, clipPos.y),
+            ImVec2(clipX + clipWidth - (clip.clip->fadeOutFrame * 1.f / state.video->getFPS() * pixelsPerSecond), clipPos.y),
+            ImVec2(clipX + clipWidth, clipPos.y + previewHeight),
+            IM_COL32(0, 0, 0, 125)
+        );
+    }
+
+    if (isAdjustingFade && clip.clip->uID == fadeAdjustID && ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
+        switch (fadeDragMode) {
+            case FadeDragMode::In:
+                clip.clip->fadeInFrame += state.video->frameForTime(io.MouseDelta.x / pixelsPerSecond);
+                clip.clip->fadeInFrame = std::clamp(clip.clip->fadeInFrame, 0, clip.clip->duration);
+                break;
+            case FadeDragMode::Out:
+                clip.clip->fadeOutFrame -= state.video->frameForTime(io.MouseDelta.x / pixelsPerSecond);
+                clip.clip->fadeOutFrame = std::clamp(clip.clip->fadeOutFrame, 0, clip.clip->duration);
+                break;
         }
     }
 
@@ -565,7 +682,7 @@ void Timeline::handleInteractions(const ImVec2& canvasPos, const ImVec2& canvasS
         }
     }
 
-    if (resizeMode != RESIZE_NONE && ImGui::IsMouseDragging(0)) {
+    if (resizeMode != RESIZE_NONE && !isAdjustingFade && ImGui::IsMouseDragging(0)) {
         ImVec2 mouse_pos = io.MousePos;
         float mouse_time = (mouse_pos.x - canvasPos.x - TRACK_HEADER_WIDTH + scrollX) / pixelsPerSecond;
         resizingTrackIdx = std::max(0, resizingTrackIdx);
@@ -602,7 +719,7 @@ void Timeline::handleInteractions(const ImVec2& canvasPos, const ImVec2& canvasS
             resizingClip->startFrame = newStartFrame;
             resizingClip->duration = resizeOriginalDuration - (newStartFrame - (float)(resizeOriginalStart));
         } else if (resizeMode == RESIZE_RIGHT) {
-            float minEndTime = (float)resizingClip->startFrame / state.video->getFPS() + 0.1f; // Min 0.1s duration
+            float minEndTime = state.video->timeForFrame(resizingClip->startFrame) + 0.1f; // Min 0.1s duration
             float newEndTime = std::max(minEndTime, mouse_time);
             int newEndFrame = state.video->frameForTime(newEndTime);
             if (selectedTrackType == TrackType::Video) {
@@ -632,7 +749,7 @@ void Timeline::handleInteractions(const ImVec2& canvasPos, const ImVec2& canvasS
         }
     }
 
-    if (isDragging && resizeMode == RESIZE_NONE && ImGui::IsMouseDragging(0)) {
+    if (isDragging && !isAdjustingFade && resizeMode == RESIZE_NONE && ImGui::IsMouseDragging(0)) {
         if (state.areClipsSelected()) {
             // auto selectedClip = state.getSelectedClip();
             ImVec2 mouse_pos = io.MousePos;
@@ -902,7 +1019,7 @@ void Timeline::handleInteractions(const ImVec2& canvasPos, const ImVec2& canvasS
                         fmt::println("this should be unreachable what");
                         break;
                 }
-            } else if (isDragging) {
+            } else if (isDragging && !isAdjustingFade) {
                 // TODO: apply to all selected clips
                 // by applying the delta-start-frame 
                 // to all selected clips
@@ -942,7 +1059,7 @@ void Timeline::handleInteractions(const ImVec2& canvasPos, const ImVec2& canvasS
     state.video->recalculateFrameCount();
 
     if (ImGui::IsMouseReleased(0)) {
-        if (isDragging) {
+        if (isDragging && !isAdjustingFade) {
             if (resizeMode == RESIZE_NONE && totalDeltaFrame != 0) {
                 state.addAction(std::make_shared<MoveClip>(state.selectedClips, totalDeltaFrame));
             }
@@ -952,6 +1069,8 @@ void Timeline::handleInteractions(const ImVec2& canvasPos, const ImVec2& canvasS
         }
         totalDeltaFrame = 0;
         isDragging = false;
+        isAdjustingFade = false;
+        fadeAdjustID = "";
         isScrubbing = false;
         isMovingBetweenTracks = false;
         resizingClip = nullptr;

@@ -6,7 +6,7 @@
 class ColorProperty : public ClipProperty<RGBAColor> {
 public:
     ColorProperty() {
-        keyframes[0] = { .r = 0, .g = 0, .b = 0, .a = 255 };
+        keyframes[0] = { .r = 255, .g = 255, .b = 255, .a = 255 };
         data = keyframes[0];
         id = "color";
         name = "Color";

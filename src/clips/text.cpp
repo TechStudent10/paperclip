@@ -73,7 +73,7 @@ namespace clips {
             500,
             500
         );
-        previewFrame->clearFrame();
+        previewFrame->clearFrame({ 255, 255, 255, 255 });
         State::get().textRenderer->drawText(previewFrame.get(), "A", "resources/fonts/Inter.ttf", { 0, 0 }, { 0, 0, 0, 255 }, 500);
     }
 
@@ -96,7 +96,7 @@ namespace clips {
         auto color = getProperty<ColorProperty>("color").unwrap()->data;
         auto transform = getProperty<TransformProperty>("transform").unwrap()->data;
 
-        size = state.textRenderer->drawText(frame, text, font, transform, color, fontSize);
+        size = state.textRenderer->drawText(frame, text, font, transform, color.fade(opacity), fontSize);
     }
 
     GLuint Text::getPreviewTexture(int) {

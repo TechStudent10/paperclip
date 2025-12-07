@@ -22,9 +22,10 @@ out vec4 FragColor;
 in vec2 TexCoord;
 
 uniform sampler2D texture1;
+uniform float opacity;
 
 void main() {
-    FragColor = texture(texture1, TexCoord);
+    FragColor = vec4(texture(texture1, TexCoord).xyz, opacity);
     // FragColor = vec4(0.5f, 0.5f, 0.5f, 1.0f);
 }
 )";
@@ -38,6 +39,7 @@ in vec2 TexCoord;
 uniform sampler2D textureY;
 uniform sampler2D textureU;
 uniform sampler2D textureV;
+uniform float opacity;
 
 void main() {
     float y = texture(textureY, TexCoord).r;
@@ -48,7 +50,7 @@ void main() {
     float g = y - 0.344146f * u - 0.714136f * v;
     float b = y + 1.772f * u;
 
-    FragColor = vec4(r, g, b, 1.0);
+    FragColor = vec4(r, g, b, opacity);
     // FragColor = vec4(y, y, y, y);
     // FragColor = vec4(0.5f, 0.5f, 0.5f, 1.0f);
 }

@@ -42,8 +42,6 @@ enum class TrackType {
 
 class Timeline {
 protected:
-    // std::vector<TimelineTrack> tracks;
-    // float playheadTime;
     float zoomFactor;
     float scrollX;
     float timelineLength;  // total timeline duration in seconds
@@ -51,10 +49,15 @@ protected:
     
     // UI state
     ImVec2 dragOffset;
+    ImVec2 initialMousePos;
     bool isDragging;
+    bool isAdjustingFade; // brilliant variable naming, i know
+    enum class FadeDragMode {
+        In,
+        Out
+    } fadeDragMode;
+    std::string fadeAdjustID;
     bool isScrubbing;
-    
-    // int draggingTrackIdx;
 
     bool isMovingBetweenTracks;
     int originalTrackId;

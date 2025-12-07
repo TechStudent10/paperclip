@@ -25,8 +25,7 @@
 })()
 
 // cool little debug macro
-// TODO: add __FILE__ and line
-#define debug(statement) ([&]() { auto res = statement; fmt::println("{}:{} {}: {}", __FILE__, __LINE__, #statement, res); return res; })()
+#define debug(...) ([&]() { auto res = __VA_ARGS__; fmt::println("{}:{} {}: {}", __FILE__, __LINE__, #__VA_ARGS__, res); return res; })()
 
 static constexpr double PI_DIV_180 = PI / 180.f;
 

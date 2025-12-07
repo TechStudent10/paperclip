@@ -21,7 +21,7 @@ namespace clips {
             500,
             500
         );
-        previewFrame->clearFrame();
+        previewFrame->clearFrame({ 255, 255, 255, 255 });
         int squareSize = 200;
         previewFrame->drawRect({
             .size {
@@ -49,7 +49,7 @@ namespace clips {
     void Rectangle::render(Frame* frame) {
         Dimensions dimensions = getProperty<DimensionsProperty>("dimensions").unwrap()->data;
         RGBAColor color = getProperty<ColorProperty>("color").unwrap()->data;
-        frame->drawRect(dimensions, color);
+        frame->drawRect(dimensions, color.fade(opacity));
     }
 
     GLuint Rectangle::getPreviewTexture(int) {

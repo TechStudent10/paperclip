@@ -142,6 +142,11 @@ public:
     int startFrame;
     int duration;
 
+    int fadeInFrame = 0; // fade-in frame
+    int fadeOutFrame = 0; // fade-out frame
+
+    float opacity = 0;
+
     std::string uID; // unique ID
     std::vector<std::string> linkedClips; // linked clip IDs
 

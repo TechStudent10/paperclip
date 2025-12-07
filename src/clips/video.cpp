@@ -240,7 +240,7 @@ namespace clips {
         int scaledW = static_cast<int>(std::floor(width * scaleX));
         int scaledH = static_cast<int>(std::floor(height * scaleY));
 
-        frame->drawTextureYUV(textureY, textureU, textureV, { scaledW, scaledH }, transform, VAO, VBO, EBO);
+        frame->drawTextureYUV(textureY, textureU, textureV, { scaledW, scaledH }, transform, VAO, VBO, EBO, opacity);
     }
 
     GLuint VideoClip::getPreviewTexture(int frameIdx) {

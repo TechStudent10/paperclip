@@ -235,7 +235,7 @@ void Frame::drawRect(Dimensions dimensions, RGBAColor color) {
     primitiveDraw(dimensions.transform, dimensions.size, color);
 }
 
-void Frame::drawTexture(GLuint texture, Vector2D size, Transform transform, GLuint VAO, GLuint VBO, GLuint EBO) {
+void Frame::drawTexture(GLuint texture, Vector2D size, Transform transform, GLuint VAO, GLuint VBO, GLuint EBO, float opacity) {
     Vector2D pos = transform.position - size / 2;
     // stolen from the primitive draw lmao
     Vector2D resolution = { width, height };
@@ -292,6 +292,10 @@ void Frame::drawTexture(GLuint texture, Vector2D size, Transform transform, GLui
         glGetUniformLocation(texShaderProgram, "texture1"),
         0
     );
+    glUniform1f(
+        glGetUniformLocation(texShaderProgram, "opacity"),
+        opacity
+    );
     glUniformMatrix4fv(
         glGetUniformLocation(texShaderProgram, "matrix"),
         1, GL_FALSE, glm::value_ptr(matrix)
@@ -310,7 +314,7 @@ void Frame::drawTexture(GLuint texture, Vector2D size, Transform transform, GLui
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
 
-void Frame::drawTextureYUV(GLuint textureY, GLuint textureU, GLuint textureV, Vector2D size, Transform transform, GLuint VAO, GLuint VBO, GLuint EBO) {
+void Frame::drawTextureYUV(GLuint textureY, GLuint textureU, GLuint textureV, Vector2D size, Transform transform, GLuint VAO, GLuint VBO, GLuint EBO, float opacity) {
     Vector2D pos = transform.position - size / 2;
     // stolen from the primitive draw lmao
     Vector2D resolution = { width, height };
@@ -371,7 +375,10 @@ void Frame::drawTextureYUV(GLuint textureY, GLuint textureU, GLuint textureV, Ve
         glGetUniformLocation(texYUVShaderProgram, "textureV"),
         2
     );
-
+    glUniform1f(
+        glGetUniformLocation(texYUVShaderProgram, "opacity"),
+        opacity
+    );
     glUniformMatrix4fv(
         glGetUniformLocation(texYUVShaderProgram, "matrix"),
         1, GL_FALSE, glm::value_ptr(matrix)

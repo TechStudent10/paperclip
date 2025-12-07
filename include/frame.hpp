@@ -33,7 +33,7 @@ public:
 
     Frame(int width, int height);
 
-    void clearFrame(RGBAColor color = { 255, 255, 255, 255 });
+    void clearFrame(RGBAColor color = { 0, 0, 0, 255 });
 
     void putPixel(Vector2D position, RGBAColor color);
     RGBAColor getPixel(Vector2D position);
@@ -42,8 +42,8 @@ public:
     void drawLine(Vector2D start, Vector2D end, RGBAColor color, int thickness = 1);
     void drawCircle(Transform transform, int radius, RGBAColor color, bool filled = true);
 
-    void drawTexture(GLuint texture, Vector2D size, Transform transform, GLuint VAO, GLuint VBO, GLuint EBO);
-    void drawTextureYUV(GLuint textureY, GLuint textureU, GLuint textureV, Vector2D size, Transform transform, GLuint VAO, GLuint VBO, GLuint EBO);
+    void drawTexture(GLuint texture, Vector2D size, Transform transform, GLuint VAO, GLuint VBO, GLuint EBO, float opacity = 1.f);
+    void drawTextureYUV(GLuint textureY, GLuint textureU, GLuint textureV, Vector2D size, Transform transform, GLuint VAO, GLuint VBO, GLuint EBO, float opacity = 1.f);
 
     // 0.5, 0.5 = center
     // 0, 0 = top left

@@ -35,7 +35,7 @@ namespace clips {
             res.y
         );
 
-        this->frame->clearFrame();
+        this->frame->clearFrame({ 255, 255, 255, 255 });
         auto previewRad = 150;
         this->frame->drawCircle({ .position = {0 , 0 } }, previewRad, { 0, 0, 0, 255 });
     }
@@ -58,7 +58,7 @@ namespace clips {
         int radius = getProperty<NumberProperty>("radius").unwrap()->data;
         debug(radius);
         RGBAColor color = getProperty<ColorProperty>("color").unwrap()->data;
-        frame->drawCircle(transform, radius, color);
+        frame->drawCircle(transform, radius, color.fade(opacity));
     }
 
     GLuint Circle::getPreviewTexture(int frameIdx) {
