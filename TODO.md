@@ -21,7 +21,7 @@
 - [ ] separate panels into their own files
 - [x] transforms
 - [x] new property system
-- [ ] fade ins/outs
+- [x] fade ins/outs
 - [ ] fix random clip clipping stuff
 
 - [x] fix whatever this means (happened when i clicked on text that was above a video, or when i clicked on the video, idk but it happened on one of those occasions)
