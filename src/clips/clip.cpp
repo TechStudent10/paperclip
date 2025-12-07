@@ -163,6 +163,8 @@ void Clip::write(qn::HeapByteWriter& writer) {
     m_metadata.write(writer);
     writer.writeI16(startFrame);
     writer.writeI16(duration);
+    writer.writeI16(fadeInFrame);
+    writer.writeI16(fadeOutFrame);
 }
 
 void Clip::read(qn::ByteReader& reader) {
@@ -202,4 +204,6 @@ void Clip::read(qn::ByteReader& reader) {
     m_metadata.read(reader);
     startFrame = reader.readI16().unwrapOr(0);
     duration = reader.readI16().unwrapOr(0);
+    fadeInFrame = reader.readI16().unwrapOr(0);
+    fadeOutFrame = reader.readI16().unwrapOr(0);
 }
