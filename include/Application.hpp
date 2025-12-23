@@ -11,6 +11,8 @@
 #include <SDL3/SDL_opengl.h>
 #include <widgets.hpp>
 
+#include <nfd.h>
+
 struct IconInfo {
     GLuint texture;
     int w = 0, h = 0;
@@ -19,6 +21,46 @@ struct IconInfo {
 enum class IconType {
     PlayPause
 };
+
+inline nfdnfilteritem_t createFilter(const char* name, const char* spec) {
+#ifndef WIN32
+    return { name, spec };
+#else
+    return { GetWC(name), GetWC(spec) };
+#endif
+}
+const nfdnfilteritem_t PROJECT_FILES_FILTER[] = { createFilter("Project Files", "pclp") };
+const nfdnfilteritem_t VIDEO_FILES_FILTER [] = { createFilter("Video Files", "mp4,mov") };
+const nfdnfilteritem_t IMAGE_FILES_FILTER [] = { createFilter("Image Files", "png,jpg,jpeg") };
+const nfdnfilteritem_t AUDIO_FILES_FILTER [] = { createFilter("Audio Files", "mp3") };
+
+// wow i hate windows
+// https://stackoverflow.com/a/8032108
+#ifdef WIN32
+#include <winnls.h>
+inline const wchar_t* GetWC(const char* c) {
+    std::string str(c);
+    int count = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), str.length(), NULL, 0);
+    std::wstring wstr(count, 0);
+    MultiByteToWideChar(CP_UTF8, 0, str.c_str(), str.length(), &wstr[0], count);
+    return wstr.c_str();
+}
+
+inline const char* ensureCStr(const wchar_t* c) {
+    std::wstring wstr(c);
+    int count = WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), wstr.length(), NULL, 0, NULL, NULL);
+    std::string str(count, 0);
+    WideCharToMultiByte(CP_UTF8, 0, wstr.c_str(), -1, &str[0], count, NULL, NULL);
+    return str.c_str();
+}
+
+#else
+
+inline const char* ensureCStr(const char* c) {
+    return c;
+}
+
+#endif
 
 class Application {
 public:
@@ -48,7 +90,19 @@ protected:
 
     std::shared_ptr<Frame> frame;
 
+    ImGuiWindowClass bareWindowClass;
+
     void setupStyle();
+
+    void drawMenuBar();
+    void drawViewport();
+
+    void drawMediaWindow();
+    void drawPropertiesWindow();
+    void drawTrackWindow();
+    void drawPlayerWindow(ImVec2 imageSize, ImVec2 imagePos, float scale);
+    void drawPlayerControls(ImVec2 imageSize);
+
     void draw();
 
     void togglePlay();

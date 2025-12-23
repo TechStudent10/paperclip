@@ -39,7 +39,6 @@ CPMAddPackage("gh:libsdl-org/SDL#release-3.2.20")
 CPMAddPackage("gh:geode-sdk/result@1.3.2")
 CPMAddPackage("gh:mackron/miniaudio#0.11.23")
 CPMAddPackage("gh:btzy/nativefiledialog-extended#6db343a")
-CPMAddPackage("gh:lemenkov/libyuv#5b22f31")
 CPMAddPackage("gh:nothings/stb#fede005")
 CPMAddPackage("gh:fmtlib/fmt#12.0.0")
 CPMAddPackage("gh:g-truc/glm#4962d27")
@@ -146,17 +145,12 @@ find_package(OpenGL REQUIRED)
 # )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
-    # PkgConfig::FFMPEG
     OpenGL::GL
-    # ${OpenCV_LIBS}
-    yuv
-    # cereal
     imgui
     nfd
     SDL3::SDL3
     mat-json
     miniaudio
-    # mlt++
     GeodeResult
     fmt
     glad
